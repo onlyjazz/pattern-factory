@@ -1,0 +1,43 @@
+PROTOCOL: 
+  id: 20050203
+
+DATA:
+  sources:
+    - adlb_pds2019
+    - adsl_pds2019
+  requires:
+    adlb_pds2019:
+      - LBTEST
+      - LBSTRESN
+    adsl_pds2019:
+      - B_WEIGHT
+      - B_ECOG
+
+RULES:
+# Kidney risk anomalies
+  alert_code: ALB_KIDNEY_RISK
+  severity: critical
+  message: Albumin > 100 may indicate kidney damage.
+  logic:
+    - if ALB > 100 then flag
+
+WORKFLOW:
+# Workflow for executing agents in a decision tree, steps are agent function names
+  entrypoint: rule_evaluator
+  decision_tree:
+    step: validate_schema
+    if valid:
+      step: expand_ruleset
+      then:
+        step: translate_to_sql
+        then:
+          step: review_translation
+          if approved:
+            step: execute_sql
+            then:
+              step: insert_alerts
+          else:
+            step: manual_review
+    else:
+      step: error_handler
+        

@@ -1,0 +1,31 @@
+__pycache__*
+datareview
+
+# Dependencies
+node_modules/
+
+# Output
+.output
+.vercel
+.netlify
+.wrangler
+/.svelte-kit
+/build
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# Database files
+*.wal
+*.wal.*
+
+# Pycharm
+.idea/

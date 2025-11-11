@@ -1,0 +1,30 @@
+# Web framework and API
+fastapi
+uvicorn[standard]
+python-multipart
+
+# Database
+duckdb
+
+# Environment variables
+python-dotenv
+
+# AI/ML
+openai
+
+# HTTP client
+httpx
+
+# Data processing and formatting
+tabulate
+pydantic
+
+# Date and time handling
+python-dateutil
+
+# File handling
+PyYAML
+
+# Text processing
+markdown2
+

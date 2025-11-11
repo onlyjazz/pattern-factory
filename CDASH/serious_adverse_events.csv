@@ -1,0 +1,3 @@
+STUDYID,USUBJID,SAEID,AETERM,SAEDECOD,SAEOUT,SAEACT,SAEONGO
+ABC123,1001,SAE001,Cardiac Arrest,Cardiac Arrest,Death,Hospitalization,N
+ABC123,1001,SAE002,Anaphylaxis,Anaphylaxis,Life Threatening,Emergency Surgery,Y

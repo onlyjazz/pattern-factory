@@ -1,0 +1,13 @@
+vocabulary:
+  Abstract:
+    type: text
+    keywords: [synopsis, abstract, study synopsis, Protocol Title]
+
+  Eligibility:
+    type: text
+    keywords: [Inclusion Criteria,Exclusion Criteria]
+
+  Study Population:
+    type: text
+    keywords: [Type of Participant and Disease Characteristics]
+

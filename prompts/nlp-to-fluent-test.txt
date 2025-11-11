@@ -1,0 +1,47 @@
+take this
+--Build the workflow
+build work flow for "MyDataCleaning"
+load protocol "MyStudyProtocol.pdf"
+extract section ELIGIBILITY from "Section 3.3"
+use base rules from "GeneralOncology"
+derive rules from section "ELIGIBILITY"
+connect edc "MedidataRave" with "credentials"
+map fields {"DOB": "DateOfBirth", "AGE": "AgeInYears"}
+apply validation
+output cleaned data to "IntermediateDataStructure"
+update edc
+measure performance to "ValidationSummary"
+build
+)
+and convert to this fluent API format
+
+workflow = (BuildWorkFlow("MyDataCleaning")
+    .load_protocol("MyStudyProtocol.pdf")
+    .extract_section("ELIGIBILITY", "Section 3.3")
+    .use_base_rules("GeneralOncology")
+    .derive_rules_from_section("ELIGIBILITY")
+    .connect_edc("PrimaryEDC", "MedidataRave", "...credentials...")
+    .map_fields({"DOB": "DateOfBirth", "AGE": "AgeInYears"})
+    .apply_validation()
+    .output_cleaned_data("IntermediateDataStructure")
+    .update_edc("PrimaryEDC")
+    .measure_performance("ValidationSummary")
+    .build()
+)
+
+take this
+--Build the workflow
+build work flow for "MyDataCleaning"
+load protocol "Protocol6715.pdf"
+extract section ELIGIBILITY from "Section 4.1"
+use base rules from "GeneralOncology"
+derive rules from section "ELIGIBILITY"
+connect edc "MedidataRave" with "credentials"
+map fields {"DOB": "DateOfBirth", "AGE": "AgeInYears"}
+apply validation
+output cleaned data to "IntermediateDataStructure"
+update edc
+measure performance to "ValidationSummary"
+build
+)
+and convert to your fluent API format

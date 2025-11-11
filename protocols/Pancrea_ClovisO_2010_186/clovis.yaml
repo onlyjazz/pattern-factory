@@ -1,0 +1,60 @@
+PROTOCOL:
+# Metadata: rule ID, description, protocol number, version
+  id: CO-101-001
+
+DATA:
+# Where all of the following live:
+# sources (required tables)
+# requires (required columns per table)
+  sources:
+    - adlb_clovis
+    - adsl_clovis
+    
+  requires:
+    adlb_clovis:
+      - ANRHI
+      - PARAM
+      - LBORRES
+      - VISIT
+    adsl_clovis:
+      - METLIV
+
+RULES:
+# Flag definitions, severity
+# AST is Aspartate Aminotransferase (U/L) 
+# If AST at screening is >2.5 but <= 5x ULN, then confirm the presence of tumor lesions in the liver at screening. If not confirmed, flag.
+# Note: This is confirmation of eligibility as per Inclusion Criteria #9. If AST is above 2.5 and there are no liver lesions reported at screening, the patient is not eligible to participate in the study.
+# Will involve a calculation 5 x ULN (ANRHI variable) or referring to tox grade variable as per CTCAE v4.0 (version specified in protocol).
+
+  rule_code: AST_NO_LIVER_CONFIRM
+  severity: "critical"
+  message: "Subject has elevated AST at screening but no confirmed liver lesion."
+  description: |
+    If AST > 2.5*ULN at screening, confirm presence of liver lesion.
+    If no liver lesion is reported, flag subject as ineligible per Inclusion Criterion 9.
+  logic:
+    if AST at screening > 2.5*ANRHI and AST at screening ≤ 5*ANRHI:        
+      if liver lesion is not confirmed:
+        flag subject as ineligible (IC#9 violation).
+# SQL Translation:
+# select  subjid,param,paramcd,LBORRES,anrhi,visit from adlb_clovis where paramcd='AST' and lborres::float > 2.5*ANRHI  order by subjid, visit;
+# select  subjid, METLIV from adsl_clovis where metliv is null order by subjid;
+# Prompt
+# Write a single SQL query that implements this DSL rule by joining adlb_clovis and adsl_clovis. Only return subjects where AST at pre-entrollment is > 2.5 × ANRHI and ≤ 5 × ANRHI and METLIV is not 'Y'. Use paramcd = 'AST' and visit = 'Screening' for the lab. Include subject ID, AST result, ANRHI, and METLIV in the output.
+# liver lessions not present may mean null values in the data
+WORKFLOW:
+# Workflow definition to control the agentic runtime. Implicit main loop on rules
+  entrypoint: pitboss
+  decision_tree:
+    step: get_next_rule
+    if valid:
+      step: model_rule_agent  # Language model agent that takes card system prompt and translates rule to SQL
+      step: sql_pitboss_agent # SQL agent that runs the SQL query and saves results in a table
+      step: data_table_agent  # Data table agent that formats the results into a data table and returns a link
+      step: insert_alerts     # Select flagged rows and insert into alerts table
+      then:
+        step: ai_chat         # AI chat agent for HITL: shows alerts link and data table link and enables user to review results  
+        else:
+            step: ai_chat     # Go back to chat and say "I need help - cant figure this out"
+    else:
+      step: end_of_workflow

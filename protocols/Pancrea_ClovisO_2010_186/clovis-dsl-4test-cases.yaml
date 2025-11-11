@@ -1,0 +1,79 @@
+PROTOCOL:
+# Metadata: rule ID, description, protocol number, version
+  id: CO-101-001
+
+DATA:
+# Where all of the following live:
+# sources (required tables)
+# requires (required columns per table)
+  sources:
+    - adlb_clovis
+    - adsl_clovis
+    
+  requires:
+    adlb_clovis:
+      - ANRHI
+      - PARAM
+      - LBORRES
+      - VISIT
+    adsl_clovis:
+      - METLIV
+
+RULES:
+# Flag definitions, severity
+  rule_code: ALT_HIGH
+  severity: "major"
+  message: "ALT > 100"
+  description: 
+    If ALT > 100 then flag the subject record.
+  logic:
+        IF ALT > 100 then flag
+
+  rule_code: ECOG_MISSING
+  severity: "minor"
+  message: "ECOG missing"
+  description: 
+    If ECOG is NULL then flag the subject record.
+  logic:
+        IF ECOG is NULL then flag
+
+  rule_code: AGE_CREAT_HIGH
+  severity: "critical"
+  message: "Elderly subject with elevated creatinine"
+  description: 
+    If AGE > 65 and Creatinine > 200 then return subjid, age, param, aval.
+  logic:
+        IF AGE > 65 and Creatinine > 200 return subjid, age, param, aval
+
+  rule_code: XYZ_CHECK
+  severity: "info"
+  message: "XYZ test result check"
+  description: 
+    If XYZ > 10 then flag the record.
+  logic:
+        IF XYZ > 10 then flag
+
+  rule_code: HGB_LOW
+  severity: "critical"
+  message: "Low Hemoglobin"
+  description: 
+    If Hemoglobin < 8 then return subjid, age, aval, param.
+  logic:
+        IF Hemoglobin < 8 then return subjid, age, aval, param
+
+WORKFLOW:
+# Workflow definition to control the agentic runtime. Implicit main loop on rules
+  entrypoint: pitboss
+  decision_tree:
+    step: get_next_rule
+    if valid:
+      step: model_rule_agent  # Language model agent that takes card system prompt and translates rule to SQL
+      step: sql_pitboss_agent # SQL agent that runs the SQL query and saves results in a table
+      step: data_table_agent  # Data table agent that formats the results into a data table and returns a link
+      step: insert_alerts     # Select flagged rows and insert into alerts table
+      then:
+        step: ai_chat         # AI chat agent for HITL: shows alerts link and data table link and enables user to review results  
+        else:
+            step: ai_chat     # Go back to chat and say "I need help - cant figure this out"
+    else:
+      step: end_of_workflow
