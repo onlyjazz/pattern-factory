@@ -1,0 +1,33 @@
+Title,Description,Labels,Project
+Phase 2 — Data Ingestion and CRUD,"Goal: ingest posts & episodes automatically and enable CRUD management in UI.",planning,"Pattern Factory — Phase 2 Build"
+Substack → Posts table,"Create ingestion pipeline from Substack API or RSS.",backend,"Pattern Factory — Phase 2 Build"
+- Implement Substack API agent to fetch recent posts.,backend,,
+- Parse title, description, published_at, tech_keywords.,backend,,
+- Insert data into posts table and handle duplicates.,backend,,
+- Add logging to system_log for each run.,backend,,
+Granola → Episodes table,"Ingest podcast episode data and summaries from Granola.",backend,"Pattern Factory — Phase 2 Build"
+- Implement Granola agent to fetch episode metadata and transcripts.,backend,,
+- Extract guest names and organizations; map FKs.,backend,,
+- Insert summaries and published_at fields into episodes table.,backend,,
+- Validate linkage with guests and orgs tables.,backend,,
+CRUD Interfaces (UI),"Add minimal Create/Read/Update/Delete functionality for posts, episodes, and patterns.",frontend,"Pattern Factory — Phase 2 Build"
+- Create /posts route with table + edit modal.,frontend,,
+- Create /episodes route with table + edit modal.,frontend,,
+- Extend /patterns route with inline edit.,frontend,,
+- Connect forms to REST API endpoints.,frontend,,
+API Endpoints for CRUD,"Expose backend routes for posts, episodes, and patterns.",backend,"Pattern Factory — Phase 2 Build"
+- Implement GET/POST/PUT/DELETE for /api/posts.,backend,,
+- Implement GET/POST/PUT/DELETE for /api/episodes.,backend,,
+- Implement GET/POST/PUT/DELETE for /api/patterns.,backend,,
+- Add auth stub (future extension).,backend,,
+Testing & Verification,"Seed DB, run ingestion jobs, and verify CRUD flows.",testing,"Pattern Factory — Phase 2 Build"
+- Create test posts and episodes via API.,testing,,
+- Verify they appear in UI and DB.,testing,,
+- Test edit/delete operations end-to-end.,testing,,
+- Record Loom demo for validation.,testing,,
+Milestone Review,"Confirm ingestion + CRUD complete and tag v0.2.",management,"Pattern Factory — Phase 2 Build"
+- Verify Substack + Granola ingestion agents functional.,management,,
+- Confirm CRUD works for posts, episodes, patterns.,management,,
+- Tag repo commit v0.2 (Phase 2 complete).,management,,
+- Plan next sprint: pattern-extraction agents.,management,,
+

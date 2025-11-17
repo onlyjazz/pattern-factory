@@ -6,13 +6,10 @@ CREATE EXTENSION IF NOT EXISTS vector;
 -- =====================
 -- Life Science Categories
 -- =====================
-drop table  if exists life_science_categories cascade;
-CREATE TABLE life_science_categories (
+drop table  if exists categories cascade;
+CREATE TABLE categories (
     id BIGSERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
     description TEXT,
-    tech_keywords TEXT[],
-    data_source TEXT,
     created_at TIMESTAMP DEFAULT now(),
     updated_at TIMESTAMP DEFAULT now(),
     deleted_at TIMESTAMP
@@ -29,11 +26,11 @@ CREATE TABLE orgs (
     description TEXT,
     stage TEXT,                   -- e.g., Seed, Series A, etc.
     funding NUMERIC,
-    website TEXT,
+    date_founded TIMESTAMP,
     linkedin_company_url TEXT,
-    tech_keywords TEXT[],
+    keywords TEXT[],
     data_source TEXT,
-    life_science_category_id BIGINT REFERENCES life_science_categories(id) ON DELETE SET NULL,
+    category_id BIGINT REFERENCES categories(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT now(),
     updated_at TIMESTAMP DEFAULT now(),
     deleted_at TIMESTAMP
@@ -50,8 +47,7 @@ CREATE TABLE guests (
     description TEXT,
     linkedin_url TEXT,
     job_description TEXT,
-    substack_url TEXT,
-    tech_keywords TEXT[],
+    keywords TEXT[],
     data_source TEXT,
     org_id BIGINT REFERENCES orgs(id) ON DELETE SET NULL,
     episode_id BIGINT REFERENCES episodes(id) ON DELETE SET NULL,
@@ -70,8 +66,8 @@ CREATE TABLE episodes (
     id BIGSERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     description TEXT,
-    tech_keywords TEXT[],
-    data_source TEXT,
+    keywords TEXT[],
+    episode_url TEXT,
     published_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT now(),
     updated_at TIMESTAMP DEFAULT now(),
@@ -87,8 +83,8 @@ CREATE TABLE posts (
     id BIGSERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     description TEXT,
-    tech_keywords TEXT[],
-    data_source TEXT,
+    keywords TEXT[],
+    substack_url TEXT,
     published_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT now(),
     updated_at TIMESTAMP DEFAULT now(),
@@ -106,14 +102,10 @@ CREATE TABLE patterns (
     description TEXT,
     data_source TEXT,
     kind TEXT CHECK (kind IN ('pattern','anti-pattern')) DEFAULT 'pattern',
-    episode_id BIGINT REFERENCES episodes(id) ON DELETE SET NULL,
-    post_id BIGINT REFERENCES posts(id) ON DELETE SET NULL,
-    org_id BIGINT REFERENCES orgs(id) ON DELETE SET NULL,
-    guest_id BIGINT REFERENCES guests(id) ON DELETE SET NULL,
     metadata JSONB DEFAULT '{}'::jsonb,        -- LLM summary, confidence, etc.
     highlights JSONB DEFAULT '[]'::jsonb,      -- quotes, snippets
-    vector tsvector,                           -- for full-text search
-    tech_keywords TEXT[],
+    search_vector tsvector,                           -- for full-text search
+    keywords TEXT[],
     created_at TIMESTAMP DEFAULT now(),
     updated_at TIMESTAMP DEFAULT now(),
     deleted_at TIMESTAMP
@@ -143,7 +135,13 @@ CREATE TABLE pattern_post_link (
     post_id BIGINT REFERENCES posts(id) ON DELETE CASCADE,
     PRIMARY KEY (pattern_id, post_id)
 );
-
+--
+DROP TABLE if exists pattern_episode_link cascade;
+CREATE TABLE pattern_episode_link (
+    pattern_id BIGINT REFERENCES patterns(id) ON DELETE CASCADE,
+    episode_id BIGINT REFERENCES episodes(id) ON DELETE CASCADE,
+    PRIMARY KEY (pattern_id, episode_id)
+);
 -- =====================
 -- System Log
 -- =====================
@@ -176,12 +174,12 @@ CREATE INDEX idx_posts_vector
 
 DROP INDEX if exists idx_patterns_vector cascade;
 CREATE INDEX idx_patterns_vector
-    ON patterns USING GIN (vector);
+    ON patterns USING GIN (search_vector);
 
 -- Optional triggers for automatic vector updates
 CREATE OR REPLACE FUNCTION patterns_vector_update() RETURNS trigger AS $$
 BEGIN
-  NEW.vector :=
+  NEW.search_vector :=
     to_tsvector('english', coalesce(NEW.name,'') || ' ' || coalesce(NEW.description,''));
   RETURN NEW;
 END;
@@ -190,3 +188,110 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE TRIGGER trg_patterns_vector_update
 BEFORE INSERT OR UPDATE ON patterns
 FOR EACH ROW EXECUTE FUNCTION patterns_vector_update();
+--
+-- ============================================
+-- INDEX TUNING FOR PATTERN FACTORY
+-- ============================================
+-- 
+CREATE INDEX IF NOT EXISTS idx_pattern_guest_link_guest  ON pattern_guest_link(guest_id);
+CREATE INDEX IF NOT EXISTS idx_pattern_org_link_org      ON pattern_org_link(org_id);
+CREATE INDEX IF NOT EXISTS idx_pattern_post_link_post    ON pattern_post_link(post_id);
+CREATE INDEX IF NOT EXISTS idx_pattern_episode_link_post ON pattern_episode_link(post_id);
+
+-- 
+CREATE INDEX IF NOT EXISTS idx_orgs_active     ON orgs(id)     WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_guests_active   ON guests(id)   WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_episodes_active ON episodes(id) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_posts_active    ON posts(id)    WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_patterns_active ON patterns(id) WHERE deleted_at IS NULL;
+
+--
+-- Logical views for reporting
+-- Pattern-Episode relationships
+CREATE OR REPLACE VIEW pattern_episodes AS
+SELECT
+    p.id AS pattern_id,
+    p.name AS pattern_name,
+    p.kind,
+    p.data_source,
+    e.id AS episode_id,
+    e.name AS episode_name,
+    e.episode_url,
+    p.created_at
+FROM patterns p
+JOIN pattern_episode_link pel ON p.id = pel.pattern_id
+JOIN episodes e ON pel.episode_id = e.id
+WHERE p.deleted_at IS NULL AND e.deleted_at IS NULL;
+
+-- Pattern-Guest relationships
+CREATE OR REPLACE VIEW pattern_guests AS
+SELECT
+    p.id AS pattern_id,
+    p.name AS pattern_name,
+    p.kind,
+    p.data_source,
+    g.id AS guest_id,
+    g.name AS guest_name,
+    g.job_description,
+    p.created_at
+FROM patterns p
+JOIN pattern_guest_link pgl ON p.id = pgl.pattern_id
+JOIN guests g ON pgl.guest_id = g.id
+WHERE p.deleted_at IS NULL AND g.deleted_at IS NULL;
+
+-- Pattern-Org relationships
+CREATE OR REPLACE VIEW pattern_orgs AS
+SELECT
+    p.id AS pattern_id,
+    p.name AS pattern_name,
+    p.kind,
+    p.data_source,
+    o.id AS org_id,
+    o.name AS org_name,
+    o.stage,
+    o.linkedin_company_url,
+    p.created_at
+FROM patterns p
+JOIN pattern_org_link pol ON p.id = pol.pattern_id
+JOIN orgs o ON pol.org_id = o.id
+WHERE p.deleted_at IS NULL AND o.deleted_at IS NULL;
+
+-- Pattern-Post relationships
+CREATE OR REPLACE VIEW pattern_posts AS
+SELECT
+    p.id AS pattern_id,
+    p.name AS pattern_name,
+    p.kind,
+    p.data_source,
+    po.id AS post_id,
+    po.name AS post_name,
+    po.substack_url,
+    p.created_at
+FROM patterns p
+JOIN pattern_post_link ppl ON p.id = ppl.pattern_id
+JOIN posts po ON ppl.post_id = po.id
+WHERE p.deleted_at IS NULL AND po.deleted_at IS NULL;
+--
+-- Registry of materialized views for pattern factory queries (maps to results_registry§)
+DROP TABLE IF EXISTS views_registry CASCADE;
+CREATE TABLE IF NOT EXISTS views_registry (
+    id BIGSERIAL PRIMARY KEY,
+    rule_id int NOT NULL references rules(id),
+    table_name TEXT NOT NULL,
+    sql TEXT NOT NULL,
+    summary varchar,  -- how many rows were returned by executing the sql query (replaces query_results)
+    created_at TIMESTAMP DEFAULT now(),
+    updated_at TIMESTAMP DEFAULT now()
+);
+--
+-- DSL rules for pattern factory views
+DROP TABLE if EXISTS rules cascade;
+CREATE TABLE IF NOT EXISTS rules (
+    id BIGSERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL,
+    description TEXT,
+    rule_code TEXT NOT NULL,  -- taken from DSL rule for example Logic: count total number of companies founded over 5 years ago
+    sql TEXT NOT NULL,        -- generated SQL for materialized view
+    created_at TIMESTAMP DEFAULT now(),
+    updated_at TIMESTAMP DEFAULT now()
+);

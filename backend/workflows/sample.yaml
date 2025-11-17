@@ -1,0 +1,180 @@
+PROTOCOL:
+  # Version 2.0 Sep 21, 2025
+  id: CO-101-001
+  official_title: >
+    A Phase II Randomized, Open-Label, Multicenter Study Comparing CO-1.01 With Gemcitabine as First-Line Therapy in Patients With Metastatic Pancreatic Adenocarcinoma
+  detailed_description: >
+    Pancreatic cancer is a very serious form of cancer. The majority of patients present with unresectable disease, and the condition is often not diagnosed until the cancer is relatively advanced. The standard first-line treatment for patients with unresectable pancreatic cancer is gemcitabine monotherapy. Unfortunately many of these patients fail to derive benefit from this treatment. No clinical or molecular marker has been established to predict benefit from gemcitabine therapy, so patients are treated empirically until evidence of disease progression or worsening performance status.
+    The potential for human equilibrative nucleoside transporter-1 (hENT1) expression to predict survival in gemcitabine-treated patients has been studied, and data suggest that patients with low levels of tumor cell hENT1 expression derive less benefit from gemcitabine treatment than patients with high levels of tumor cell hENT1 expression. These data support the hypothesis to be tested in this study that patients with pancreatic tumors expressing low levels of hENT1 will derive minimal benefit from gemcitabine, but will receive benefit from CO-1.01 (gemcitabine elaidate) which enters tumor cells in a hENT1-independent fashion.
+  inclusion_criteria: >
+    Metastatic pancreatic ductal adenocarcinoma (i.e., Stage 4).
+    Histological/cytological confirmation of metastatic tissue (not primary tumor) by a central pathology laboratory (H&E stain) to ensure sufficient material is available for later hENT1 analysis.
+    Adjuvant chemotherapy/radiotherapy ≥ 6 months prior to randomization.
+    Palliative radiotherapy (if administered) ≥ 1 month prior to randomization.
+    CT scan ≤30 days prior to randomization
+    Performance Status (ECOG) 0 or 1.
+    Estimated life expectancy ≥ 12 weeks.
+    Age ≥ 18 years.
+    Has adequate hematological and biological function.
+    Written consent on an Institutional Review Board/Institutional Ethics Committee-approved Informed Consent Form prior to any study-specific evaluation.
+
+  exclusion_criteria: >
+    Prior palliative chemotherapy for pancreatic cancer.
+    Radical pancreatic resections (e.g., Whipple procedure) are not allowed < 6 months prior to randomization. Exploratory laparotomy, palliative (e.g., bypass) surgery, or other procedures (e.g., stents) are not allowed < 14 days prior to randomization. In both cases the patient must be sufficiently recovered and stable.
+    Symptomatic brain metastases.
+    Participation in other investigational drug clinical studies ≤ 30 days prior to randomization.
+    Concomitant treatment with prohibited medications.
+    History of allergy to gemcitabine or eggs.
+    Presence of any serious or unstable concomitant systemic disorder incompatible with the clinical study (e.g., substance abuse, uncontrolled intercurrent illness including active infection, arterial thrombosis, symptomatic pulmonary embolism).
+    Any disorder that would hamper protocol compliance.
+    Prior nonpancreatic malignancy treated with chemotherapy. Prior malignancies treated with surgery or radiotherapy alone must be in remission ≥ 3 years. The following prior malignancies are allowable irrespective of when they occurred: in situ carcinoma of the cervix, in situ ductal breast cancer, low-grade local bladder cancer, and nonmelanotic skin cancer.
+    Females who are pregnant or breastfeeding.
+    Refusal to use adequate contraception for fertile patients (females and males during the study and for 6 months after the last study treatment). Adequate forms of contraception are double-barrier methods (condoms or diaphragm with spermicidal jelly or foam); oral, depot, or injectable contraceptives; intrauterine devices; tubal ligation.
+    Any other reason the investigator considers the patient should not participate in the study.
+      
+DATA:
+  naming: Field names conform to CDASH conventions
+  note: Use only good_examples or good_examples_minimal for generation. 
+        Bad_examples are shown for contrast and must never be followed.
+
+  good_examples (full, correct usage): >
+    Subject data is in adsl_clovis. Subject-level data with columns (USUBJID, AGE, SEX, ARM, ECOG, METLIV, etc.).
+    Adverse events data is in adae_clovis. One observation per subject per adverse event.
+    Concomitant medications data is in adcm_clovis. One observation per subject per medication per timepoint.
+    Duration of response data is in addur_clovis. One observation per subject per parameter.
+    Primary efficacy data is in adef_clovis with columns like TRTA, TRTP, ITTFL, SAFFL
+    ECG data is in adeg_clovis. One observation per subject per parameter per time point.
+    Exposure data is in adex_clovis. One observation per subject per timepoint per treatment.
+    Inclusion/Exclusion violations data is in adie_clovis. One observation per subject per criteria violation.
+    Laboratory results data is in adlb_clovis. Lab test names in the DSL may be written as either:
+      - A shorthand (e.g., ALT, HGB, GLUC, XYZ) → map to PARAMCD = 'value'
+      - A full name (e.g., Hemoglobin, Creatinine) → map to PARAM LIKE 'value%'
+    The lab value is always contained in AVAL (not LBORRES).
+    Medical history data is in admh_clovis. One observation per subject per medical history event.
+    Overall response data is in ador_clovis. One observation per subject per visit.
+    Progression-free survival data is in adpf_clovis. One observation per subject per parameter.
+    Questionnaire data is in adqs_clovis. One observation per subject per parameter per visit.
+    Subject visit status data is in adsv_clovis. One observation per subject per visit.
+    Vital signs data is in advs_clovis. One observation per subject per parameter per time point.
+
+  good_examples_minimal (terse, correct usage): >
+    Subject data is in adsl_clovis with key USUBJID including liver data METLIV
+    Adverse events data is in adae_clovis with keys USUBJID, AESEQ.
+    Laboratory results data is in adlb_clovis; labs are always in AVAL (not LBORRES) and METLIV is a subject-level flag.
+
+  bad_examples (incorrect, never use): >
+    Subject data is in subject_table. May or may not include USUBJID.
+    Adverse events are in ae_dataset.xpt with mixed keys (AGE, SEX).
+    Lab tests are in labs.csv, values stored in LBORRES instead of AVAL.
+    Exposure data is optional and stored inside subject_table.
+    Dataset names are inconsistent, sometimes using .sas7bdat or .csv extensions.
+
+RULES:
+  # Flag definitions, severity
+  - rule_code: IC9_VIOLATION
+    severity: "critical"
+    message: "Subject has elevated AST at screening but no confirmed liver lesion."
+    description: "AST > 2.5ULN and < 5ULN and METLIV is N"
+    crf: Subject
+    logic: |
+      if AST at PRE-ENROLLMENT > 2.5*ANRHI and AST at PRE-ENROLLMENT ≤ 5*ANRHI        
+      and liver lesion is N return SUBJID, AST, ULN, METLIV, flag 'IC9 violation'
+
+  - rule_code: SCRATCHPAD
+    severity: "low"
+    message: "List subjects with missing TRTA"
+    description: "List study arm, actual treatment and planned treatment from  the primary efficacy  adef_clovis and TRTSDT from subject listing"
+    crf: Efficacy
+    logic: >
+      flag missing TRTA in primary efficacy, return SUBJID, AGE, ARM, TRTP, 'Missing TRTA' as flag  
+
+  - rule_code: METADATA
+    severity: "critical"
+    message: "Display a listing of study metadata"
+    description: "Study metadata"
+    logic: "select * from ddt WHERE protocol_id = 'CO-101-001'"
+
+  - rule_code: ALT_HIGH
+    severity: "major"
+    message: "Alanine Aminotransferase between 400 and 900 indication of liver risk"
+    description: "Show patients with ALT between 400 and 900"
+    crf: "Labs"
+    logic: "IF ALT between 400 and 900 then return SUBJID, PARAMCD, AVAL, flag 'Liver risk'"
+
+  - rule_code: FLAG_UNDER_18
+    severity: "major"
+    message: "Inclusion criteria violation - age not >= 18"
+    description: "Flag people under 18"
+    crf: "Subjects"
+    logic: >
+      Flag subjects under 18, return SUBJID, AGE, flag 'Inclusion criteria violation'
+
+  - rule_code: AGE_UNDER_30
+    severity: "minor"
+    message: "Subjects under 30"
+    description: "List people under 30 in the study"
+    crf: "Subjects"
+    logic: "IF AGE < 30 return SUBJID, AGE, SEX"
+  
+  - rule_code: AGE_OVER_80
+    severity: "minor"
+    message: "Subjects over 80"
+    description: "Listing of people over 80 in the study"
+    crf: "Subjects"
+    logic: "IF AGE > 80 then return SUBJID, AGE, SEX, RACE, COUNTRY, REGION, flag 'Age over 80'"
+  
+  - rule_code: ECOG_MISSING
+    severity: "minor"
+    message: "The ECOG assessment is missing"
+    description: "If ECOG is NULL then produce a listing of all subjects and flag subjects without ECOG"
+    crf: "Subjects"
+    logic: >
+      IF ECOG is NULL then return SUBJID, ARM, 'ECOG was not recorded' as flag
+
+  - rule_code: AGE_CREAT_HIGH
+    severity: "critical"
+    message: "Elderly subject with elevated creatinine"
+    description: "Produce a listing of subjects over 65 with elevated Creatinine."
+    crf: "Labs"
+    logic: >
+      IF AGE > 65 and Creatinine > 200 then return SUBJID, AGE, PARAM, AVAL, flag 'Elevated Creatine'
+
+  - rule_code: XYZ_CHECK
+    severity: "info"
+    message: "XYZ test result check"
+    description: "Test case to query on a non-existent key in the data dictionary"
+    logic: "IF XYZ > 10 then flag"
+
+  - rule_code: HGB_LOW
+    severity: "critical"
+    message: "Low Hemoglobin below 5"
+    description: "Low hemoglobin check"
+    crf: "Labs"
+    logic: >
+      IF Hemoglobin < 5 then return SUBJID, AGE, AVAL, PARAM, 'Hemoglobin under 5' as flag
+
+  - rule_code: "30-SOMETHING"
+    severity: "low"
+    message: "Age group"
+    description: "age group"
+    crf: "Subjects"
+    logic: "IF AGE between 30 and 50 then return SUBJID, AGE, SEX"
+
+  - rule_code: AE_GRADE34_WITHIN_28DAYS
+    severity: "major"
+    message: "Grade 3/4 related AEs within first 28 days"
+    description: "List patients with grade 3 or 4 related AEs that occurred within 28 days of treatment start"
+    crf: "Adverse Events"
+    logic: >
+      IF (AETOXGR = 3 OR AETOXGR = 4) AND 
+      AEREL in ('POSSIBLE/PROBABLY', 'DEFINITELY') AND 
+      ASTDT is on or before 28 days after STARTDT (from adef_clovis, DATE_ADD, one row per subject)
+      THEN return USUBJID, AETERM, AETOXGR, AEREL, ASTDT, STARTDT,'Grade 3/4 AEs within 28 days' as flag
+
+  - rule_code: FULLY_ACTIVE
+    severity: "minor"
+    message: "Listing of patients who are fully active"
+    description: "Fully active, able to carry on all pre-disease performance without restriction"
+    crf: "Subjects"
+    logic: >
+      IF ECOG = 0 then return SUBJID, ECOG, AGE, SEX, SAFFL, ARM, 'Fully active' as flag
