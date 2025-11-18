@@ -10,5 +10,5 @@ Key tasks for this Release:
 - API for episodes, guests, transcripts
 - clean cruft in [services]
 - skeleton pitboss app
-- Configure for Postgresql (not duckdb)
+- Configure for Postgresql
 - Configure for Supabase

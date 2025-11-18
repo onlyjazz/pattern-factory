@@ -1,24 +1,21 @@
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from services.pitboss_llm_supervisor import Pitboss
-import duckdb
+from pitboss.supervisor import Pitboss
+import psycopg
 import os
 import json
 import logging
 import uvicorn
 from contextlib import contextmanager
 
-# Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# FastAPI app setup
 app = FastAPI()
 
-# Allow frontend connection
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Replace with your frontend origin if different
+    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -26,10 +23,10 @@ app.add_middleware(
 
 @contextmanager
 def get_db_connection():
-    db_path = os.getenv("DATABASE_LOCATION")
-    if not db_path:
-        raise RuntimeError("DATABASE_LOCATION environment variable not set")
-    conn = duckdb.connect(db_path)
+    db_url = os.getenv("DATABASE_URL")
+    if not db_url:
+        raise RuntimeError("DATABASE_URL environment variable not set")
+    conn = psycopg.connect(db_url)
     try:
         yield conn
     finally:
@@ -40,30 +37,23 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     logger.info("WebSocket connected")
 
-    db = None
     try:
-        # Wait for 1 message from client
         data = await websocket.receive_text()
-        logger.info(f"Received: {data}")
-
-        # Expecting JSON string with rule_code, system_prompt, protocol_id, and rule_id
         message = json.loads(data)
 
-        # Extract parameters from message
         rule_code = message.get("rule_code")
         system_prompt = message.get("system_prompt")
         protocol_id = message.get("protocol_id")
         rule_id = message.get("rule_id")
-        dsl = message.get("dsl")  # For workflow execution
+        dsl = message.get("dsl")
 
-        # Connect to DuckDB
         with get_db_connection() as db:
             pitboss = Pitboss(db, websocket)
-            
-            # Check if this is a workflow execution
+
             if dsl:
                 logger.info("Processing DSL workflow...")
                 await pitboss.run_workflow(dsl)
+
             elif rule_code:
                 logger.info("Processing single rule...")
                 await pitboss.process_rule_request(
@@ -77,23 +67,20 @@ async def websocket_endpoint(websocket: WebSocket):
                     "type": "error",
                     "message": "Missing 'rule_code' or 'dsl'"
                 })
-                return
 
     except Exception as e:
-        logger.error(f"WebSocket error: {str(e)}")
+        logger.error(f"WebSocket error: {e}")
         try:
             await websocket.send_json({
                 "type": "error",
-                "message": str(e)
+                "message": str(e),
+                "error_type": e.__class__.__name__
             })
-        except Exception as send_err:
-            logger.warning(f"Failed to send error over websocket: {send_err}")
-
-    finally:
-        try:
-            await websocket.close()
         except:
             pass
+
+    finally:
+        await websocket.close()
         logger.info("WebSocket closed")
 
 if __name__ == "__main__":
