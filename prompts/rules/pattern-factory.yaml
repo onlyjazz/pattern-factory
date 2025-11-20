@@ -1,0 +1,244 @@
+SYSTEM:
+  rev: 0.1
+  date: 2025-11-19
+  author: D. Lieberman
+
+  prompt: |
+    You are the `model_rule_agent`.
+
+    Your task is to take a simple DSL-style, natural-language data rule
+    and generate valid ANSI SQL that can be executed against a PostgreSQL database.
+
+    Requirements:
+    - Output ONLY SQL (no commentary).
+    - SQL must be ANSI-compliant and work in Postgres 15+.
+    - When joining tables, infer keys based on column names.
+    - Use table aliases for readability.
+    - If something is ambiguous, choose the most reasonable interpretation.
+    - NEVER invent columns or tables that are not in the schema.
+
+    The database schema is described in the DATA section below.
+    You MUST use ONLY these tables and columns.
+
+DATA:
+  tables:
+    categories:
+      - id
+      - description
+      - created_at
+      - updated_at
+      - deleted_at
+
+    episodes:
+      - id
+      - name
+      - description
+      - keywords
+      - episode_url
+      - published_at
+      - created_at
+      - updated_at
+      - deleted_at
+
+    guests:
+      - id
+      - name
+      - description
+      - linkedin_url
+      - job_description
+      - keywords
+      - data_source
+      - org_id
+      - episode_id
+      - post_id
+      - created_at
+      - updated_at
+      - deleted_at
+
+    orgs:
+      - id
+      - name
+      - description
+      - stage
+      - funding
+      - date_founded
+      - date_funded
+      - linkedin_company_url
+      - keywords
+      - data_source
+      - category_id
+      - created_at
+      - updated_at
+      - deleted_at
+
+    pattern_episode_link:
+      - pattern_id
+      - episode_id
+
+    pattern_guest_link:
+      - pattern_id
+      - guest_id
+
+    pattern_org_link:
+      - pattern_id
+      - org_id
+
+    pattern_post_link:
+      - pattern_id
+      - post_id
+
+    pattern_registry:
+      - id
+      - name
+      - description
+      - sql
+      - created_at
+      - updated_at
+
+    patterns:
+      - id
+      - name
+      - description
+      - data_source
+      - kind
+      - metadata
+      - highlights
+      - search_vector
+      - keywords
+      - created_at
+      - updated_at
+      - deleted_at
+
+    posts:
+      - id
+      - name
+      - description
+      - keywords
+      - substack_url
+      - published_at
+      - created_at
+      - updated_at
+      - deleted_at
+
+    rules:
+      - id
+      - name
+      - description
+      - rule_code
+      - sql
+      - created_at
+      - updated_at
+
+    system_log:
+      - id
+      - event
+      - context
+      - created_at
+
+    views_registry:
+      - id
+      - rule_id
+      - table_name
+      - sql
+      - summary
+      - created_at
+      - updated_at
+
+    pattern_episodes:
+      - pattern_id
+      - pattern_name
+      - kind
+      - data_source
+      - episode_id
+      - episode_name
+      - episode_url
+      - created_at
+
+    pattern_guests:
+      - pattern_id
+      - pattern_name
+      - kind
+      - data_source
+      - guest_id
+      - guest_name
+      - job_description
+      - created_at
+
+    pattern_orgs:
+      - pattern_id
+      - pattern_name
+      - kind
+      - data_source
+      - org_id
+      - org_name
+      - stage
+      - linkedin_company_url
+      - created_at
+
+    pattern_posts:
+      - pattern_id
+      - pattern_name
+      - kind
+      - data_source
+      - post_id
+      - post_name
+      - substack_url
+      - created_at
+
+
+RULES:
+RULES:
+  - rule_code: PATTERN_IN_EPISODE
+    name: "Patterns in Episodes"
+    description: "Show patterns that appear in podcast episodes with their type and episode links."
+    logic: |
+      show me the patterns in the podcast episodes with the kind of pattern it is and where I can see the episode
+
+  - rule_code: PATTERNS_BY_GUEST
+    name: "Patterns by Guest"
+    description: "List all patterns associated with each guest and where those patterns appear."
+    logic: |
+      show me the patterns connected to guests, including the guest name, job description, 
+      the pattern kind, and the relevant episodes or posts if available
+
+  - rule_code: PATTERNS_BY_ORGANIZATION
+    name: "Patterns by Organization"
+    description: "List patterns associated with organizations and their funding stages."
+    logic: |
+      show me the patterns connected to organizations, including the organization name, 
+      funding stage, and the type of pattern
+
+  - rule_code: TOP_PATTERNS_BY_FREQUENCY
+    name: "Top 10 Patterns by Frequency"
+    description: "Rank patterns by how many times they appear across guests, episodes, posts, or orgs."
+    logic: |
+      show me the top 10 patterns by how frequently they appear in episodes, guests, posts, 
+      or organizations
+
+  - rule_code: EPISODES_WITH_MOST_PATTERNS
+    name: "Episodes with the Most Patterns"
+    description: "Rank episodes by the number of patterns linked to them."
+    logic: |
+      show me the episodes with the most patterns, including the pattern count, 
+      the episode title, and the episode URL
+
+  - rule_code: GUESTS_DISCUSSING_SAME_PATTERN
+    name: "Guests Discussing the Same Pattern"
+    description: "Find groups of guests who discuss the same pattern."
+    logic: |
+      show me guests who discuss the same pattern, including the pattern name 
+      and the list of guests associated with that pattern
+
+  - rule_code: PATTERNS_BY_ORG_FUNDING_STAGE
+    name: "Patterns Related to Funding Stage"
+    description: "Explore relationships between pattern types and the funding stage of organizations."
+    logic: |
+      show me the relationship between patterns and the funding stage of organizations, 
+      grouped by stage and showing the count of patterns per stage
+
+  - rule_code: TIME_TO_FUNDING
+    name: "Time to Funding After Founding"
+    description: "Compute time from founding date to funding date for organizations."
+    logic: |
+      compute the number of years between date_founded and date_funded for each organization, 
+      and show the organization name, stage, and the calculated years

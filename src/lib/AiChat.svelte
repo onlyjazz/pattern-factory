@@ -4,7 +4,6 @@
   // ============================================================================
   import { onMount, tick } from 'svelte';
   import { get } from 'svelte/store';
-  import { connectWebSocket, sendChatMessage, sendWorkflow } from '$lib/api';
   import { dslCode } from '$lib/stores/dslStore';
   import DataTable from '$lib/DataTable.svelte';
   import { tableRegistry } from '$lib/stores/tableRegistry';
@@ -186,20 +185,6 @@
     }
 
     appendMessage('user', prompt);
-    
-    try {
-      // Send everything as natural language - let the backend LLM handle intent
-      console.log('[sendMessage] Sending natural language to backend:', prompt);
-      const message_id = `msg_${Date.now()}`;
-      await sendChatMessage(
-        `NATURAL_LANGUAGE:${prompt}\nDSL:${currentDsl}`, 
-        'Process natural language input',
-        message_id
-      );
-    } catch (error) {
-      console.error('[sendMessage] Error sending message:', error);
-      appendMessage('assistant', 'Error connecting to the backend. Please ensure the server is running.');
-    }
 
     userMessage = '';
     scrollToBottomSoon();
@@ -316,7 +301,7 @@
   <aside class="sessions">
     <div class="sessions__header">
       <div class="heading heading_5">Chats</div>
-      <button class="btn" on:click={() => switchSession(createSession('New Chat').id)}>+ New</button>
+      <button class="btn" onclick={() => switchSession(createSession('New Chat').id)}>+ New</button>
     </div>
 
     {#each $sessions as s}
@@ -325,17 +310,17 @@
           <input
             class="session__rename"
             bind:value={renameText}
-            on:keydown={(e)=> e.key==='Enter' && commitRename(s.id)}
-            on:blur={() => commitRename(s.id)}
+            onkeydown={(e)=> e.key==='Enter' && commitRename(s.id)}
+            onblur={() => commitRename(s.id)}
             autofocus
           />
         {:else}
-          <button class="session__title" on:click={() => switchSession(s.id)} title={new Date(s.updatedAt).toLocaleString()}>
+          <button class="session__title" onclick={() => switchSession(s.id)} title={new Date(s.updatedAt).toLocaleString()}>
             {s.title}
           </button>
           <div class="session__actions">
-            <button title="Rename" on:click={() => startRename(s.id, s.title)}>✏️</button>
-            <button title="Delete" on:click={() => deleteSession(s.id)}>🗑️</button>
+            <button title="Rename" onclick={() => startRename(s.id, s.title)}>✏️</button>
+            <button title="Delete" onclick={() => deleteSession(s.id)}>🗑️</button>
           </div>
         {/if}
       </div>
@@ -374,8 +359,8 @@
           bind:value={userMessage}
           rows="1"
           style="max-height: 200px; overflow-y: auto;"
-          on:input={handleTextareaResize}
-          on:keydown={handleKeyDown}
+          oninput={handleTextareaResize}
+          onkeydown={handleKeyDown}
           placeholder=""
         ></textarea>
         <label class="input__label">Ask something</label>

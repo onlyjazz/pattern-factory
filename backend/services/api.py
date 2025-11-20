@@ -1,67 +1,52 @@
 """
-services/api.py — Stable Postgres Version (Nov 2025)
----------------------------------------------------
-Centralized Postgres connection management.
-Pitboss and all agents call back into this module to get pooled access.
+services/api.py
+Clean and production-ready Pattern Factory API (Postgres + Pitboss).
 """
 
-# ──────────────────────────────────────────────
-# Logging setup
-# ──────────────────────────────────────────────
-import logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("services.api")
-logger.info("📦 API module initializing (Postgres mode)")
-
-# ──────────────────────────────────────────────
-# Core imports
-# ──────────────────────────────────────────────
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional, Dict, Any
-from pydantic import BaseModel
 import os
 import json
-import asyncio
-import asyncpg
+import logging
 from datetime import datetime
+
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from typing import Optional
+
+import asyncpg
 from dotenv import load_dotenv
-import httpx
 from openai import OpenAI
 
-# ──────────────────────────────────────────────
-# Load environment
-# ──────────────────────────────────────────────
+# -------------------------------------------------------------------------
+# Logging
+# -------------------------------------------------------------------------
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("pattern-factory.api")
+logger.info("📦 Loading Pattern Factory API (clean version)")
+
+# -------------------------------------------------------------------------
+# Environment
+# -------------------------------------------------------------------------
 load_dotenv()
 
-# Postgres
-PGHOST = os.getenv("PGHOST", "127.0.0.1")
-PGPORT = os.getenv("PGPORT", "5432")
-PGUSER = os.getenv("PGUSER", "pattern_factory")
-PGDATABASE = os.getenv("PGDATABASE", "pattern_factory")
-PGPASSWORD = os.getenv("PGPASSWORD", "314159")
+PGHOST      = os.getenv("PGHOST", "127.0.0.1")
+PGPORT      = os.getenv("PGPORT", "5432")
+PGUSER      = os.getenv("PGUSER", "pattern_factory")
+PGDATABASE  = os.getenv("PGDATABASE", "pattern_factory")
+PGPASSWORD  = os.getenv("PGPASSWORD", "314159")
 
 POSTGRES_DSN = f"postgresql://{PGUSER}:{PGPASSWORD}@{PGHOST}:{PGPORT}/{PGDATABASE}"
-PG_POOL: Optional[asyncpg.Pool] = None
 
-# OpenAI
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-OPENAPI_KEY_BILLING = os.getenv("OPENAPI_KEY_BILLING")
 
-# API config
-API_HOST = os.getenv("API_HOST", "0.0.0.0")
-API_PORT = int(os.getenv("API_PORT", 8000))
-
-# ──────────────────────────────────────────────
-# FastAPI app initialization
-# ──────────────────────────────────────────────
+# -------------------------------------------------------------------------
+# FastAPI Init
+# -------------------------------------------------------------------------
 app = FastAPI(
     title="Pattern Factory API",
-    description="Central API with Postgres pool and Pitboss supervisor",
-    version="2.0.0",
+    description="Backend API (Postgres + Pitboss)",
+    version="2.1.0"
 )
 
-# CORS for local dev
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
@@ -70,122 +55,247 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ──────────────────────────────────────────────
-# Global accessors
-# ──────────────────────────────────────────────
-def get_pg_pool() -> Optional[asyncpg.Pool]:
-    """Accessor for other modules to retrieve the running Postgres pool."""
+PG_POOL: Optional[asyncpg.Pool] = None
+
+# -------------------------------------------------------------------------
+# Import the real Pitboss
+# -------------------------------------------------------------------------
+from pitboss.supervisor import Pitboss
+logger.info("🧠 Imported Pitboss Supervisor successfully")
+
+# -------------------------------------------------------------------------
+# Helpers
+# -------------------------------------------------------------------------
+def get_pg_pool() -> asyncpg.Pool:
+    if PG_POOL is None:
+        raise RuntimeError("Postgres pool not initialized")
     return PG_POOL
 
-# ──────────────────────────────────────────────
-# Postgres startup & shutdown
-# ──────────────────────────────────────────────
+# -------------------------------------------------------------------------
+# Startup: connect to Postgres
+# -------------------------------------------------------------------------
 @app.on_event("startup")
-async def init_postgres():
+async def startup_postgres():
     global PG_POOL
-    try:
-        logger.info(f"🐘 Connecting to Postgres: {POSTGRES_DSN}")
-        PG_POOL = await asyncpg.create_pool(dsn=POSTGRES_DSN, min_size=1, max_size=5)
-        async with PG_POOL.acquire() as conn:
-            await conn.execute("""
-            CREATE TABLE IF NOT EXISTS system_log (
-                id SERIAL PRIMARY KEY,
-                event TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-            """)
-        logger.info("✅ Connected to Postgres successfully")
-    except Exception as e:
-        logger.error(f"❌ Failed to connect to Postgres: {e}")
-        raise
+    logger.info(f"🐘 Connecting to Postgres: {POSTGRES_DSN}")
 
+    PG_POOL = await asyncpg.create_pool(
+        dsn=POSTGRES_DSN,
+        min_size=1,
+        max_size=5
+    )
+
+    # Ensure system_log exists
+    async with PG_POOL.acquire() as conn:
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS system_log (
+            id SERIAL PRIMARY KEY,
+            event TEXT,
+            context JSONB DEFAULT '{}'::jsonb,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
+    logger.info("✅ Postgres connected and system_log ready")
+
+# -------------------------------------------------------------------------
+# Shutdown: clean close
+# -------------------------------------------------------------------------
 @app.on_event("shutdown")
 async def shutdown_postgres():
-    global PG_POOL
     if PG_POOL:
         await PG_POOL.close()
-        logger.info("🧹 Closed Postgres connection pool.")
+        logger.info("🧹 Closed Postgres pool")
 
-# ──────────────────────────────────────────────
-# OpenAI Diagnostics
-# ──────────────────────────────────────────────
+# -------------------------------------------------------------------------
+# Optional OpenAI diagnostics
+# -------------------------------------------------------------------------
 @app.on_event("startup")
-async def openai_diagnostics():
-    """Optional diagnostic check for OpenAI connectivity."""
+async def startup_openai():
+    if not OPENAI_API_KEY:
+        logger.warning("⚠️ No OPENAI_API_KEY set — skipping diagnostics")
+        return
+
     try:
         client = OpenAI(api_key=OPENAI_API_KEY)
         models = [m.id for m in client.models.list().data[:3]]
-        logger.info(f"🧠 OpenAI models available: {', '.join(models)}")
+        logger.info(f"🧠 OpenAI models: {', '.join(models)}")
     except Exception as e:
         logger.warning(f"⚠️ OpenAI diagnostics failed: {e}")
 
-# ──────────────────────────────────────────────
-# Import Pitboss after pool creation
-# ──────────────────────────────────────────────
-try:
-    from services.pitboss_research import Pitboss
-    logger.info("✅ Imported Pitboss (research version)")
-except Exception as e:
-    logger.error(f"❌ Could not import Pitboss: {e}")
-
-# ──────────────────────────────────────────────
-# Root endpoint
-# ──────────────────────────────────────────────
-@app.get("/", tags=["Root"])
+# -------------------------------------------------------------------------
+# Root Endpoint
+# -------------------------------------------------------------------------
+@app.get("/")
 async def root():
-    return {"message": "Pattern Factory API (Postgres mode) operational"}
+    return {
+        "status": "ok",
+        "message": "Pattern Factory API operational",
+        "postgres": POSTGRES_DSN,
+        "timestamp": datetime.now().isoformat()
+    }
 
-# ──────────────────────────────────────────────
-# WebSocket endpoint
-# ──────────────────────────────────────────────
+# -------------------------------------------------------------------------
+# GET /patterns
+# -------------------------------------------------------------------------
+@app.get("/patterns")
+async def get_patterns():
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT id, name, description, kind, created_at, updated_at
+            FROM patterns
+            ORDER BY created_at DESC
+        """)
+
+    return [dict(r) for r in rows]
+
+# Create a new pattern
+from pydantic import BaseModel
+
+class PatternCreate(BaseModel):
+    name: str
+    description: str
+    kind: str
+
+@app.post("/patterns", tags=["Patterns"])
+async def create_pattern(pattern: PatternCreate):
+    async with PG_POOL.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            INSERT INTO patterns (name, description, kind)
+            VALUES ($1, $2, $3)
+            RETURNING id, name, description, kind, created_at, updated_at
+            """,
+            pattern.name,
+            pattern.description,
+            pattern.kind
+        )
+        return dict(row)
+# Upda
+class PatternUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    kind: str | None = None
+
+@app.put("/patterns/{pattern_id}", tags=["Patterns"])
+async def update_pattern(pattern_id: int, patch: PatternUpdate):
+    async with PG_POOL.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            UPDATE patterns
+            SET 
+                name = COALESCE($1, name),
+                description = COALESCE($2, description),
+                kind = COALESCE($3, kind),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $4
+            RETURNING id, name, description, kind, created_at, updated_at
+            """,
+            patch.name,
+            patch.description,
+            patch.kind,
+            pattern_id
+        )
+        if not row:
+            return {"error": f"Pattern {pattern_id} not found"}
+        return dict(row)
+# Delete pattern
+@app.delete("/patterns/{pattern_id}", tags=["Patterns"])
+async def delete_pattern(pattern_id: int):
+    async with PG_POOL.acquire() as conn:
+        result = await conn.execute(
+            "DELETE FROM patterns WHERE id = $1", pattern_id
+        )
+        # asyncpg returns: "DELETE 1" or "DELETE 0"
+        if result == "DELETE 0":
+            return {"error": f"Pattern {pattern_id} not found"}
+    return {"status": "ok", "deleted_id": pattern_id}
+
+
+# -------------------------------------------------------------------------
+# GET /query/{table}  (Universal table reader)
+# -------------------------------------------------------------------------
+@app.get("/query/{table}")
+async def query_table(table: str, limit: int = 200):
+    """
+    Generic SQL reader for any table.
+    """
+    pool = get_pg_pool()
+
+    # Basic sanitization to block SQL injection
+    if not table.replace("_", "").isalnum():
+        raise HTTPException(status_code=400, detail="Invalid table name")
+
+    async with pool.acquire() as conn:
+        try:
+            rows = await conn.fetch(f'SELECT * FROM "{table}" LIMIT {limit}')
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    return [dict(r) for r in rows]
+
+# -------------------------------------------------------------------------
+# WebSocket → Pitboss
+# -------------------------------------------------------------------------
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     logger.info("🔌 WebSocket connected")
 
-    if PG_POOL is None:
-        await websocket.send_json({"type": "error", "message": "Database not connected"})
-        await websocket.close()
-        return
-
-    # Pass the API service (this module) to Pitboss
-    pitboss = Pitboss(api_services=app, websocket=websocket)
-    logger.info("🧠 Pitboss instantiated via API service accessor")
+    # Create Pitboss instance
+    pitboss = Pitboss(db_connection=get_pg_pool(), websocket=websocket)
+    logger.info("🧠 Pitboss instance created for WebSocket")
 
     try:
         while True:
             data = await websocket.receive_text()
             msg = json.loads(data)
 
-            # Basic echo or route to pitboss
-            if msg.get("type") == "run_workflow":
-                await pitboss.run_pattern_workflow(msg.get("params", {}))
+            # Basic routing for now
+            if msg.get("type") == "run_rule":
+                await pitboss.process_rule_request(
+                    rule_code=msg.get("rule_code"),
+                    system_prompt=None,
+                    protocol_id=None,   # patterns do not use protocol
+                    rule_id=msg.get("rule_id")
+                )
+            elif msg.get("type") == "run_workflow":
+                await pitboss.run_workflow(msg.get("dsl"))
             else:
                 await websocket.send_json({"type": "echo", "message": msg})
+
     except WebSocketDisconnect:
         logger.info("🔌 WebSocket disconnected")
     finally:
-        await websocket.close()
+        try:
+            await websocket.close()
+        except:
+            pass
 
-# ──────────────────────────────────────────────
-# Utility: simple system-log write
-# ──────────────────────────────────────────────
-@app.post("/log", tags=["System"])
-async def write_log(event: str):
-    if PG_POOL is None:
-        raise HTTPException(status_code=500, detail="Database not connected")
-    async with PG_POOL.acquire() as conn:
-        await conn.execute("INSERT INTO system_log (event) VALUES ($1)", event)
-    return {"status": "ok", "event": event, "timestamp": datetime.now().isoformat()}
+# -------------------------------------------------------------------------
+# POST /log
+# -------------------------------------------------------------------------
+@app.post("/log")
+async def write_log(event: str, context: dict = {}):
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        await conn.execute(
+            "INSERT INTO system_log (event, context) VALUES ($1, $2)",
+            event, json.dumps(context)
+        )
+    return {"status": "ok", "event": event}
 
-# ──────────────────────────────────────────────
-# Final readiness banner
-# ──────────────────────────────────────────────
+# -------------------------------------------------------------------------
+# Final banner
+# -------------------------------------------------------------------------
 logger.info(f"""
 ==========================================
-✅ Pattern Factory API Ready
+🔥 Pattern Factory API Ready
 🐘 Database: {POSTGRES_DSN}
-🔑 OpenAI prefix: {OPENAI_API_KEY[:12] if OPENAI_API_KEY else 'MISSING'}
-⚙️ Host: {API_HOST}:{API_PORT}
+🔑 OpenAI key prefix: {OPENAI_API_KEY[:8] if OPENAI_API_KEY else 'MISSING'}
+📡 WebSocket: /ws
+🔍 Query: /query/{{table}}
+📚 Patterns: /patterns
 ==========================================
 """)

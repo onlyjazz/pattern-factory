@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { selectedStudy } from '$lib/selectedStudy';
+  import { selectedPattern } from '$lib/selectedPattern';
   import { selectedTable } from '$lib/stores/selectedTable';
   import DataTable from '$lib/DataTable.svelte';
   import { tableRegistry } from '$lib/stores/tableRegistry';
@@ -21,7 +21,7 @@
   });
   
   async function loadTableData(table: any) {
-    const study = $selectedStudy;
+    const study = $selectedPattern;
     if (!study?.name || !table) return;
     
     loading = true;
@@ -126,7 +126,7 @@
                     className: 'btn-export-csv',
                     title: 'Export to CSV',
                     filename: function() {
-                      const study = $selectedStudy?.name || 'study';
+                      const study = $selectedPattern?.name || 'study';
                       const table = $selectedTable?.rule_id || 'data';
                       const date = new Date().toISOString().split('T')[0];
                       return `${study}_${table}_${date}`;
@@ -148,7 +148,7 @@
     <span class="material-icons">table_chart</span>
     <h2>No Table Selected</h2>
     <p>Select a result table from the sidebar to view its data.</p>
-    {#if !$selectedStudy}
+    {#if !$selectedPattern}
       <p class="hint">First, select a study from the Studies page.</p>
       <a href="/studies" class="button button_green">Go to Studies</a>
     {/if}

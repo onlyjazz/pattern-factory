@@ -26,6 +26,7 @@ CREATE TABLE orgs (
     description TEXT,
     stage TEXT,                   -- e.g., Seed, Series A, etc.
     funding NUMERIC,
+    date_funded TIMESTAMP,
     date_founded TIMESTAMP,
     linkedin_company_url TEXT,
     keywords TEXT[],

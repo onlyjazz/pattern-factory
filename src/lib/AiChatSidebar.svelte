@@ -3,15 +3,12 @@
   import AiChat from './AiChat.svelte';
   import { onMount, onDestroy } from 'svelte';
   import { getDslCode } from '$lib/globalDsl';
-  import CodeBox from './CodeBox.svelte';
 
-  let isOpen = false;
+  let isOpen = true;
   let loadedCode = ``;
-  let codeBoxHeight = '800px';
-  let activeTab: 'code' | 'chat' = 'code';
+  let activeTab = 'chat';
 
   function toggleSidebar() {
-    isOpen = !isOpen;
     loadedCode = getDslCode();
   }
 
@@ -51,13 +48,7 @@
     </div>
 
     <div class="chat-wrapper">
-      {#if activeTab === 'code'}
-        <div style="padding: 1rem;">
-          <CodeBox height={codeBoxHeight} />
-        </div>
-      {:else if activeTab === 'chat'}
         <AiChat dslCode={loadedCode} />
-      {/if}
     </div>
   </div>
 </div>

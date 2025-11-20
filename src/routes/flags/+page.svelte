@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { selectedStudy } from '$lib/selectedStudy';
+    import { selectedPattern } from '$lib/selectedPattern';
     import AiChat from '$lib/AiChat.svelte';
 </script>
 

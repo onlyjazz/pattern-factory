@@ -246,3 +246,13 @@ INSERT INTO pattern_post_link (pattern_id, post_id) VALUES
     (3, 5),  -- Counter-Positioning
     (7, 5),  -- Process Power
     (1, 5);  -- Scale Economies
+
+
+
+INSERT INTO orgs (name, description, stage, funding, date_funded, date_founded)
+VALUES
+('Iktos', 'AI for new drug discovery and design', 'Series A', 21000000.00, '2025-02-20', '2016-01-01'),
+('Caris Life Sciences', 'AI TechBio company specializing in molecular profiling for oncology', 'Public (previously Series D)', 1230000000.00, '2025-06-18', '2008-01-01'),
+('Carta Healthcare', 'AI-powered clinical data abstraction and analytics solutions', 'Series B', 80500000.00, '2025-05-08', '2017-01-01'),
+('Emtelligent', 'NLP engine and apps primarily for healthcare', 'Unfunded (Revenue Generating)', 0.00, NULL, '2016-01-01'),
+('Delve Health', 'Digital clinical trial management tool for researchers', 'Seed/Early Stage', 1250000.00, '2022-07-07', '2016-01-01');

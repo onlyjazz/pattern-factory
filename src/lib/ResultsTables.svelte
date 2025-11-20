@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { selectedStudy } from '$lib/selectedStudy';
+  import { selectedPattern } from '$lib/selectedPattern';
   import DataTable from '$lib/DataTable.svelte';
   import { tableRegistry } from '$lib/stores/tableRegistry';
   
@@ -21,7 +21,7 @@
   let refreshInterval: NodeJS.Timeout;
   
   // Subscribe to study changes
-  const unsubscribe = selectedStudy.subscribe(study => {
+  const unsubscribe = selectedPattern.subscribe(study => {
     if (study?.name) {
       fetchTables();
     }
@@ -41,14 +41,14 @@
   });
   
   async function fetchTables() {
-    const study = $selectedStudy;
+    const study = $selectedPattern;
     if (!study?.name) return;
     
     loading = true;
     error = '';
     
     try {
-      const response = await fetch(`http://localhost:8000/api/results/${study.name}`);
+      const response = await fetch(`http://localhost:8000/views`);
       if (!response.ok) {
         throw new Error(`Failed to fetch tables: ${response.statusText}`);
       }
@@ -68,7 +68,7 @@
   }
   
   async function openTable(table: ResultTable) {
-    const study = $selectedStudy;
+    const study = $selectedPattern;
     if (!study?.name) return;
     
     selectedTable = table;
@@ -143,7 +143,7 @@
       </svg>
       Result Tables
     </h3>
-    <button class="refresh-btn" on:click={fetchTables} disabled={loading} title="Refresh">
+    <button class="refresh-btn" onclick={fetchTables} disabled={loading} title="Refresh">
       <svg class="refresh-icon" class:spinning={loading} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <polyline points="23 4 23 10 17 10"></polyline>
         <polyline points="1 20 1 14 7 14"></polyline>
@@ -181,7 +181,7 @@
       {#each tables as table}
         <button 
           class="table-item {getSeverityClass(table.rule_id)}"
-          on:click={() => openTable(table)}
+          onclick={() => openTable(table)}
           title="Click to view table data"
         >
           <div class="table-header">
@@ -202,11 +202,11 @@
 
 <!-- Modal for displaying table data -->
 {#if showModal}
-  <div class="modal-overlay" on:click={closeModal}>
+  <div class="modal-overlay" onclick={closeModal}>
     <div class="modal-content" on:click|stopPropagation>
       <div class="modal-header">
         <h2>{selectedTable ? getRuleDisplay(selectedTable.rule_id) : 'Table Data'}</h2>
-        <button class="close-btn" on:click={closeModal}>
+        <button class="close-btn" onclick={closeModal}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>

@@ -19,8 +19,6 @@ certifi==2025.6.15
 click==8.2.1
     # via uvicorn
 distro==1.9.0
-    # via openai
-postgresql
     # via -r requirements.in
 fastapi==0.115.12
     # via -r requirements.in
@@ -95,3 +93,4 @@ watchfiles==1.1.0
 websockets==15.0.1
     # via uvicorn
 psycopg==3.2.12 
+asyncpg
