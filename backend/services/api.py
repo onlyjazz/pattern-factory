@@ -11,7 +11,6 @@ from datetime import datetime
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
-
 import asyncpg
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -39,7 +38,7 @@ POSTGRES_DSN = f"postgresql://{PGUSER}:{PGPASSWORD}@{PGHOST}:{PGPORT}/{PGDATABAS
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # -------------------------------------------------------------------------
-# FastAPI Init
+# FastAPI Init with CORS
 # -------------------------------------------------------------------------
 app = FastAPI(
     title="Pattern Factory API",
@@ -47,9 +46,10 @@ app = FastAPI(
     version="2.1.0"
 )
 
+# Add CORS middleware FIRST before any routes
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["*"],  # Allow all origins in development
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -160,7 +160,8 @@ class PatternCreate(BaseModel):
 
 @app.post("/patterns", tags=["Patterns"])
 async def create_pattern(pattern: PatternCreate):
-    async with PG_POOL.acquire() as conn:
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
         row = await conn.fetchrow(
             """
             INSERT INTO patterns (name, description, kind)
@@ -180,7 +181,8 @@ class PatternUpdate(BaseModel):
 
 @app.put("/patterns/{pattern_id}", tags=["Patterns"])
 async def update_pattern(pattern_id: int, patch: PatternUpdate):
-    async with PG_POOL.acquire() as conn:
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
         row = await conn.fetchrow(
             """
             UPDATE patterns
@@ -203,7 +205,8 @@ async def update_pattern(pattern_id: int, patch: PatternUpdate):
 # Delete pattern
 @app.delete("/patterns/{pattern_id}", tags=["Patterns"])
 async def delete_pattern(pattern_id: int):
-    async with PG_POOL.acquire() as conn:
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
         result = await conn.execute(
             "DELETE FROM patterns WHERE id = $1", pattern_id
         )

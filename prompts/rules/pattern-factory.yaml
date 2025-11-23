@@ -185,8 +185,6 @@ DATA:
       - substack_url
       - created_at
 
-
-RULES:
 RULES:
   - rule_code: PATTERN_IN_EPISODE
     name: "Patterns in Episodes"

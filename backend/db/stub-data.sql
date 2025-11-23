@@ -256,3 +256,5 @@ VALUES
 ('Carta Healthcare', 'AI-powered clinical data abstraction and analytics solutions', 'Series B', 80500000.00, '2025-05-08', '2017-01-01'),
 ('Emtelligent', 'NLP engine and apps primarily for healthcare', 'Unfunded (Revenue Generating)', 0.00, NULL, '2016-01-01'),
 ('Delve Health', 'Digital clinical trial management tool for researchers', 'Seed/Early Stage', 1250000.00, '2022-07-07', '2016-01-01');
+--
+--

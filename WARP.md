@@ -1,0 +1,219 @@
+# WARP.md
+
+This file provides guidance to WARP (warp.dev) when working with code in this repository.
+
+## Project Overview
+
+Pattern Factory is a full-stack application combining:
+- **Frontend**: Svelte 5 + SvelteKit (TypeScript)
+- **Backend**: Python FastAPI with async Postgres (asyncpg)
+- **Database**: PostgreSQL 17
+- **AI System**: Pitboss supervisor with LLM integration (OpenAI GPT-4o)
+
+The application extracts patterns and antipatterns from podcast transcripts and Substack content using an AI-driven agent system, storing them with linked relationships across episodes, guests, organizations, and posts.
+
+## Architecture Overview
+
+### Backend Structure
+
+**FastAPI API** (`backend/services/api.py`):
+- RESTful endpoints for CRUD operations on patterns, episodes, guests, orgs, posts
+- WebSocket endpoint at `/ws` for real-time agent communication
+- Async Postgres connection pooling (asyncpg)
+- Generic table query endpoint `/query/{table}`
+- System logging via `system_log` table
+
+**Pitboss Supervisor** (`backend/pitboss/`):
+- Orchestrates natural-language rule execution pipeline
+- `supervisor.py`: Main orchestrator that chains tool execution
+- `context_builder.py`: Builds LLM context from pattern-factory.yaml (SYSTEM + DATA sections)
+- `tools.py`: Registry of async tools (sql_pitboss, data_table, register_rule, register_view)
+- `config.py`: Configuration management for model settings, timeouts, and execution parameters
+
+**Tool Pipeline**:
+1. **sql_pitboss**: Converts natural-language rules to SQL via GPT-4o
+2. **data_table**: Creates materialized views (CREATE TABLE AS SELECT)
+3. **register_rule**: Writes rule metadata to `rules` table
+4. **register_view**: Records view info in `views_registry` table
+
+### Frontend Structure
+
+**Pages** (`src/routes/`):
+- `/+page.svelte`: Home/dashboard
+- `/patterns/+page.svelte`: Pattern CRUD operations
+- `/results/+page.svelte`: Display materialized views as DataTables
+- Settings and help pages
+
+**Components** (`src/lib/`):
+- `Header.svelte`: Navigation and branding
+- `Sidebar.svelte`: Left navigation for pattern views
+- `DataTable.svelte`: Reusable table component using datatables.net
+- `ResultsTables.svelte`: Multi-table results display
+- `db.ts`: Database/API client utilities
+
+### Data Model
+
+**Core Tables**:
+- `patterns`: pattern definitions (id, name, description, kind, metadata, etc.)
+- `episodes`, `guests`, `orgs`, `posts`: content sources
+- `pattern_*_link`: Junction tables for many-to-many relationships
+- `rules`: DSL rule definitions and generated SQL
+- `views_registry`: Materialized view metadata
+- `system_log`: Event logging for auditing
+
+**Derived Views** (created from rules):
+- `pattern_episodes`, `pattern_guests`, `pattern_orgs`, `pattern_posts`: Pre-joined views
+
+## Development Commands
+
+### Frontend Development
+
+```bash
+# Install dependencies
+npm install
+
+# Run dev server (http://localhost:5173)
+npm run dev
+
+# Type checking (Svelte + TypeScript)
+npm run check
+
+# Watch type checking
+npm run check:watch
+
+# Build for production
+npm run build
+
+# Preview production build locally
+npm run preview
+```
+
+### Backend Development
+
+```bash
+# Install Python dependencies
+cd backend
+pip install -r requirements.txt  # Create if missing; should include: fastapi uvicorn asyncpg openai python-dotenv pyyaml
+
+# Run FastAPI dev server (http://localhost:8000)
+# From backend directory:
+uvicorn services.api:app --reload --host 0.0.0.0 --port 8000
+
+# Run Pitboss supervisor in isolation (for testing)
+python -m pitboss.supervisor
+```
+
+### Database Setup
+
+```bash
+# PostgreSQL (assuming local installation with defaults from .env)
+psql -h 127.0.0.1 -U pattern_factory -d pattern-factory
+
+# Create database and schema (one-time setup)
+# Use database migration scripts from backend/db/ directory
+
+# Connect and verify
+psql postgresql://pattern_factory:314159@localhost:5432/pattern-factory -c "\dt"
+```
+
+### Testing
+
+```bash
+# Frontend tests (if configured)
+npm run test  # Currently minimal test setup
+
+# Backend tests (create as needed)
+# Pattern: python -m pytest backend/tests/ -v
+```
+
+## Key Configuration
+
+### Environment Variables (.env)
+
+**Database**:
+- `PGHOST`, `PGPORT`, `PGUSER`, `PGDATABASE`, `PGPASSWORD`: PostgreSQL connection
+- `DATABASE_URL`: Full connection string format
+
+**API**:
+- `API_HOST`, `API_PORT`: FastAPI server binding (default: 0.0.0.0:8000)
+
+**AI/LLM**:
+- `OPENAI_API_KEY`: GPT-4o API key (required for pattern extraction)
+- `PITBOSS_STRATEGY`: llm_supervised (default)
+
+**Frontend**:
+- `VITE_API_BASE`: API endpoint for frontend (default: http://localhost:8000)
+
+See `.env.example` for template.
+
+## Important Files and Patterns
+
+### Pattern Factory YAML (`prompts/rules/pattern-factory.yaml`)
+
+Defines the DSL schema:
+- `SYSTEM.prompt`: Instructions for LLM (model_rule_agent)
+- `DATA.tables`: Complete schema description (used by ContextBuilder)
+- `RULES`: Predefined rules that users can execute (examples for the LLM)
+
+Changes here affect SQL generation quality. Keep table/column descriptions accurate.
+
+### Pitboss Processing Flow
+
+1. WebSocket `/ws` receives JSON: `{"type": "run_rule", "rule_code": "...", "rule_id": "..."}`
+2. Supervisor calls ContextBuilder to assemble system + user prompts
+3. SqlPitbossTool calls OpenAI to generate SQL (async via thread pool)
+4. DataTableTool executes SQL and creates materialized table
+5. RegisterRuleTool records rule metadata
+6. RegisterViewTool registers view in views_registry
+7. Results sent back over WebSocket as JSON
+
+### API Response Patterns
+
+All tool responses follow:
+```json
+{
+  "status": "success" | "error",
+  "error": "...",  // if status=error
+  "duration": 1.23
+}
+```
+
+Plus tool-specific fields (e.g., `sql`, `table_name`, `row_count`).
+
+## Common Development Tasks
+
+### Adding a New Pattern Source
+
+1. Add table to PostgreSQL schema
+2. Update `DATA.tables` in `pattern-factory.yaml`
+3. Create new junction table if needed (e.g., `pattern_newsitem_link`)
+4. Add corresponding derived view definition
+
+### Creating a New Rule
+
+Users add rules via the web UI; for static definitions, edit `RULES` section in `pattern-factory.yaml`.
+
+### Debugging Pitboss
+
+- Enable logging: `logging.basicConfig(level=logging.DEBUG)` in supervisor.py
+- Check `system_log` table for event records
+- Verify OpenAI key and rate limits
+- Inspect WebSocket messages in browser DevTools
+
+### Database Schema Changes
+
+1. Create migration script in `backend/db/`
+2. Document schema in `pattern-factory.yaml` DATA section
+3. Restart FastAPI to reload schema
+
+## Technology Stack Details
+
+- **Svelte 5**: Latest reactive framework with runes
+- **SvelteKit**: File-based routing and SSR
+- **DataTables.net**: Advanced table UI with sorting, filtering, export
+- **Flowbite**: Pre-built UI components
+- **CodeMirror**: SQL/Python syntax highlighting (for future IDE features)
+- **asyncpg**: Async Postgres driver (faster than psycopg2)
+- **FastAPI**: Modern async Python framework with automatic OpenAPI docs
+- **OpenAI API**: GPT-4o for natural language → SQL translation
+- **WebSockets**: Real-time frontend-backend communication for agent progress

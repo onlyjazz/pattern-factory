@@ -2,7 +2,7 @@
 	import { page } from '$app/stores';
 
 	const links = [
-		{ name: "Patterns", href: "/" }
+		{ name: "Patterns", href: "/patterns" }
 	];
 </script>
 
