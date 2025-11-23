@@ -1,92 +1,15 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-    import Modal from "$lib/Modal.svelte";
-    import PatternEditor from "$lib/PatternEditor.svelte";
-    import ActionMenu from "$lib/ActionMenu.svelte";
-
-    import { patterns, type Pattern } from "$lib/stores/patterns";
-
-    // --------------------------------------------------
-    // State
-    // --------------------------------------------------
-    let showAddModal = $state(false);
-    let showEditModal = $state(false);
-
-    // Fresh pattern for Add modal
-    let newPattern = $state({
-        name: "",
-        description: "",
-        kind: ""
-    });
-    // Pattern being edited
-    let patternToEdit: Pattern | null = $state(null);
-
-    // --------------------------------------------------
-    // Load patterns from backend
-    // --------------------------------------------------
-    onMount(async () => {
-        await patterns.refresh();
-    });
-
-    // --------------------------------------------------
-    // Actions
-    // --------------------------------------------------
-    function openEdit(p: Pattern) {
-        patternToEdit = { ...p };
-        showEditModal = true;
-    }
-
-    async function handleAddPattern(data: Pattern) {
-        try {
-            await patterns.addPattern(data);
-            newPattern = { name: "", description: "", kind: "" };
-            showAddModal = false;
-        } catch (err) {
-            console.error("Failed to add pattern:", err);
-            alert("Could not save pattern.");
-        }
-    }
-
-    async function handleEditPattern(updated: Pattern) {
-        try {
-            if (!patternToEdit?.id) return;
-            await patterns.updatePattern(patternToEdit.id, updated);
-            showEditModal = false;
-        } catch (err) {
-            console.error("Failed to update pattern:", err);
-            alert("Could not update pattern.");
-        }
-    }
-
-    async function handleDelete(id: number) {
-        if (!confirm("Delete this pattern?")) return;
-        await patterns.deletePattern(id);
-    }
-
-    // --------------------------------------------------
-    // Search + Filter
-    // --------------------------------------------------
-    let searchInput = $state("");
-    let selectedKind = $state("All");
-
-    let kinds = $derived([
-        "All",
-        ...Array.from(new Set($patterns.map((p) => p.kind))).filter(Boolean)
-    ]);
-
-    let filteredPatterns = $derived(
-        $patterns.filter((p) => {
-            const matchesSearch =
-                p.name.toLowerCase().includes(searchInput.toLowerCase()) ||
-                p.description.toLowerCase().includes(searchInput.toLowerCase());
-
-            const matchesKind =
-                selectedKind === "All" ||
-                p.kind.trim().toLowerCase() === selectedKind.trim().toLowerCase();
-
-            return matchesSearch && matchesKind;
-        })
-    );
+        import type { Pattern } from "$lib/db";
+        
+        let patterns: Pattern[] = []; // Initialize patterns array
+        let searchInput = '';
+        let selectedKind = '';
+        
+        let filteredPatterns: Pattern[] = [];
+        let showAddModal = false;
+        let showEditModal = false;
+        let patternToEdit = {} as Pattern;
+        let kinds = ['pattern', 'antipattern'];
 </script>
 
 <!-- PAGE HEADER -->
@@ -152,10 +75,6 @@
                                 <td class="tal">{p.kind}</td>
 
                                 <td class="tar">
-                                    <ActionMenu
-                                        onEdit={() => openEdit(p)}
-                                        onDelete={() => handleDelete(p.id!)}
-                                    />
                                 </td>
                             </tr>
                         {/each}
@@ -166,24 +85,6 @@
     </div>
 </div>
 
-<!-- ADD PATTERN MODAL -->
-<Modal bind:showModal={showAddModal}>
-    {#snippet header()}
-        <h2>Add Pattern</h2>
-    {/snippet}
-    {#snippet children()}
-        <PatternEditor pattern={newPattern} onSave={handleAddPattern} />
-    {/snippet}
-</Modal>
-
-<!-- EDIT PATTERN MODAL -->
-<Modal bind:showModal={showEditModal}>
-    {#snippet header()}
-        <h2>Edit Pattern</h2>
-    {/snippet}
-    {#snippet children()}
-        <PatternEditor pattern={patternToEdit} onSave={handleEditPattern} />
-    {/snippet}
-</Modal>
 
 <style></style>
+
