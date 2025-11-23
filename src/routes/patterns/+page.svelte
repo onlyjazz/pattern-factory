@@ -13,6 +13,7 @@
 </script>
 
 <!-- PAGE HEADER -->
+<div id="application-content-area">
 <div class="page-title">
     <button class="button button_green" onclick={() => (showAddModal = true)}>
         Add Pattern
@@ -84,7 +85,7 @@
         </div>
     </div>
 </div>
-
+</div> <!-- end application-content-area -->
 
 <style></style>
 
