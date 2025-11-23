@@ -144,4 +144,7 @@ INSERT INTO rules (name, description, rule_code, sql) VALUES
 --
 --
 insert into views_registry (rule_id, table_name, summary) values
-(),
+(1, 'pattern_episodes', 'Patterns in Episodes'),
+(2, 'pattern_guests', 'Patterns by Guest'),
+(3, 'pattern_orgs', 'Patterns by Organization'),
+(4, 'pattern_posts', 'Patterns by Post');

@@ -1,9 +1,9 @@
 <script lang="ts">
         import { onMount } from 'svelte';
+        import { globalSearch } from '$lib/searchStore';
         import type { Pattern } from "$lib/db";
         
         let patterns: Pattern[] = [];
-        let searchInput = '';
         let selectedKind = '';
         let loading = true;
         let error: string | null = null;
@@ -32,15 +32,15 @@
         
         function filterPatterns() {
                 filteredPatterns = patterns.filter(p => {
-                        const matchesSearch = p.name.toLowerCase().includes(searchInput.toLowerCase()) ||
-                                p.description.toLowerCase().includes(searchInput.toLowerCase());
+                        const matchesSearch = p.name.toLowerCase().includes($globalSearch.toLowerCase()) ||
+                                p.description.toLowerCase().includes($globalSearch.toLowerCase());
                         const matchesKind = !selectedKind || p.kind === selectedKind;
                         return matchesSearch && matchesKind;
                 });
         }
         
         $: if (patterns) filterPatterns();
-        $: if (searchInput !== undefined) filterPatterns();
+        $: if ($globalSearch !== undefined) filterPatterns();
         $: if (selectedKind !== undefined) filterPatterns();
         
         function handleEdit(pattern: Pattern) {
@@ -115,40 +115,23 @@
 </div>
 
 <div class="grid-row">
-    <!-- LEFT FILTER PANEL -->
-    <div class="grid-col grid-col_6">
-        <div class="filters card">
-            <div class="heading heading_3">Filters</div>
-
-            <div class="input">
-                <input
-                    id="pattern-search"
-                    bind:value={searchInput}
-                    class="input__text"
-                    class:input__text_changed={searchInput.length > 0}
-                />
-                <label class="input__label" for="pattern-search">Search patterns</label>
-            </div>
-
-            <div class="input input_select">
-                <select
-                    id="pattern-kind-filter"
-                    bind:value={selectedKind}
-                    class="input__text input__text_changed"
-                >
-                    {#each kinds as k}
-                        <option>{k}</option>
-                    {/each}
-                </select>
-                <label class="input__label" for="pattern-kind-filter">Kind</label>
-            </div>
-        </div>
-    </div>
-
-    <!-- RIGHT TABLE -->
-    <div class="grid-col grid-col_18">
+    <!-- FULL WIDTH TABLE -->
+    <div class="grid-col grid-col_24">
         <div class="studies card">
-            <div class="heading heading_3">Pattern Library</div>
+            <div class="card-header">
+                <div class="heading heading_3">Pattern Library</div>
+                <div class="kind-filter">
+                    <select
+                        id="pattern-kind-filter"
+                        bind:value={selectedKind}
+                        class="kind-filter-select"
+                    >
+                        {#each kinds as k}
+                            <option value={k}>{k || 'All Kinds'}</option>
+                        {/each}
+                    </select>
+                </div>
+            </div>
 
             {#if loading}
                 <div class="message">Loading patterns...</div>
@@ -434,6 +417,38 @@
         margin-top: 20px;
         padding-top: 20px;
         border-top: 1px solid #eee;
+    }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .kind-filter {
+        flex-shrink: 0;
+    }
+
+    .kind-filter-select {
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        background-color: white;
+        font-size: 0.875rem;
+        font-family: 'Roboto', system-ui, -apple-system, sans-serif;
+        color: #495057;
+        cursor: pointer;
+    }
+
+    .kind-filter-select:hover {
+        border-color: #adb5bd;
+        background-color: #f8f9fa;
+    }
+
+    .kind-filter-select:focus {
+        outline: none;
+        border-color: #adb5bd;
     }
 </style>
 

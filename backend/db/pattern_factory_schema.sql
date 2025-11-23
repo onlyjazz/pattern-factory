@@ -197,7 +197,7 @@ FOR EACH ROW EXECUTE FUNCTION patterns_vector_update();
 CREATE INDEX IF NOT EXISTS idx_pattern_guest_link_guest  ON pattern_guest_link(guest_id);
 CREATE INDEX IF NOT EXISTS idx_pattern_org_link_org      ON pattern_org_link(org_id);
 CREATE INDEX IF NOT EXISTS idx_pattern_post_link_post    ON pattern_post_link(post_id);
-CREATE INDEX IF NOT EXISTS idx_pattern_episode_link_post ON pattern_episode_link(post_id);
+CREATE INDEX IF NOT EXISTS idx_pattern_episode_link_post ON pattern_episode_link(episode_id);
 
 -- 
 CREATE INDEX IF NOT EXISTS idx_orgs_active     ON orgs(id)     WHERE deleted_at IS NULL;
@@ -205,73 +205,6 @@ CREATE INDEX IF NOT EXISTS idx_guests_active   ON guests(id)   WHERE deleted_at 
 CREATE INDEX IF NOT EXISTS idx_episodes_active ON episodes(id) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_posts_active    ON posts(id)    WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_patterns_active ON patterns(id) WHERE deleted_at IS NULL;
-
---
--- Logical views for reporting
--- Pattern-Episode relationships
-CREATE OR REPLACE VIEW pattern_episodes AS
-SELECT
-    p.id AS pattern_id,
-    p.name AS pattern_name,
-    p.kind,
-    p.data_source,
-    e.id AS episode_id,
-    e.name AS episode_name,
-    e.episode_url,
-    p.created_at
-FROM patterns p
-JOIN pattern_episode_link pel ON p.id = pel.pattern_id
-JOIN episodes e ON pel.episode_id = e.id
-WHERE p.deleted_at IS NULL AND e.deleted_at IS NULL;
-
--- Pattern-Guest relationships
-CREATE OR REPLACE VIEW pattern_guests AS
-SELECT
-    p.id AS pattern_id,
-    p.name AS pattern_name,
-    p.kind,
-    p.data_source,
-    g.id AS guest_id,
-    g.name AS guest_name,
-    g.job_description,
-    p.created_at
-FROM patterns p
-JOIN pattern_guest_link pgl ON p.id = pgl.pattern_id
-JOIN guests g ON pgl.guest_id = g.id
-WHERE p.deleted_at IS NULL AND g.deleted_at IS NULL;
-
--- Pattern-Org relationships
-CREATE OR REPLACE VIEW pattern_orgs AS
-SELECT
-    p.id AS pattern_id,
-    p.name AS pattern_name,
-    p.kind,
-    p.data_source,
-    o.id AS org_id,
-    o.name AS org_name,
-    o.stage,
-    o.linkedin_company_url,
-    p.created_at
-FROM patterns p
-JOIN pattern_org_link pol ON p.id = pol.pattern_id
-JOIN orgs o ON pol.org_id = o.id
-WHERE p.deleted_at IS NULL AND o.deleted_at IS NULL;
-
--- Pattern-Post relationships
-CREATE OR REPLACE VIEW pattern_posts AS
-SELECT
-    p.id AS pattern_id,
-    p.name AS pattern_name,
-    p.kind,
-    p.data_source,
-    po.id AS post_id,
-    po.name AS post_name,
-    po.substack_url,
-    p.created_at
-FROM patterns p
-JOIN pattern_post_link ppl ON p.id = ppl.pattern_id
-JOIN posts po ON ppl.post_id = po.id
-WHERE p.deleted_at IS NULL AND po.deleted_at IS NULL;
 --
 -- Registry of materialized views for pattern factory queries (maps to results_registry§)
 DROP TABLE IF EXISTS views_registry CASCADE;
@@ -279,7 +212,6 @@ CREATE TABLE IF NOT EXISTS views_registry (
     id BIGSERIAL PRIMARY KEY,
     rule_id int NOT NULL references rules(id),
     table_name TEXT NOT NULL,
-    sql TEXT NOT NULL,
     summary varchar,  -- how many rows were returned by executing the sql query (replaces query_results)
     created_at TIMESTAMP DEFAULT now(),
     updated_at TIMESTAMP DEFAULT now()
