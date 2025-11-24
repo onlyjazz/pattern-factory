@@ -108,22 +108,22 @@ class SqlPitbossTool(Tool):
 # -------------------------------------------------------------------------
 class DataTableTool(Tool):
     """
-    Convert SQL → persistent physical table (CREATE TABLE AS SELECT)
+    Convert SQL → logical view (CREATE OR REPLACE VIEW)
     and return the row count.
     """
 
     async def execute(self, sql_query: str, rule_name: str, **kwargs):
         start = datetime.now()
         try:
-            table_name = self._safe_table_name(rule_name)
+            view_name = self._safe_table_name(rule_name)
             select_sql = self._strip_to_select(sql_query)
 
             async with self.db_pool.acquire() as conn:
-                # Safe replace pattern
-                await conn.execute(f"DROP TABLE IF EXISTS {table_name}")
-                await conn.execute(f"CREATE TABLE {table_name} AS {select_sql}")
+                # Drop view if exists, then create or replace
+                await conn.execute(f"DROP VIEW IF EXISTS {view_name}")
+                await conn.execute(f"CREATE VIEW {view_name} AS {select_sql}")
 
-                row = await conn.fetchrow(f"SELECT COUNT(*) AS c FROM {table_name}")
+                row = await conn.fetchrow(f"SELECT COUNT(*) AS c FROM {view_name}")
                 row_count = row["c"] if row else 0
 
             duration = (datetime.now() - start).total_seconds()
@@ -131,7 +131,7 @@ class DataTableTool(Tool):
 
             return {
                 "status": "success",
-                "table_name": table_name,
+                "table_name": view_name,
                 "row_count": row_count,
                 "duration": duration,
             }
@@ -167,19 +167,16 @@ class RegisterRuleTool(Tool):
     async def execute(self, rule_name: str, logic: str, sql_query: str, **kwargs):
         start = datetime.now()
         try:
-            now = datetime.now()
-
             async with self.db_pool.acquire() as conn:
                 await conn.execute("""
-                    INSERT INTO rules (name, description, rule_code, sql, created_at, updated_at)
-                    VALUES ($1, $2, $3, $4, $5, $5)
+                    INSERT INTO rules (name, description, rule_code, sql)
+                    VALUES ($1, $2, $3, $4)
                     ON CONFLICT (name)
                     DO UPDATE SET
                         description = EXCLUDED.description,
                         rule_code   = EXCLUDED.rule_code,
-                        sql         = EXCLUDED.sql,
-                        updated_at  = EXCLUDED.updated_at
-                """, rule_name, logic, logic, sql_query, now)
+                        sql         = EXCLUDED.sql
+                """, rule_name, logic, logic, sql_query)
 
             duration = (datetime.now() - start).total_seconds()
             self.log_execution(True, duration)
@@ -200,7 +197,7 @@ class RegisterRuleTool(Tool):
 class RegisterViewTool(Tool):
     """
     Register materialized view info into views_registry:
-    id, rule_id, table_name, sql, summary, created_at, updated_at
+    id, rule_id, table_name, summary, created_at, updated_at
     """
 
     async def execute(self, rule_name: str, table_name: str, sql_query: str, summary: int, **kwargs):
@@ -214,9 +211,9 @@ class RegisterViewTool(Tool):
                 rule_id = row["id"] if row else None
 
                 await conn.execute("""
-                    INSERT INTO views_registry (rule_id, table_name, sql, summary, created_at, updated_at)
-                    VALUES ($1, $2, $3, $4, NOW(), NOW())
-                """, rule_id, table_name, sql_query, summary)
+                    INSERT INTO views_registry (rule_id, table_name, summary)
+                    VALUES ($1, $2, $3)
+                """, rule_id, table_name, summary)
 
             duration = (datetime.now() - start).total_seconds()
             self.log_execution(True, duration)
