@@ -120,15 +120,6 @@ VALUES (
     'Founder and CEO at Delve Health'
 );
 
--- Orgs
-DELETE from orgs;
-INSERT INTO orgs (name) VALUES 
-    ('Iktos'),
-    ('Caris Life Sciences'),
-    ('Carta Healthcare'),
-    ('emtelligent'),
-    ('Delve Health');
-
 DELETE from patterns;
 INSERT INTO patterns (name, description) VALUES 
     ('Scale Economies', 'Unit costs decline as production volume increases due to fixed cost spreading and operational efficiencies. Barriers rise when competitors can''t match your volume economics.'),
@@ -194,32 +185,6 @@ INSERT INTO pattern_guest_link (pattern_id, guest_id) VALUES
     (7, 5),  -- Process Power
     (1, 5);  -- Scale Economies
 
--- Link patterns to organizations based on their business models
-DELETE from pattern_org_link;
--- Org 1: Iktos - Process Power
-INSERT INTO pattern_org_link (pattern_id, org_id) VALUES
-    (7, 1);  -- Process Power
-
--- Org 2: Caris Life Sciences - Branding, Cornered Resource, Network Economies
-INSERT INTO pattern_org_link (pattern_id, org_id) VALUES
-    (5, 2),  -- Branding
-    (6, 2),  -- Cornered Resource
-    (2, 2);  -- Network Economies
-
--- Org 3: Carta Healthcare - Switching Costs
-INSERT INTO pattern_org_link (pattern_id, org_id) VALUES
-    (4, 3);  -- Switching Costs
-
--- Org 4: emtelligent - Process Power
-INSERT INTO pattern_org_link (pattern_id, org_id) VALUES
-    (7, 4);  -- Process Power
-    
--- Org 5: Delve Health - Counter-Positioning, Process Power, Scale Economies
-INSERT INTO pattern_org_link (pattern_id, org_id) VALUES
-    (3, 5),  -- Counter-Positioning
-    (7, 5),  -- Process Power
-    (1, 5);  -- Scale Economies
-
 -- 
 -- Link patterns to posts
 
@@ -248,7 +213,6 @@ INSERT INTO pattern_post_link (pattern_id, post_id) VALUES
     (1, 5);  -- Scale Economies
 
 
-
 INSERT INTO orgs (name, description, stage, funding, date_funded, date_founded)
 VALUES
 ('Iktos', 'AI for new drug discovery and design', 'Series A', 21000000.00, '2025-02-20', '2016-01-01'),
@@ -257,4 +221,26 @@ VALUES
 ('Emtelligent', 'NLP engine and apps primarily for healthcare', 'Unfunded (Revenue Generating)', 0.00, NULL, '2016-01-01'),
 ('Delve Health', 'Digital clinical trial management tool for researchers', 'Seed/Early Stage', 1250000.00, '2022-07-07', '2016-01-01');
 --
---
+-- Org 1: Iktos - Process Power
+INSERT INTO pattern_org_link (pattern_id, org_id) VALUES
+    (7, 1);  -- Process Power
+
+-- Org 2: Caris Life Sciences - Branding, Cornered Resource, Network Economies
+INSERT INTO pattern_org_link (pattern_id, org_id) VALUES
+    (5, 2),  -- Branding
+    (6, 2),  -- Cornered Resource
+    (2, 2);  -- Network Economies
+
+-- Org 3: Carta Healthcare - Switching Costs
+INSERT INTO pattern_org_link (pattern_id, org_id) VALUES
+    (4, 3);  -- Switching Costs
+
+-- Org 4: emtelligent - Process Power
+INSERT INTO pattern_org_link (pattern_id, org_id) VALUES
+    (7, 4);  -- Process Power
+    
+-- Org 5: Delve Health - Counter-Positioning, Process Power, Scale Economies
+INSERT INTO pattern_org_link (pattern_id, org_id) VALUES
+    (3, 5),  -- Counter-Positioning
+    (7, 5),  -- Process Power
+    (1, 5);  -- Scale Economies

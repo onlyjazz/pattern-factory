@@ -112,6 +112,9 @@ class DataTableTool(Tool):
     and return the row count.
     """
 
+    def __init__(self, db_pool):
+        super().__init__("data_table", db_pool)
+
     async def execute(self, sql_query: str, rule_name: str, **kwargs):
         start = datetime.now()
         try:
@@ -164,19 +167,26 @@ class RegisterRuleTool(Tool):
     id (serial), name, description, rule_code, sql, created_at, updated_at
     """
 
-    async def execute(self, rule_name: str, logic: str, sql_query: str, **kwargs):
+    def __init__(self, db_pool):
+        super().__init__("register_rule", db_pool)
+
+    async def execute(self, rule_code_key: str, rule_name: str, logic: str, sql_query: str, **kwargs):
         start = datetime.now()
         try:
             async with self.db_pool.acquire() as conn:
+                # UPSERT on rule_code (stable identifier from YAML)
+                # If rule_code already exists, UPDATE the name, logic, and sql
+                # This ensures that running the same YAML rule_code updates existing rule data
                 await conn.execute("""
-                    INSERT INTO rules (name, description, rule_code, sql)
+                    INSERT INTO rules (name, rule_code, description, sql)
                     VALUES ($1, $2, $3, $4)
-                    ON CONFLICT (name)
+                    ON CONFLICT (rule_code)
                     DO UPDATE SET
+                        name        = EXCLUDED.name,
                         description = EXCLUDED.description,
-                        rule_code   = EXCLUDED.rule_code,
-                        sql         = EXCLUDED.sql
-                """, rule_name, logic, logic, sql_query)
+                        sql         = EXCLUDED.sql,
+                        updated_at  = CURRENT_TIMESTAMP
+                """, rule_name, rule_code_key, logic, sql_query)
 
             duration = (datetime.now() - start).total_seconds()
             self.log_execution(True, duration)
@@ -200,13 +210,16 @@ class RegisterViewTool(Tool):
     id, rule_id, table_name, summary, created_at, updated_at
     """
 
-    async def execute(self, rule_name: str, table_name: str, sql_query: str, summary: int, **kwargs):
+    def __init__(self, db_pool):
+        super().__init__("register_view", db_pool)
+
+    async def execute(self, rule_code_key: str, table_name: str, summary: str, **kwargs):
         start = datetime.now()
         try:
             async with self.db_pool.acquire() as conn:
-
+                # Look up the rule by rule_code (stable identifier)
                 row = await conn.fetchrow(
-                    "SELECT id FROM rules WHERE name=$1 LIMIT 1", rule_name
+                    "SELECT id FROM rules WHERE rule_code=$1 LIMIT 1", rule_code_key
                 )
                 rule_id = row["id"] if row else None
 

@@ -20,7 +20,14 @@
 		// Fetch views from views_registry
 		fetchViews();
 
-		return () => unsubscribe();
+		// Listen for refresh events from ChatInterface after a rule runs
+		const onRefresh = () => fetchViews();
+		window.addEventListener('views:refresh', onRefresh);
+
+		return () => {
+			unsubscribe();
+			window.removeEventListener('views:refresh', onRefresh);
+		};
 	});
 
 	async function fetchViews() {

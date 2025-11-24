@@ -1,6 +1,8 @@
 <script>
 	import { page } from '$app/stores';
 	import { globalSearch } from '$lib/searchStore';
+	
+	export let onChatClick = () => {};
 </script>
 
 <header class="page-header">
@@ -8,13 +10,23 @@
 		<div class="logo"></div>
 		<span class="heading_4">Pattern Factory</span>
 	</div>
-	<div class="header-search">
-		<input
-			type="text"
-			placeholder="Search..."
-			bind:value={$globalSearch}
-			class="header-search-input"
-			/>
+	<div class="header-controls">
+		<button
+			class="header-chat-button"
+			on:click={onChatClick}
+			title="Open chat"
+			aria-label="Open pattern agent chat"
+		>
+			<i class="material-icons">chat</i>
+		</button>
+		<div class="header-search">
+			<input
+				type="text"
+				placeholder="Search..."
+				bind:value={$globalSearch}
+				class="header-search-input"
+				/>
+		</div>
 	</div>
 </header>
 
@@ -48,11 +60,38 @@
 		flex-shrink: 0;
 	}
 
+	.header-controls {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		margin-left: auto;
+		padding-right: 1.5rem;
+	}
+
+	.header-chat-button {
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 0.5rem;
+		border-radius: 4px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: white;
+		transition: all 0.2s ease;
+	}
+
+	.header-chat-button:hover {
+		background-color: rgba(255, 255, 255, 0.1);
+	}
+
+	.header-chat-button i {
+		font-size: 24px;
+	}
+
 	.header-search {
 		display: flex;
 		align-items: center;
-		margin-left: auto;
-		padding-right: 1.5rem;
 	}
 
 	.header-search-input {

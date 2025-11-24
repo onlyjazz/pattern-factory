@@ -192,6 +192,12 @@ RULES:
     logic: |
       show me the patterns in the podcast episodes with the kind of pattern it is and where I can see the episode
 
+  - rule_code: LIST_ORGS 
+    name: "List of Organizations from the podcast"
+    description: "Show organizations with their funding stage, name, date founded, and date funded."
+    logic: |
+      show me a list with funding stage, name, date founded, and date funded
+
   - rule_code: PATTERNS_BY_GUEST
     name: "Patterns by Guest"
     description: "List all patterns associated with each guest and where those patterns appear."

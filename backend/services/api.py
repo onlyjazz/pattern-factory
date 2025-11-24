@@ -58,9 +58,9 @@ app.add_middleware(
 PG_POOL: Optional[asyncpg.Pool] = None
 
 # -------------------------------------------------------------------------
-# Import the real Pitboss
+# Import Pitboss Supervisor
 # -------------------------------------------------------------------------
-from pitboss.supervisor import Pitboss
+from pitboss.supervisor import PitbossSupervisor
 logger.info("🧠 Imported Pitboss Supervisor successfully")
 
 # -------------------------------------------------------------------------
@@ -247,7 +247,7 @@ async def websocket_endpoint(websocket: WebSocket):
     logger.info("🔌 WebSocket connected")
 
     # Create Pitboss instance
-    pitboss = Pitboss(db_connection=get_pg_pool(), websocket=websocket)
+    pitboss = PitbossSupervisor(db_connection=get_pg_pool(), websocket=websocket)
     logger.info("🧠 Pitboss instance created for WebSocket")
 
     try:
@@ -255,16 +255,12 @@ async def websocket_endpoint(websocket: WebSocket):
             data = await websocket.receive_text()
             msg = json.loads(data)
 
-            # Basic routing for now
+            # Basic routing
             if msg.get("type") == "run_rule":
                 await pitboss.process_rule_request(
                     rule_code=msg.get("rule_code"),
-                    system_prompt=None,
-                    protocol_id=None,   # patterns do not use protocol
                     rule_id=msg.get("rule_id")
                 )
-            elif msg.get("type") == "run_workflow":
-                await pitboss.run_workflow(msg.get("dsl"))
             else:
                 await websocket.send_json({"type": "echo", "message": msg})
 

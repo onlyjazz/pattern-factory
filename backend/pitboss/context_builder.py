@@ -36,9 +36,17 @@ class ContextBuilder:
         self.db = db_connection
 
         # Allow override but default to prompts/rules/pattern-factory.yaml
-        self.rules_yaml_path = rules_yaml_path or os.path.join(
-            "prompts", "rules", "pattern-factory.yaml"
-        )
+        # Resolve relative to the backend directory to support different working directories
+        if rules_yaml_path:
+            self.rules_yaml_path = rules_yaml_path
+        else:
+            # Get the backend root directory (parent of pitboss/)
+            backend_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            # Go up one more level to project root
+            project_root = os.path.dirname(backend_root)
+            self.rules_yaml_path = os.path.join(
+                project_root, "prompts", "rules", "pattern-factory.yaml"
+            )
 
         self.max_context_tokens = 32000
 
@@ -51,12 +59,30 @@ class ContextBuilder:
     def _load_yaml(self) -> Dict[str, Any]:
         """Load pattern-factory.yaml file."""
         try:
+            # Verify file exists
+            if not os.path.exists(self.rules_yaml_path):
+                logger.error(f"DSL file not found: {self.rules_yaml_path}")
+                logger.error(f"Current working directory: {os.getcwd()}")
+                logger.error(f"Absolute path resolved to: {os.path.abspath(self.rules_yaml_path)}")
+                raise FileNotFoundError(f"DSL file not found at {self.rules_yaml_path}")
+            
             with open(self.rules_yaml_path, "r") as f:
                 data = yaml.safe_load(f)
-                logger.info(f"Loaded Pattern Factory YAML: {self.rules_yaml_path}")
+                logger.info(f"✅ Loaded Pattern Factory DSL: {self.rules_yaml_path}")
+                
+                # Log what was loaded
+                system_keys = list(data.get("SYSTEM", {}).keys()) if data.get("SYSTEM") else []
+                data_tables = len(data.get("DATA", {}).get("tables", {}))
+                rules_count = len(data.get("RULES", []))
+                logger.info(f"   SYSTEM sections: {', '.join(system_keys)}")
+                logger.info(f"   DATA tables: {data_tables}")
+                logger.info(f"   Predefined RULES: {rules_count}")
+                
                 return data
         except Exception as e:
             logger.error(f"Failed to load YAML file {self.rules_yaml_path}: {e}")
+            logger.error(f"Working directory: {os.getcwd()}")
+            logger.error(f"Backend location: {os.path.dirname(os.path.dirname(os.path.abspath(__file__)))}")
             return {"SYSTEM": {}, "DATA": {}}
 
     # ---------------------------------------------------------------------
@@ -123,14 +149,19 @@ class ContextBuilder:
         """
         Format DATA section (tables + columns) into readable text.
         """
-        data_list = self.yaml_data.get("DATA", [])
-        if not data_list:
-            return "(No DATA section found in YAML)"
+        data_section = self.yaml_data.get("DATA", {})
+        tables = data_section.get("tables", {})
+        
+        if not tables:
+            return "(No DATA.tables section found in YAML)"
 
         lines = ["Available Tables:"]
-        for entry in data_list:
-            # entries look like: `- table_name (col1, col2, ...)`
-            lines.append(f"  - {entry}")
+        for table_name, columns in tables.items():
+            if isinstance(columns, list):
+                col_str = ", ".join(columns)
+            else:
+                col_str = str(columns)
+            lines.append(f"  {table_name}: {col_str}")
 
         return "\n".join(lines)
 
