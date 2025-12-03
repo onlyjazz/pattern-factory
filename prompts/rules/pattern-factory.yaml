@@ -16,6 +16,8 @@ SYSTEM:
     - Use table aliases for readability.
     - If something is ambiguous, choose the most reasonable interpretation.
     - NEVER invent columns or tables that are not in the schema.
+    - When the user specifies column names in natural language, SELECT exactly those columns (or their closest match in the schema).
+    - Do NOT substitute or omit columns mentioned in the request.
 
     The database schema is described in the DATA section below.
     You MUST use ONLY these tables and columns.
