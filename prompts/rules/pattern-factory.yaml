@@ -136,53 +136,18 @@ DATA:
       - created_at
       - updated_at
 
-    pattern_episodes:
-      - pattern_id
-      - pattern_name
-      - kind
-      - data_source
-      - episode_id
-      - episode_name
-      - episode_url
-      - created_at
-
-    pattern_guests:
-      - pattern_id
-      - pattern_name
-      - kind
-      - data_source
-      - guest_id
-      - guest_name
-      - job_description
-      - created_at
-
-    pattern_orgs:
-      - pattern_id
-      - pattern_name
-      - kind
-      - data_source
-      - org_id
-      - org_name
-      - stage
-      - linkedin_company_url
-      - created_at
-
-    pattern_posts:
-      - pattern_id
-      - pattern_name
-      - kind
-      - data_source
-      - post_id
-      - post_name
-      - substack_url
-      - created_at
-
 RULES:
-  - rule_code: PATTERN_IN_EPISODE
+  - rule_code: PIE
+    name: "Apple Pie"
+    description: "A list of patterns that appear in podcast episodes."
+    logic: |
+      show me episodes with their pattern_name, episode_name and episode_url
+
+  - rule_code: PATE
     name: "Patterns in Episodes"
     description: "Show patterns that appear in podcast episodes with their type and episode links."
     logic: |
-      show me episodes with episode_name, pattern_name 
+      show me episodes with  pattern_name, episode_name and episode_url
 
   - rule_code: LIST_ORGS 
     name: "Organizations who were on the podcast"
