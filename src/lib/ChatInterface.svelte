@@ -8,6 +8,13 @@
 		role: 'user' | 'agent';
 		content: string;
 		timestamp: Date;
+		envelopeData?: {
+			decision?: string;
+			confidence?: number;
+			reason?: string;
+			nextAgent?: string | null;
+			returnCode?: number;
+		};
 	}
 
 	let messages: Message[] = [];
@@ -17,12 +24,15 @@
 	let websocket: WebSocket | null = null;
 	let connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error' = 'disconnected';
 	let connectionError: string = '';
+	let sessionId: string = '';
+	let requestCounter = 0;
 
 	export let onClose = () => {};
 
 	const WS_URL = 'ws://localhost:8000/ws';
 
 	onMount(() => {
+		sessionId = `session-${Math.random().toString(36).slice(2, 9)}`;
 		connectWebSocket();
 		// Auto-scroll to bottom when component mounts
 		scrollToBottom();
@@ -78,7 +88,38 @@
 	function handleWebSocketMessage(data: any) {
 		isLoading = false;
 		
-		if (data.type === 'rule_result') {
+		// New Message Protocol (v1.1)
+		if (data.type === 'response' || data.type === 'error') {
+			const decision = data.decision ? `[${String(data.decision).toUpperCase()}]` : '';
+			const confidence = typeof data.confidence === 'number' ? ` (${Math.round(data.confidence * 100)}%)` : '';
+			const reason = data.reason ? `\n${data.reason}` : '';
+			const nextAgent = data.nextAgent ? `\nNext: ${data.nextAgent}` : '';
+			
+			const content = `${decision}${confidence}${reason}${nextAgent}`;
+			
+			const agentMessage: Message = {
+				id: `msg-${++messageCounter}`,
+				role: 'agent',
+				content: content || data.reason || '...',
+				timestamp: new Date(),
+				envelopeData: {
+					decision: data.decision,
+					confidence: data.confidence,
+					reason: data.reason,
+					nextAgent: data.nextAgent,
+					returnCode: data.returnCode
+				}
+			};
+			messages = [...messages, agentMessage];
+			scrollToBottom();
+			
+			// HITL: Stop if decision is 'no'
+			if (data.decision === 'no') {
+				isLoading = false;
+			}
+		}
+		// Legacy protocol
+		else if (data.type === 'rule_result') {
 			const agentMessage: Message = {
 				id: `msg-${++messageCounter}`,
 				role: 'agent',
@@ -133,60 +174,55 @@
 		messages = [...messages, userMessage];
 		scrollToBottom();
 
-		// Check if message starts with "run "
-		const ruleMatch = message.match(/^run\s+(.+)$/i);
-		
-		if (ruleMatch) {
-			// Extract rule code after "run"
-			const ruleCode = ruleMatch[1].trim();
+		if (connectionStatus === 'connected' && websocket) {
+			isLoading = true;
 			
-			if (connectionStatus === 'connected' && websocket) {
-				isLoading = true;
+			try {
+				// Send via new Message Protocol (v1.1)
+				// Use GENERIC verb to let LanguageCapo determine if it's RULE or CONTENT
+				const requestId = `req-${++requestCounter}`;
+				const request = {
+					type: 'request',
+					version: '1.1',
+					timestamp: Date.now(),
+					session_id: sessionId,
+					request_id: requestId,
+					verb: 'GENERIC',
+					nextAgent: 'model.LanguageCapo',
+					returnCode: 0,
+					decision: null,
+					confidence: 0.0,
+					reason: '',
+					messageBody: {
+						raw_text: message
+					}
+				};
 				
-				try {
-					// Send to Pitboss via WebSocket
-					const request = {
-						type: 'run_rule',
-						rule_code: ruleCode,
-						rule_id: ruleCode  // Pass the rule code directly as the ID
-					};
-					
-					console.log('Sending to Pitboss:', request);
-					websocket.send(JSON.stringify(request));
-					// Response will come via onmessage handler
-				} catch (e) {
-					isLoading = false;
-					console.error('Failed to send message:', e);
-					const errorMessage: Message = {
-						id: `msg-${++messageCounter}`,
-						role: 'agent',
-						content: `❌ Failed to send request: ${e}`,
-						timestamp: new Date()
-					};
-					messages = [...messages, errorMessage];
-					scrollToBottom();
-				}
-			} else {
+				console.log('Sending envelope:', request);
+				websocket.send(JSON.stringify(request));
+				// Response envelopes will come via onmessage handler
+			} catch (e) {
 				isLoading = false;
-				const statusMsg = connectionStatus === 'connected' ? 'WebSocket not ready' : `Not connected (status: ${connectionStatus})`;
+				console.error('Failed to send message:', e);
 				const errorMessage: Message = {
 					id: `msg-${++messageCounter}`,
 					role: 'agent',
-					content: `❌ ${statusMsg}`,
+					content: `❌ Failed to send request: ${e}`,
 					timestamp: new Date()
 				};
 				messages = [...messages, errorMessage];
 				scrollToBottom();
 			}
 		} else {
-			// Regular message - show info
-			const infoMessage: Message = {
+			isLoading = false;
+			const statusMsg = connectionStatus === 'connected' ? 'WebSocket not ready' : `Not connected (status: ${connectionStatus})`;
+			const errorMessage: Message = {
 				id: `msg-${++messageCounter}`,
 				role: 'agent',
-				content: 'ℹ️ Start your message with "run " followed by a rule. Example: "run Find all patterns with description containing test"',
+				content: `❌ ${statusMsg}`,
 				timestamp: new Date()
 			};
-			messages = [...messages, infoMessage];
+			messages = [...messages, errorMessage];
 			scrollToBottom();
 		}
 	}

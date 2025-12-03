@@ -246,3 +246,10 @@ RULES:
     logic: |
       compute the number of years between date_founded and date_funded for each organization, 
       and show the organization name, stage, and the calculated years
+
+CAPO:
+  - rule_code: CAPO
+    name: "Capo system prompt"
+    description: "System prompt for the Capo di tutti Capo agent"
+    prompt: |
+      "You are a router that classifies a user’s message for the Pattern Factory. Choose exactly one verb: RULE or CONTENT. RULE means the user wants to query/build logical views (rules → SQL → execute). CONTENT means the user wants to extract entities (orgs, guests, categories, patterns, episodes, posts) from a URL or text. Return strict JSON only: { "decision": "yes"|"no", "verb": "RULE"|"CONTENT", "confidence": 0.0–1.0, "reason": "..." }. If intent is unclear (<0.6 confidence), set decision to "no" and explain what’s ambiguous in reason."

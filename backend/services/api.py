@@ -255,8 +255,13 @@ async def websocket_endpoint(websocket: WebSocket):
             data = await websocket.receive_text()
             msg = json.loads(data)
 
-            # Basic routing
-            if msg.get("type") == "run_rule":
+            # Routing: Message Protocol (v1.1) vs legacy "run_rule"
+            if msg.get("type") in ["request", "response", "error"]:
+                # New envelope-based protocol
+                logger.info(f"📨 Received envelope: verb={msg.get('verb')}, nextAgent={msg.get('nextAgent')}")
+                await pitboss.process_envelope(msg)
+            elif msg.get("type") == "run_rule":
+                # Legacy rule execution (still supported for backwards compatibility)
                 await pitboss.process_rule_request(
                     rule_code=msg.get("rule_code"),
                     rule_id=msg.get("rule_id")
