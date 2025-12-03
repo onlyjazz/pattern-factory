@@ -118,16 +118,21 @@ class DataTableTool(Tool):
     async def execute(self, sql_query: str, rule_name: str, rule_code: str = None, **kwargs):
         start = datetime.now()
         try:
-            # Use rule_code if provided, otherwise derive from rule_name
-            view_name = rule_code if rule_code else self._safe_table_name(rule_name)
+            # Use rule_code directly if provided (preserves case)
+            # Otherwise derive from rule_name
+            if rule_code:
+                view_name = rule_code
+            else:
+                view_name = self._safe_table_name(rule_name)
             select_sql = self._strip_to_select(sql_query)
 
             async with self.db_pool.acquire() as conn:
                 # Drop view if exists, then create or replace
-                await conn.execute(f"DROP VIEW IF EXISTS {view_name}")
-                await conn.execute(f"CREATE VIEW {view_name} AS {select_sql}")
+                # Quote view name to preserve case sensitivity
+                await conn.execute(f'DROP VIEW IF EXISTS "{view_name}" CASCADE')
+                await conn.execute(f'CREATE VIEW "{view_name}" AS {select_sql}')
 
-                row = await conn.fetchrow(f"SELECT COUNT(*) AS c FROM {view_name}")
+                row = await conn.fetchrow(f'SELECT COUNT(*) AS c FROM "{view_name}"')
                 row_count = row["c"] if row else 0
 
             duration = (datetime.now() - start).total_seconds()
