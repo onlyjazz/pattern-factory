@@ -87,13 +87,28 @@ class MessageEnvelope:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "MessageEnvelope":
         """Create envelope from dict (reverse of to_dict)."""
-        # Convert string values back to enums
+        # Convert string values back to enums with validation
         if isinstance(data.get("type"), str):
-            data["type"] = MessageType(data["type"])
+            try:
+                data["type"] = MessageType(data["type"])
+            except ValueError:
+                raise ValueError(f"Invalid message type: '{data['type']}'")
+        
         if isinstance(data.get("verb"), str):
-            data["verb"] = Verb(data["verb"])
+            verb_str = data["verb"].strip() if data["verb"] else ""
+            if not verb_str:
+                raise ValueError("Verb field is empty or missing")
+            try:
+                data["verb"] = Verb(verb_str)
+            except ValueError:
+                available_verbs = ", ".join([v.value for v in Verb])
+                raise ValueError(f"Invalid verb: '{verb_str}'. Available: {available_verbs}")
+        
         if isinstance(data.get("decision"), str):
-            data["decision"] = Decision(data["decision"])
+            try:
+                data["decision"] = Decision(data["decision"])
+            except ValueError:
+                raise ValueError(f"Invalid decision: '{data['decision']}'")
         
         # Handle optional fields
         if "decision" not in data or data["decision"] is None:

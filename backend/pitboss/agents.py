@@ -65,27 +65,26 @@ async def agent_language_capo(message_body: Dict[str, Any]) -> Tuple[str, float,
     """
     model.LanguageCapo
     Pre-workflow agent that determines if user is asking for RULE or CONTENT.
+    
+    RESPONSIBILITY: Route the message to the correct workflow (RULE or CONTENT).
+    Does NOT validate anything - that's the job of downstream agents.
+    
     Uses LLM if OPENAI_API_KEY is set, otherwise falls back to heuristics.
-
-    Additionally recognizes explicit run syntax: "run <RULE_CODE>" or a known RULE code in text.
-    When detected, classifies as RULE with high confidence.
+    Always returns decision="yes" with a RULE or CONTENT verb.
     
     Returns: (decision: yes|no, confidence: 0.0-1.0, reason: str, verb: str)
-    The verb return value determines which workflow to enter (RULE or CONTENT).
     """
-    logger.info("🤖 [model.LanguageCapo] Classifying user intent...")
+    logger.info("🤖 [model.LanguageCapo] Routing message to RULE or CONTENT workflow...")
 
     text = (message_body.get("raw_text") or "").strip()
 
-    # Fast-path: recognize explicit run <RULE_CODE>
-    try:
-        rule_code = _extract_rule_code_inline(text)
-        if rule_code:
-            reason = f"Detected explicit rule code '{rule_code}'"
-            logger.info(f"  Fast-path RULE via inline code: {rule_code}")
-            return ("yes", 0.98, reason, "RULE")
-    except Exception:
-        pass
+    # Fast-path: recognize explicit "run <SOMETHING>" syntax → route to RULE
+    # (Do NOT validate if rule exists - downstream agent verifyRequest will do that)
+    if text.upper().startswith("RUN "):
+        code = text[4:].strip()
+        reason = f"User wants to run rule: '{code}'"
+        logger.info(f"  Detected 'RUN' syntax → routing to RULE workflow")
+        return ("yes", 0.95, reason, "RULE")
 
     # Try LLM-based classification first
     api_key = os.getenv("OPENAI_API_KEY")
@@ -105,7 +104,10 @@ async def agent_language_capo(message_body: Dict[str, Any]) -> Tuple[str, float,
 
             data = json.loads(response)
             decision = data.get("decision", "no")
-            verb = data.get("verb", "RULE")
+            verb = (data.get("verb", "") or "").strip().upper()
+            # Default to RULE if empty or invalid
+            if verb not in ("RULE", "CONTENT"):
+                verb = "RULE"
             confidence = float(data.get("confidence", 0.55))
             reason = data.get("reason", "")
 
@@ -205,37 +207,20 @@ def _heuristic_language_capo(text: str) -> Tuple[str, float, str, str]:
 
 
 def _extract_rule_code_inline(raw_text: str) -> Optional[str]:
-    """Detect 'run <RULE_CODE>' or any known RULE code inline using YAML lookup.
-    Returns RULE_CODE if found, else None.
+    """Extract rule code from 'run <RULE_CODE>' syntax.
+    Returns the rule code string if user typed 'RUN <something>', else None.
+    Does NOT validate if the rule exists in YAML - that's verifyRequest's job.
     """
-    try:
-        from .context_builder import ContextBuilder
-    except Exception:
-        ContextBuilder = None
-
     if not raw_text:
         return None
 
     text = raw_text.strip()
     text_upper = text.upper()
 
-    # Load YAML (no DB needed)
-    cb = ContextBuilder() if ContextBuilder else None
-    rules = (cb.yaml_data.get("RULES", []) if cb and cb.yaml_data else [])
-    codes = {r.get("rule_code", "").upper() for r in rules}
-
+    # If user typed "RUN <something>", extract the code
     if text_upper.startswith("RUN "):
         code = text_upper[4:].strip()
-        return code if code in codes else None
-
-    # Exact match
-    if text_upper in codes:
-        return text_upper
-
-    # Any token match
-    for token in text_upper.split():
-        if token in codes:
-            return token
+        return code if code else None
 
     return None
 
@@ -246,36 +231,29 @@ def _extract_rule_code_inline(raw_text: str) -> Optional[str]:
 
 async def agent_capo_rule(message_body: Dict[str, Any]) -> Tuple[str, float, str]:
     """
-    model.Capo (RULE flow)
-    Initial validation of rule request.
+    model.Capo (RULE flow entry point)
+    Validates the message envelope structure.
     
     Checks:
-    - Rule logic is non-empty
-    - Rule code/name are present (or will be looked up)
+    - Envelope has required fields (session_id, request_id, messageBody with raw_text)
+    - Message is not empty
     
     Returns: (decision: yes|no, confidence: 0.0-1.0, reason: str)
     """
-    logger.info("🤖 [model.Capo] Validating rule request...")
+    logger.info("🤖 [model.Capo] Validating message envelope...")
     
-    rule_logic = message_body.get("rule_logic", "").strip()
-    rule_code = message_body.get("rule_code", "").strip()
+    # Check if message has content
+    raw_text = message_body.get("raw_text", "").strip()
     
-    # Validation: must have rule logic
-    if not rule_logic:
-        reason = "Rule logic is empty; cannot proceed"
-        logger.info(f"  Decision: no (confidence: 0.95) - {reason}")
-        return ("no", 0.95, reason)
+    if not raw_text:
+        reason = "Message is empty. Please type something."
+        logger.info(f"  Decision: no (confidence: 1.0) - {reason}")
+        return ("no", 1.0, reason)
     
-    # Validation: rule code or name should exist
-    if not rule_code and not message_body.get("rule_name"):
-        reason = "Rule lacks identifier (code or name); cannot track state"
-        logger.info(f"  Decision: no (confidence: 0.88) - {reason}")
-        return ("no", 0.88, reason)
-    
-    # All checks pass
+    # Envelope is valid - message is ready for processing
     decision = "yes"
-    confidence = 0.92
-    reason = f"Rule '{rule_code}' validated: syntax and structure appear sound"
+    confidence = 1.0
+    reason = "Message envelope is valid and ready for processing"
     
     logger.info(f"  Decision: {decision} (confidence: {confidence:.2f})")
     return (decision, confidence, reason)
@@ -287,13 +265,27 @@ async def agent_verify_request(message_body: Dict[str, Any]) -> Tuple[str, float
     Validate semantics of the rule request.
     
     Checks:
+    - Rule code exists in YAML (if provided)
     - Rule logic references valid entities/tables
     - Rule intent is clear (not ambiguous)
     - Begin context building for LLM (store in message_body)
     """
     logger.info("🤖 [model.verifyRequest] Validating rule semantics...")
     
+    rule_code = message_body.get("rule_code", "").strip()
     rule_logic = message_body.get("rule_logic", "").lower()
+    
+    # First: Verify rule exists in YAML (if rule_code was extracted)
+    if rule_code:
+        context_builder = message_body.get("_ctx")
+        if context_builder and hasattr(context_builder, 'yaml_data'):
+            rules = context_builder.yaml_data.get("RULES", [])
+            rule_codes = [r.get("rule_code") for r in rules]
+            
+            if rule_code not in rule_codes:
+                reason = f"Rule '{rule_code}' not found in YAML. Available rules: {', '.join(rule_codes[:5])}"
+                logger.info(f"  Decision: no (confidence: 0.98) - {reason}")
+                return ("no", 0.98, reason)
     
     # Get valid tables from context builder (loads from YAML dynamically)
     context_builder = message_body.get("_ctx")
@@ -408,7 +400,7 @@ async def agent_rule_to_sql(message_body: Dict[str, Any]) -> Tuple[str, float, s
 async def agent_verify_sql(message_body: Dict[str, Any]) -> Tuple[str, float, str]:
     """
     model.verifySQL (RULE flow)
-    Validate SQL safety, syntax, and correctness.
+    Validate SQL safety and syntax, then request human approval.
     
     Checks:
     - SQL is not empty
@@ -416,8 +408,10 @@ async def agent_verify_sql(message_body: Dict[str, Any]) -> Tuple[str, float, st
     - No DROP, DELETE, ALTER commands (safety)
     - No obvious SQL injection attacks
     
-    If SQL looks suspicious but not malicious, returns NO to trigger HITL.
-    The frontend will show SQL for user approval, and if approved, tool.executeSQL runs.
+    If validation passes: returns NO to trigger HITL for human approval
+    The frontend will show SQL for user to approve or tweak, then re-submit.
+    
+    If validation fails: returns NO with error reason (rejection, not HITL)
     """
     logger.info("🤖 [model.verifySQL] Validating SQL safety and syntax...")
     
@@ -439,7 +433,7 @@ async def agent_verify_sql(message_body: Dict[str, Any]) -> Tuple[str, float, st
     # Check for dangerous operations (destructive)
     dangerous_ops = ("DROP", "DELETE", "ALTER", "TRUNCATE", "GRANT", "REVOKE")
     if any(f" {op} " in sql_query_upper for op in dangerous_ops):
-        reason = f"SQL contains dangerous operation ({', '.join(dangerous_ops)})"
+        reason = f"SQL contains dangerous operation ({', '.join(dangerous_ops)}). Rejected for safety."
         logger.warning(f"  ❌ {reason}")
         return ("no", 0.98, reason)  # High confidence - reject
     
@@ -450,15 +444,15 @@ async def agent_verify_sql(message_body: Dict[str, Any]) -> Tuple[str, float, st
     if suspicious_patterns and "--" not in sql_query_upper:  # Allow SQL comments as they're valid
         reason = f"SQL looks suspicious (detected: {', '.join(suspicious_patterns)}). Please review."
         logger.info(f"  Decision: no (confidence: 0.72) - HITL required - {reason}")
-        message_body["sql_for_review"] = sql_query  # Store for frontend display
-        return ("no", 0.72, reason)  # Lower confidence - HITL, not rejection
+        return ("no", 0.72, reason)  # HITL - user can approve or modify
     
-    # SQL validated
-    decision = "yes"
-    confidence = 0.96
-    reason = "SQL is syntactically sound and passes safety checks"
+    # SQL passed validation - now request human approval via HITL
+    decision = "no"  # Trigger HITL (human-in-the-loop)
+    confidence = 0.92
+    reason = f"SQL validation passed. Please review and approve:\n\n{sql_query}"
     
     logger.info(f"  Decision: {decision} (confidence: {confidence:.2f})")
+    logger.info(f"  SQL ready for human approval:\n{sql_query}")
     return (decision, confidence, reason)
 
 

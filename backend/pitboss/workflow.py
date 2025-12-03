@@ -37,6 +37,7 @@ class WorkflowEngine:
     - Track current position in decision tree
     - Branch on agent decisions (yes/no)
     - Route to terminal nodes (sendMessageToChat, etc)
+    - Provide HITL resume targets (which agent to call after human approval)
     """
     
     def __init__(self):
@@ -170,3 +171,14 @@ class WorkflowEngine:
             "terminal",
             None,
         ]
+    
+    def get_hitl_next_agent(self, verb: str, current_agent: str) -> str:
+        """
+        After a NO decision (HITL), recommend which agent to call when the human replies.
+        Defaults to sendMessageToChat unless explicitly mapped.
+        """
+        if verb == "RULE":
+            if current_agent == "model.verifySQL":
+                return "tool.executeSQL"
+        # Default fallback
+        return "sendMessageToChat"

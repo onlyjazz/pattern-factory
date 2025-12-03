@@ -52,12 +52,13 @@ The application extracts patterns and antipatterns from podcast transcripts and 
 - `db.ts`: Database/API client utilities
 
 ### Data Model
+**Pattern Factory YAML**
+- Contains metadata for proper construction of system prompts as rules to generate logical views for the application
 
 **Core Tables**:
 - `patterns`: pattern definitions (id, name, description, kind, metadata, etc.)
 - `episodes`, `guests`, `orgs`, `posts`: content sources
 - `pattern_*_link`: Junction tables for many-to-many relationships
-- `rules`: DSL rule definitions and generated SQL
 - `views_registry`: Materialized view metadata
 - `system_log`: Event logging for auditing
 
@@ -157,7 +158,45 @@ Defines the DSL schema:
 
 Changes here affect SQL generation quality. Keep table/column descriptions accurate.
 
-### Pitboss Processing Flow
+### Message Protocol v1.1 (Put-and-Take Pattern)
+
+The system implements a stateless "put-and-take" message protocol between frontend and backend:
+
+Message Envelope Structure:
+```json
+{
+  "type": "request" | "response" | "error",
+  "version": "1.1",
+  "session_id": "sess-...",
+  "request_id": "req-...",
+  "verb": "RULE" | "CONTENT" | "GENERIC",
+  "nextAgent": "agent-name" | null,
+  "decision": "yes" | "no" | null,
+  "confidence": 0.0-1.0,
+  "reason": "explanation",
+  "returnCode": 0 | 1 | -1,
+  "messageBody": { "...": "user and agent payload" }
+}
+```
+
+Flow:
+1. Frontend sends REQUEST with `verb: GENERIC`, `nextAgent: model.LanguageCapo`.
+2. Backend returns RESPONSE with `nextAgent` indicating the next agent to call.
+3. Frontend MUST NOT modify `nextAgent`; it echoes back as received.
+4. Frontend echoes `messageBody` from the backend response (e.g., preserves `sql_query`, `rule_code`).
+5. Frontend may add `raw_text` to `messageBody` for user comments/approval.
+
+HITL (Human-In-The-Loop):
+- When an agent returns `decision: "no"`, frontend detects HITL.
+- Frontend stores full `messageBody` and, on user reply, echoes it back with the SAME `verb` and SAME `nextAgent`.
+- Backend routes directly to `nextAgent` without reclassification.
+
+Backend HITL mapping:
+- `WorkflowEngine.get_hitl_next_agent(verb, current_agent)` defines resume targets.
+  - RULE: `model.verifySQL` → `tool.executeSQL`.
+- `supervisor.py` uses `nextAgent` from the envelope to jump to the correct agent when present.
+
+### Pitboss Processing Flow (Legacy)
 
 1. WebSocket `/ws` receives JSON: `{"type": "run_rule", "rule_code": "...", "rule_id": "..."}`
 2. Supervisor calls ContextBuilder to assemble system + user prompts
@@ -173,7 +212,7 @@ All tool responses follow:
 ```json
 {
   "status": "success" | "error",
-  "error": "...",  // if status=error
+  "error": "...",
   "duration": 1.23
 }
 ```

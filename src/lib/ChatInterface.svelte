@@ -14,7 +14,9 @@
 			reason?: string;
 			nextAgent?: string | null;
 			returnCode?: number;
+			verb?: string;
 		};
+		messageBody?: any;  // Store full messageBody for HITL echo-back
 	}
 
 	let messages: Message[] = [];
@@ -107,8 +109,10 @@
 					confidence: data.confidence,
 					reason: data.reason,
 					nextAgent: data.nextAgent,
-					returnCode: data.returnCode
-				}
+					returnCode: data.returnCode,
+					verb: data.verb
+				},
+				messageBody: data.messageBody  // Store full messageBody for HITL echo-back
 			};
 			messages = [...messages, agentMessage];
 			scrollToBottom();
@@ -178,27 +182,53 @@
 			isLoading = true;
 			
 			try {
-				// Send via new Message Protocol (v1.1)
-				// Use GENERIC verb to let LanguageCapo determine if it's RULE or CONTENT
-				const requestId = `req-${++requestCounter}`;
-				const request = {
-					type: 'request',
-					version: '1.1',
-					timestamp: Date.now(),
-					session_id: sessionId,
-					request_id: requestId,
-					verb: 'GENERIC',
-					nextAgent: 'model.LanguageCapo',
-					returnCode: 0,
-					decision: null,
-					confidence: 0.0,
-					reason: '',
-					messageBody: {
-						raw_text: message
-					}
-				};
+				// Check if this is a HITL response (last agent message has nextAgent)
+				const lastAgentMessage = [...messages].reverse().find(m => m.role === 'agent');
+				const isHitlResponse = lastAgentMessage?.envelopeData?.decision === 'no' && lastAgentMessage?.envelopeData?.nextAgent;
+				console.log('HITL Check:', { isHitlResponse, decision: lastAgentMessage?.envelopeData?.decision, nextAgent: lastAgentMessage?.envelopeData?.nextAgent });
 				
-				console.log('Sending envelope:', request);
+				const requestId = `req-${++requestCounter}`;
+				const request = isHitlResponse ? 
+					// HITL response: echo the messageBody (with any modified SQL) and nextAgent
+					{
+						type: 'request',
+						version: '1.1',
+						timestamp: Date.now(),
+						session_id: sessionId,
+						request_id: requestId,
+						verb: lastAgentMessage.envelopeData.verb || 'RULE',
+						nextAgent: lastAgentMessage.envelopeData.nextAgent,
+						returnCode: 0,
+						decision: null,
+						confidence: 0.0,
+						reason: '',
+						// Echo the messageBody from the agent (preserves sql_query, rule_code, etc)
+						// User's response goes in raw_text if they modified something
+						messageBody: {
+							...(lastAgentMessage.messageBody || {}),
+							raw_text: message  // User's approval/modification comment
+						}
+					}
+					:
+					// New message: start with LanguageCapo
+					{
+						type: 'request',
+						version: '1.1',
+						timestamp: Date.now(),
+						session_id: sessionId,
+						request_id: requestId,
+						verb: 'GENERIC',
+						nextAgent: 'model.LanguageCapo',
+						returnCode: 0,
+						decision: null,
+						confidence: 0.0,
+						reason: '',
+						messageBody: {
+							raw_text: message
+						}
+					};
+				
+				console.log('Sending envelope (HITL=' + isHitlResponse + '):', request);
 				websocket.send(JSON.stringify(request));
 				// Response envelopes will come via onmessage handler
 			} catch (e) {

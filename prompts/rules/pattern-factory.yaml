@@ -72,19 +72,19 @@ DATA:
       - created_at
       - updated_at
       - deleted_at
-
+# pattern_episode_link is a join table between patterns and episodes
     pattern_episode_link:
       - pattern_id
       - episode_id
-
+# pattern_guest_link is a join table between patterns and guests
     pattern_guest_link:
       - pattern_id
       - guest_id
-
+# pattern_org_link is a join table
     pattern_org_link:
       - pattern_id
       - org_id
-
+# pattern_post_link is a join table
     pattern_post_link:
       - pattern_id
       - post_id
@@ -182,7 +182,7 @@ RULES:
     name: "Patterns in Episodes"
     description: "Show patterns that appear in podcast episodes with their type and episode links."
     logic: |
-      show me the patterns in the podcast episodes with the kind of pattern it is and where I can see the episode
+      show me episodes with episode_name, pattern_name 
 
   - rule_code: LIST_ORGS 
     name: "Organizations who were on the podcast"
