@@ -222,10 +222,10 @@ async def delete_pattern(pattern_id: int):
 @app.get("/query/{table}")
 async def query_table(table: str, limit: int = 200):
     """
-    Generic SQL reader for any table or registered view.
+    Generic SQL reader for any table.
     
-    If table is in views_registry, resolve to the actual view name.
-    Otherwise, query directly.
+    For registered views, table name is the YAML rule_code (e.g., LIST_ORGS).
+    For other tables, queries directly.
     """
     pool = get_pg_pool()
 
@@ -235,19 +235,9 @@ async def query_table(table: str, limit: int = 200):
 
     async with pool.acquire() as conn:
         try:
-            # First check if this is a registered view (by rule_code or table_name)
-            view_row = await conn.fetchrow(
-                'SELECT table_name FROM views_registry WHERE table_name = $1 OR name = $1',
-                table
-            )
-            
-            if view_row:
-                # Use the actual view name from views_registry
-                actual_view_name = view_row["table_name"]
-                rows = await conn.fetch(f'SELECT * FROM "{actual_view_name}" LIMIT {limit}')
-            else:
-                # Query directly (table might be a real table, not a view)
-                rows = await conn.fetch(f'SELECT * FROM "{table}" LIMIT {limit}')
+            # Query the table/view directly by name
+            # View names are rule_codes (e.g., LIST_ORGS)
+            rows = await conn.fetch(f'SELECT * FROM "{table}" LIMIT {limit}')
         except Exception as e:
             raise HTTPException(status_code=400, detail=str(e))
 

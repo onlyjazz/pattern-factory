@@ -115,10 +115,11 @@ class DataTableTool(Tool):
     def __init__(self, db_pool):
         super().__init__("data_table", db_pool)
 
-    async def execute(self, sql_query: str, rule_name: str, **kwargs):
+    async def execute(self, sql_query: str, rule_name: str, rule_code: str = None, **kwargs):
         start = datetime.now()
         try:
-            view_name = self._safe_table_name(rule_name)
+            # Use rule_code if provided, otherwise derive from rule_name
+            view_name = rule_code if rule_code else self._safe_table_name(rule_name)
             select_sql = self._strip_to_select(sql_query)
 
             async with self.db_pool.acquire() as conn:

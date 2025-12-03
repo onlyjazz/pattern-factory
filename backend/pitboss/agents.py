@@ -505,7 +505,8 @@ async def agent_execute_sql(message_body: Dict[str, Any]) -> Tuple[str, float, s
         table_res = await tool_registry.execute(
             "data_table",
             sql_query=sql_query,
-            rule_name=rule_name
+            rule_name=rule_name,
+            rule_code=rule_code
         )
         
         if table_res["status"] != "success":
