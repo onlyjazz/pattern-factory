@@ -184,9 +184,9 @@ RULES:
 
   - rule_code: LIST_ORGS 
     name: "Organizations who were on the podcast"
-    description: "Show organizations with their funding stage, name, date founded, and date funded."
+    description: "List of organizations who were on the podcast"
     logic: |
-      show me the orgs with name, date founded, date funded, funding stage
+      show me the orgs with name, description, date founded, date funded, funding stage
 
   - rule_code: PATTERNS_BY_GUEST
     name: "Patterns by Guest"
