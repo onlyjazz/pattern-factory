@@ -295,12 +295,21 @@ async def agent_verify_request(message_body: Dict[str, Any]) -> Tuple[str, float
     
     rule_logic = message_body.get("rule_logic", "").lower()
     
-    # Check for valid table/entity references
-    valid_tables = {
-        "patterns", "episodes", "guests", "organizations", "posts",
-        "pattern_episodes", "pattern_guests", "pattern_orgs", "pattern_posts",
-        "orgs", "org", "guest", "episode", "post", "pattern"
-    }
+    # Get valid tables from context builder (loads from YAML dynamically)
+    context_builder = message_body.get("_ctx")
+    if context_builder and hasattr(context_builder, 'yaml_data'):
+        # Extract all table names from YAML DATA section
+        yaml_tables = context_builder.yaml_data.get("DATA", {}).get("tables", {}).keys()
+        valid_tables = set(yaml_tables)
+        logger.info(f"  Loaded {len(valid_tables)} tables from YAML: {sorted(list(valid_tables))[:5]}...")
+    else:
+        # Fallback to hardcoded list if context builder unavailable
+        valid_tables = {
+            "patterns", "episodes", "guests", "organizations", "posts",
+            "pattern_episodes", "pattern_guests", "pattern_orgs", "pattern_posts",
+            "orgs", "org", "guest", "episode", "post", "pattern"
+        }
+        logger.warning("Using fallback hardcoded table list; context_builder not available")
     
     found_tables = [t for t in valid_tables if t in rule_logic]
     
@@ -456,15 +465,14 @@ async def agent_verify_sql(message_body: Dict[str, Any]) -> Tuple[str, float, st
 async def agent_execute_sql(message_body: Dict[str, Any]) -> Tuple[str, float, str]:
     """
     tool.executeSQL (RULE flow) — Terminal agent
-    Execute SQL, create materialized view, register rule and view in database.
+    Execute SQL, create materialized view, and register metadata in views_registry.
     
     Pipeline:
     1. Execute SQL via data_table tool (creates VIEW)
-    2. Register rule metadata via register_rule tool
-    3. Register view in views_registry via register_view tool
+    2. Register view metadata in views_registry (consolidated table with name, table_name, sql)
     
     Stores:
-    - table_name: name of created view
+    - table_name: name of created view (also the YAML rule_code)
     - row_count: rows in materialized view
     """
     logger.info("🤖 [tool.executeSQL] Executing SQL and materializing view...")
@@ -512,29 +520,14 @@ async def agent_execute_sql(message_body: Dict[str, Any]) -> Tuple[str, float, s
         message_body["table_name"] = table_name
         message_body["row_count"] = row_count
         
-        # Step 2: Register rule metadata
-        logger.info(f"  Step 2: Registering rule metadata...")
-        rule_res = await tool_registry.execute(
-            "register_rule",
-            rule_code_key=rule_code,
-            rule_name=rule_name,
-            logic=rule_logic,
-            sql_query=sql_query
-        )
-        
-        if rule_res["status"] != "success":
-            logger.warning(f"  ⚠️ Rule registration failed: {rule_res.get('error')}")
-            # Continue anyway; view is created
-        else:
-            logger.info(f"    ✅ Rule registered: {rule_code}")
-        
-        # Step 3: Register view in views_registry
-        logger.info(f"  Step 3: Registering view in views_registry...")
+        # Step 2: Register view metadata in views_registry
+        # (consolidates both rule and view metadata into single table)
+        logger.info(f"  Step 2: Registering view metadata in views_registry...")
         view_res = await tool_registry.execute(
             "register_view",
-            rule_code_key=rule_code,
             table_name=table_name,
-            summary=rule_name
+            name=rule_name,
+            sql_query=sql_query
         )
         
         if view_res["status"] != "success":

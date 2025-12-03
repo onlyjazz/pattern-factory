@@ -158,75 +158,45 @@ class DataTableTool(Tool):
         return cleaned
 
 
-# -------------------------------------------------------------------------
-# Register Rule Tool — write to rules table
-# -------------------------------------------------------------------------
-class RegisterRuleTool(Tool):
-    """
-    Insert or update a rule in the `rules` table:
-    id (serial), name, description, rule_code, sql, created_at, updated_at
-    """
-
-    def __init__(self, db_pool):
-        super().__init__("register_rule", db_pool)
-
-    async def execute(self, rule_code_key: str, rule_name: str, logic: str, sql_query: str, **kwargs):
-        start = datetime.now()
-        try:
-            async with self.db_pool.acquire() as conn:
-                # UPSERT on rule_code (stable identifier from YAML)
-                # If rule_code already exists, UPDATE the name, logic, and sql
-                # This ensures that running the same YAML rule_code updates existing rule data
-                await conn.execute("""
-                    INSERT INTO rules (name, rule_code, description, sql)
-                    VALUES ($1, $2, $3, $4)
-                    ON CONFLICT (rule_code)
-                    DO UPDATE SET
-                        name        = EXCLUDED.name,
-                        description = EXCLUDED.description,
-                        sql         = EXCLUDED.sql,
-                        updated_at  = CURRENT_TIMESTAMP
-                """, rule_name, rule_code_key, logic, sql_query)
-
-            duration = (datetime.now() - start).total_seconds()
-            self.log_execution(True, duration)
-
-            return {"status": "success", "rule": rule_name, "duration": duration}
-
-        except Exception as e:
-            duration = (datetime.now() - start).total_seconds()
-            self.log_execution(False, duration)
-            logger.error(f"[RegisterRuleTool] Error: {e}")
-
-            return {"status": "error", "error": str(e), "duration": duration}
 
 
 # -------------------------------------------------------------------------
-# Register View Tool — record in views_registry
+# Register View Tool — upsert complete view metadata in views_registry
 # -------------------------------------------------------------------------
 class RegisterViewTool(Tool):
     """
-    Register materialized view info into views_registry:
-    id, rule_id, table_name, summary, created_at, updated_at
+    Register or update materialized view in views_registry.
+    
+    The views_registry table now contains all metadata:
+    - id: serial primary key
+    - name: human-readable name from YAML rule
+    - table_name: YAML rule_code (stable identifier, unique constraint)
+    - sql: generated SQL for the view
+    - created_at, updated_at: timestamps
+    
+    Uses UPSERT on table_name to ensure idempotency:
+    - If table_name already exists, updates name, sql, and updated_at
+    - Otherwise, inserts a new entry
     """
 
     def __init__(self, db_pool):
         super().__init__("register_view", db_pool)
 
-    async def execute(self, rule_code_key: str, table_name: str, summary: str, **kwargs):
+    async def execute(self, table_name: str, name: str, sql_query: str, **kwargs):
         start = datetime.now()
         try:
             async with self.db_pool.acquire() as conn:
-                # Look up the rule by rule_code (stable identifier)
-                row = await conn.fetchrow(
-                    "SELECT id FROM rules WHERE rule_code=$1 LIMIT 1", rule_code_key
-                )
-                rule_id = row["id"] if row else None
-
+                # UPSERT on table_name (stable identifier from YAML rule_code)
+                # If table_name already exists, update name, sql, and updated_at
+                # This ensures re-running the same rule updates the existing view entry
                 await conn.execute("""
-                    INSERT INTO views_registry (rule_id, table_name, summary)
+                    INSERT INTO views_registry (name, table_name, sql)
                     VALUES ($1, $2, $3)
-                """, rule_id, table_name, summary)
+                    ON CONFLICT (table_name) DO UPDATE SET
+                        name        = EXCLUDED.name,
+                        sql         = EXCLUDED.sql,
+                        updated_at  = CURRENT_TIMESTAMP
+                """, name, table_name, sql_query)
 
             duration = (datetime.now() - start).total_seconds()
             self.log_execution(True, duration)
@@ -255,7 +225,6 @@ class ToolRegistry:
     def _register_default_tools(self):
         self.register(SqlPitbossTool(self.db_pool, self.config))
         self.register(DataTableTool(self.db_pool))
-        self.register(RegisterRuleTool(self.db_pool))
         self.register(RegisterViewTool(self.db_pool))
 
     def register(self, tool: Tool):

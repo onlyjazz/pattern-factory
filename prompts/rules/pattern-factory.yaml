@@ -120,15 +120,6 @@ DATA:
       - updated_at
       - deleted_at
 
-    rules:
-      - id
-      - name
-      - description
-      - rule_code
-      - sql
-      - created_at
-      - updated_at
-
     system_log:
       - id
       - event
@@ -137,10 +128,9 @@ DATA:
 
     views_registry:
       - id
-      - rule_id
+      - name
       - table_name
       - sql
-      - summary
       - created_at
       - updated_at
 
@@ -193,10 +183,10 @@ RULES:
       show me the patterns in the podcast episodes with the kind of pattern it is and where I can see the episode
 
   - rule_code: LIST_ORGS 
-    name: "List of Organizations from the podcast"
+    name: "Organizations who were on the podcast"
     description: "Show organizations with their funding stage, name, date founded, and date funded."
     logic: |
-      show me a list with funding stage, name, date founded, and date funded
+      show me the orgs with name, date founded, date funded, funding stage
 
   - rule_code: PATTERNS_BY_GUEST
     name: "Patterns by Guest"

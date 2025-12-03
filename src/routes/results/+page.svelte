@@ -136,6 +136,28 @@
     if (typeof value === 'string' && value.startsWith('http')) {
       return value;
     }
+    
+    // Check if value looks like an ISO timestamp (YYYY-MM-DDTHH:mm:ss or similar)
+    if (typeof value === 'string') {
+      const datePattern = /^\d{4}-\d{2}-\d{2}(T|\s)/;
+      if (datePattern.test(value)) {
+        try {
+          const date = new Date(value);
+          // Check if date is valid
+          if (!isNaN(date.getTime())) {
+            // Format as "Mon Day, Year" (e.g., "Dec 3, 2025")
+            return date.toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            });
+          }
+        } catch (e) {
+          // If parsing fails, fall through to default
+        }
+      }
+    }
+    
     return String(value);
   }
 

@@ -149,6 +149,13 @@ class PitbossSupervisor:
         
         # Update env verb for consistency
         env.verb = Verb(verb_str)
+        
+        # Ensure context builder and tool registry are always available to agents
+        # (unless explicitly added earlier for rule code lookups)
+        if "_ctx" not in env.messageBody:
+            env.messageBody["_ctx"] = self.context_builder
+        if "_tools" not in env.messageBody:
+            env.messageBody["_tools"] = self.tool_registry
 
         # Walk the decision tree until terminal or HITL (decision=no)
         while True:

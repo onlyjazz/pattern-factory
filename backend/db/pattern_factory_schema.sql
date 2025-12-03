@@ -206,25 +206,16 @@ CREATE INDEX IF NOT EXISTS idx_episodes_active ON episodes(id) WHERE deleted_at 
 CREATE INDEX IF NOT EXISTS idx_posts_active    ON posts(id)    WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_patterns_active ON patterns(id) WHERE deleted_at IS NULL;
 --
--- DSL rules for pattern factory views (CREATE BEFORE views_registry to avoid foreign key constraint)
-DROP TABLE if EXISTS rules cascade;
-CREATE TABLE IF NOT EXISTS rules (
-    id BIGSERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    description TEXT,
-    rule_code TEXT NOT NULL UNIQUE,  -- stable identifier from DSL (e.g., LIST_ORGS)
-    sql TEXT NOT NULL,               -- generated SQL for materialized view
-    created_at TIMESTAMP DEFAULT now(),
-    updated_at TIMESTAMP DEFAULT now()
-);
-
--- Registry of materialized views for pattern factory queries
+-- =====================
+-- Views Registry (consolidated rule and view metadata)
+-- =====================
 DROP TABLE IF EXISTS views_registry CASCADE;
 CREATE TABLE IF NOT EXISTS views_registry (
     id BIGSERIAL PRIMARY KEY,
-    rule_id BIGINT REFERENCES rules(id) ON DELETE SET NULL,
-    table_name TEXT NOT NULL,
-    summary VARCHAR,           -- human-readable name or description of the view
+    name VARCHAR,                       -- YAML rule name e.g "Organizations who were on the podcast"
+    table_name TEXT NOT NULL UNIQUE,    -- YAML rule rule_code e.g LIST_ORGS this will be the name of the view
+    sql TEXT NOT NULL,                  -- generated SQL e.g. DROP VIEW IF EXISTS, create view 
+
     created_at TIMESTAMP DEFAULT now(),
     updated_at TIMESTAMP DEFAULT now()
 );

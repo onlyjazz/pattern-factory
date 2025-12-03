@@ -71,10 +71,10 @@
 					<a 
 						class="main-nav__item main-nav__view {isViewActive(view.table_name) ? 'main-nav__item_active' : ''}" 
 						href="/results?view={view.table_name}"
-						title={view.summary}
+						title={view.name}
 					>
 						<i class="material-icons">table_chart</i>
-						{view.summary || view.table_name}
+						{view.name || view.table_name}
 					</a>
 				{/each}
 			</div>
