@@ -13,7 +13,7 @@
         let showEditModal = false;
         let patternToEdit = {} as Pattern;
         let newPattern: Partial<Pattern> = { name: '', description: '', kind: 'pattern' };
-        let kinds = ['', 'pattern', 'anti-pattern'];
+        const kinds = ['', 'pattern', 'anti-pattern'];
         
         const apiBase = "http://localhost:8000";
         
