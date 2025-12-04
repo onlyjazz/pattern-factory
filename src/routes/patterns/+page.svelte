@@ -180,8 +180,8 @@
 
 <!-- EDIT MODAL -->
 {#if showEditModal && Object.keys(patternToEdit).length > 0}
-    <div class="modal-overlay" onclick={closeEditModal}>
-        <div class="modal-content" onclick={(e) => e.stopPropagation()}>
+    <div class="modal-overlay" role="button" tabindex="0" onkeydown={(e) => e.key === 'Escape' && closeEditModal()} onclick={closeEditModal}>
+        <div class="modal-content" role="button" tabindex="0" onkeydown={(e) => e.stopPropagation()} onclick={(e) => e.stopPropagation()}>
             <div class="modal-header">
                 <h2 class="heading heading_2">Edit Pattern</h2>
                 <button
@@ -200,28 +200,31 @@
                 }}>
                     <div class="input">
                         <input
+                            id="edit-name"
                             type="text"
                             bind:value={patternToEdit.name}
                             class="input__text"
                             class:input__text_changed={patternToEdit.name?.length > 0}
                             required
                         />
-                        <label class="input__label">Name</label>
+                        <label for="edit-name" class="input__label">Name</label>
                     </div>
 
                     <div class="input">
                         <input
+                            id="edit-description"
                             type="text"
                             bind:value={patternToEdit.description}
                             class="input__text"
                             class:input__text_changed={patternToEdit.description?.length > 0}
                             required
                         />
-                        <label class="input__label">Description</label>
+                        <label for="edit-description" class="input__label">Description</label>
                     </div>
 
                     <div class="input input_select">
                         <select
+                            id="edit-kind"
                             bind:value={patternToEdit.kind}
                             class="input__text input__text_changed"
                             required
@@ -229,7 +232,7 @@
                             <option value="pattern">Pattern</option>
                             <option value="anti-pattern">Anti-Pattern</option>
                         </select>
-                        <label class="input__label">Kind</label>
+                        <label for="edit-kind" class="input__label">Kind</label>
                     </div>
 
                     <div class="modal-footer">
@@ -252,8 +255,8 @@
 
 <!-- ADD MODAL -->
 {#if showAddModal}
-    <div class="modal-overlay" onclick={closeAddModal}>
-        <div class="modal-content" onclick={(e) => e.stopPropagation()}>
+    <div class="modal-overlay" role="button" tabindex="0" onkeydown={(e) => e.key === 'Escape' && closeAddModal()} onclick={closeAddModal}>
+        <div class="modal-content" role="button" tabindex="0" onkeydown={(e) => e.stopPropagation()} onclick={(e) => e.stopPropagation()}>
             <div class="modal-header">
                 <h2 class="heading heading_2">Add Pattern</h2>
                 <button
@@ -272,6 +275,7 @@
                 }}>
                     <div class="input">
                         <input
+                            id="add-name"
                             type="text"
                             bind:value={newPattern.name}
                             class="input__text"
@@ -279,11 +283,12 @@
                             placeholder=""
                             required
                         />
-                        <label class="input__label">Name</label>
+                        <label for="add-name" class="input__label">Name</label>
                     </div>
 
                     <div class="input">
                         <input
+                            id="add-description"
                             type="text"
                             bind:value={newPattern.description}
                             class="input__text"
@@ -291,11 +296,12 @@
                             placeholder=""
                             required
                         />
-                        <label class="input__label">Description</label>
+                        <label for="add-description" class="input__label">Description</label>
                     </div>
 
                     <div class="input input_select">
                         <select
+                            id="add-kind"
                             bind:value={newPattern.kind}
                             class="input__text input__text_changed"
                             required
@@ -303,7 +309,7 @@
                             <option value="pattern">Pattern</option>
                             <option value="anti-pattern">Anti-Pattern</option>
                         </select>
-                        <label class="input__label">Kind</label>
+                        <label for="add-kind" class="input__label">Kind</label>
                     </div>
 
                     <div class="modal-footer">
