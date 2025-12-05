@@ -23,7 +23,6 @@ The data model looks like this
 | pattern_guest_link   | table of pattern_guest_link
 | pattern_org_link     | table of pattern_org_link
 | pattern_post_link    | table of pattern_post_link
-| pattern_registry     | table of pattern_registry
 | system_log           | table of system_log 
 | views_registry       | table of views_registry
 
