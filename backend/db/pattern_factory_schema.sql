@@ -30,7 +30,7 @@ CREATE TABLE orgs (
     date_founded TIMESTAMP,
     linkedin_company_url TEXT,
     keywords TEXT[],
-    data_source TEXT,
+    content_source TEXT,          -- e.g., 'linkedin', 'crunchbase', 'website'
     category_id BIGINT REFERENCES categories(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT now(),
     updated_at TIMESTAMP DEFAULT now(),
@@ -49,9 +49,8 @@ CREATE TABLE guests (
     linkedin_url TEXT,
     job_description TEXT,
     keywords TEXT[],
-    data_source TEXT,
+    content_source TEXT,                -- e.g., 'linkedin', 'twitter', 'website', 'company_page', content post
     org_id BIGINT REFERENCES orgs(id) ON DELETE SET NULL,
-    episode_id BIGINT REFERENCES episodes(id) ON DELETE SET NULL,
     post_id BIGINT REFERENCES posts(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT now(),
     updated_at TIMESTAMP DEFAULT now(),
@@ -61,31 +60,22 @@ CREATE TABLE guests (
 -- =====================
 -- Episodes
 -- =====================
-
+-- Dec 5 refactor schema - removed episodes table
+-- Episodes are now handled through the posts table
 drop table if exists episodes cascade;
-CREATE TABLE episodes (
-    id BIGSERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    description TEXT,
-    keywords TEXT[],
-    episode_url TEXT,
-    published_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT now(),
-    updated_at TIMESTAMP DEFAULT now(),
-    deleted_at TIMESTAMP
-);
 
 -- =====================
 -- Substack Posts
 -- =====================
-
+-- Dec 5 refactor schema - posts table now handles all content, rename  substack_url to content_url
 drop table if exists posts cascade;
 CREATE TABLE posts (
     id BIGSERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     description TEXT,
     keywords TEXT[],
-    substack_url TEXT,
+    content_url TEXT,
+    content_source TEXT,                        -- e.g., 'substack', 'website', 'blog', 'content_post'
     published_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT now(),
     updated_at TIMESTAMP DEFAULT now(),
@@ -101,11 +91,11 @@ CREATE TABLE patterns (
     id BIGSERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     description TEXT,
-    data_source TEXT,
+    content_source TEXT,                        -- e.g., 'substack', 'website', 'blog'
     kind TEXT CHECK (kind IN ('pattern','anti-pattern')) DEFAULT 'pattern',
-    metadata JSONB DEFAULT '{}'::jsonb,        -- LLM summary, confidence, etc.
-    highlights JSONB DEFAULT '[]'::jsonb,      -- quotes, snippets
-    search_vector tsvector,                           -- for full-text search
+    metadata JSONB DEFAULT '{}'::jsonb,         -- LLM summary, confidence, etc.
+    highlights JSONB DEFAULT '[]'::jsonb,       -- quotes, snippets
+    search_vector tsvector,                     -- for full-text search
     keywords TEXT[],
     created_at TIMESTAMP DEFAULT now(),
     updated_at TIMESTAMP DEFAULT now(),
@@ -137,12 +127,9 @@ CREATE TABLE pattern_post_link (
     PRIMARY KEY (pattern_id, post_id)
 );
 --
+-- Dec 5 refactor: removed episode-related tables
 DROP TABLE if exists pattern_episode_link cascade;
-CREATE TABLE pattern_episode_link (
-    pattern_id BIGINT REFERENCES patterns(id) ON DELETE CASCADE,
-    episode_id BIGINT REFERENCES episodes(id) ON DELETE CASCADE,
-    PRIMARY KEY (pattern_id, episode_id)
-);
+
 -- =====================
 -- System Log
 -- =====================
@@ -165,9 +152,8 @@ DROP INDEX if exists idx_guests_vector cascade;
 CREATE INDEX idx_guests_vector
     ON guests USING GIN (to_tsvector('english', coalesce(name,'') || ' ' || coalesce(description,'')));
 
+-- Dec 5 refactor: removed episode-related indexes
 DROP INDEX if exists idx_episodes_vector cascade;
-CREATE INDEX idx_episodes_vector
-    ON episodes USING GIN (to_tsvector('english', coalesce(name,'') || ' ' || coalesce(description,'')));
 
 DROP INDEX if exists idx_posts_vector cascade;
 CREATE INDEX idx_posts_vector
@@ -197,12 +183,10 @@ FOR EACH ROW EXECUTE FUNCTION patterns_vector_update();
 CREATE INDEX IF NOT EXISTS idx_pattern_guest_link_guest  ON pattern_guest_link(guest_id);
 CREATE INDEX IF NOT EXISTS idx_pattern_org_link_org      ON pattern_org_link(org_id);
 CREATE INDEX IF NOT EXISTS idx_pattern_post_link_post    ON pattern_post_link(post_id);
-CREATE INDEX IF NOT EXISTS idx_pattern_episode_link_post ON pattern_episode_link(episode_id);
 
 -- 
 CREATE INDEX IF NOT EXISTS idx_orgs_active     ON orgs(id)     WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_guests_active   ON guests(id)   WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_episodes_active ON episodes(id) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_posts_active    ON posts(id)    WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_patterns_active ON patterns(id) WHERE deleted_at IS NULL;
 --
@@ -219,3 +203,6 @@ CREATE TABLE IF NOT EXISTS views_registry (
     created_at TIMESTAMP DEFAULT now(),
     updated_at TIMESTAMP DEFAULT now()
 );
+--
+ALTER TABLE views_registry DROP CONSTRAINT views_registry_table_name_key;
+ALTER TABLE views_registry ADD CONSTRAINT views_registry_table_name_key UNIQUE (table_name);

@@ -1,26 +1,12 @@
 --
 -- Logical views for reporting
--- Pattern-Episode relationships
-DROP VIEW IF EXISTS pattern_episodes;
-CREATE OR REPLACE VIEW pattern_episodes AS
-SELECT
-    p.name AS pattern_name,
-    p.kind,
-    p.data_source,
-    e.name AS episode_name,
-    e.episode_url
-FROM patterns p
-JOIN pattern_episode_link pel ON p.id = pel.pattern_id
-JOIN episodes e ON pel.episode_id = e.id
-WHERE p.deleted_at IS NULL AND e.deleted_at IS NULL;
-
 -- Pattern-Guest relationships
 DROP VIEW IF EXISTS pattern_guests;
 CREATE OR REPLACE VIEW pattern_guests AS
 SELECT
     p.name AS pattern_name,
     p.kind,
-    p.data_source,
+    p.content_source,
     g.name AS guest_name,
     g.job_description
 FROM patterns p
@@ -34,7 +20,7 @@ CREATE OR REPLACE VIEW pattern_orgs AS
 SELECT
     p.name AS pattern_name,
     p.kind,
-    p.data_source,
+    p.content_source,
     o.name AS org_name,
     o.stage,
     o.linkedin_company_url
@@ -49,9 +35,9 @@ CREATE OR REPLACE VIEW pattern_posts AS
 SELECT
     p.name AS pattern_name,
     p.kind,
-    p.data_source,
+    p.content_source,
     po.name AS post_name,
-    po.substack_url
+    po.content_url
 FROM patterns p
 JOIN pattern_post_link ppl ON p.id = ppl.pattern_id
 JOIN posts po ON ppl.post_id = po.id

@@ -1,6 +1,6 @@
 SYSTEM:
-  rev: 0.1
-  date: 2025-11-19
+  rev: 0.5
+  date: 2025-12-05
   author: D. Lieberman
 
   prompt: |
@@ -31,17 +31,6 @@ DATA:
       - updated_at
       - deleted_at
 
-    episodes:
-      - id
-      - name
-      - description
-      - keywords
-      - episode_url
-      - published_at
-      - created_at
-      - updated_at
-      - deleted_at
-
     guests:
       - id
       - name
@@ -49,9 +38,8 @@ DATA:
       - linkedin_url
       - job_description
       - keywords
-      - data_source
+      - content_source
       - org_id
-      - episode_id
       - post_id
       - created_at
       - updated_at
@@ -63,45 +51,33 @@ DATA:
       - description
       - stage
       - funding
-      - date_founded
       - date_funded
+      - date_founded
       - linkedin_company_url
       - keywords
-      - data_source
+      - content_source
       - category_id
       - created_at
       - updated_at
       - deleted_at
-# pattern_episode_link is a join table between patterns and episodes
-    pattern_episode_link:
-      - pattern_id
-      - episode_id
-# pattern_guest_link is a join table between patterns and guests
+
     pattern_guest_link:
       - pattern_id
       - guest_id
-# pattern_org_link is a join table
+
     pattern_org_link:
       - pattern_id
       - org_id
-# pattern_post_link is a join table
+
     pattern_post_link:
       - pattern_id
       - post_id
-
-    pattern_registry:
-      - id
-      - name
-      - description
-      - sql
-      - created_at
-      - updated_at
 
     patterns:
       - id
       - name
       - description
-      - data_source
+      - content_source
       - kind
       - metadata
       - highlights
@@ -116,7 +92,8 @@ DATA:
       - name
       - description
       - keywords
-      - substack_url
+      - content_url
+      - content_source
       - published_at
       - created_at
       - updated_at
@@ -137,17 +114,18 @@ DATA:
       - updated_at
 
 RULES:
-  - rule_code: PIE
-    name: "Apple Pie"
-    description: "A list of patterns that appear in podcast episodes."
+  - rule_code: PIP
+    name: "All patterns all posts"
+    description: "A list of patterns in posts."
     logic: |
-      show me episodes with their pattern_name, episode_name and episode_url
+      select * from pattern_posts
 
-  - rule_code: PATE
+  - rule_code: PIE
     name: "Patterns in Episodes"
-    description: "Show patterns that appear in podcast episodes with their type and episode links."
+    description: "Show patterns that appear in podcast episode."
     logic: |
-      show me episodes with  pattern_name, episode_name and episode_url
+      show me posts with  pattern_name, episode_name and episode_url where content_source is 'podcast'
+      Use the content_source field to determine if the pattern is from a podcast episode ('podcast')
 
   - rule_code: LIST_ORGS 
     name: "Organizations who were on the podcast"
@@ -161,6 +139,7 @@ RULES:
     logic: |
       show me the patterns connected to guests, including the guest name, job description, 
       the pattern kind, and the relevant episodes or posts if available
+      Use the content_source field to determine if the pattern is from an episode or post.
 
   - rule_code: PATTERNS_BY_ORGANIZATION
     name: "Patterns by Organization"
@@ -173,8 +152,8 @@ RULES:
     name: "Top 10 Patterns by Frequency"
     description: "Rank patterns by how many times they appear across guests, episodes, posts, or orgs."
     logic: |
-      show me the top 10 patterns by how frequently they appear in episodes, guests, posts, 
-      or organizations
+      show me the top 10 patterns by how frequently they appear in podcast episodes, guests, posts, 
+      or organizations. Use the content_source field to determine if the pattern is from an episode or post.
 
   - rule_code: EPISODES_WITH_MOST_PATTERNS
     name: "Episodes with the Most Patterns"

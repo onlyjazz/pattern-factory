@@ -51,7 +51,7 @@ def get_capo_system_prompt() -> str:
         "You are a router that classifies a user’s message for the Pattern Factory. "
         "Choose exactly one verb: RULE or CONTENT. RULE means the user wants to query/build "
         "logical views (rules → SQL → execute). CONTENT means the user wants to extract "
-        "entities (orgs, guests, categories, patterns, episodes, posts) from a URL or text. "
+        "entities (orgs, guests, categories, patterns, posts) from a URL or text. "
         "Return strict JSON only: { \"decision\": \"yes\"|\"no\", \"verb\": \"RULE\"|\"CONTENT\", \"confidence\": 0.0–1.0, \"reason\": \"...\" }. "
         "If intent is unclear (<0.6 confidence), set decision to \"no\" and explain what’s ambiguous in reason."
     )
@@ -160,7 +160,6 @@ def _heuristic_language_capo(text: str) -> Tuple[str, float, str, str]:
         "having",
         "order",
         "sql",
-        "episodes",
         "guests",
         "organizations",
         "posts",
@@ -297,8 +296,8 @@ async def agent_verify_request(message_body: Dict[str, Any]) -> Tuple[str, float
     else:
         # Fallback to hardcoded list if context builder unavailable
         valid_tables = {
-            "patterns", "episodes", "guests", "organizations", "posts",
-            "pattern_episodes", "pattern_guests", "pattern_orgs", "pattern_posts",
+            "patterns", "guests", "organizations", "posts",
+            "pattern_guests", "pattern_orgs", "pattern_posts",
             "orgs", "org", "guest", "episode", "post", "pattern"
         }
         logger.warning("Using fallback hardcoded table list; context_builder not available")
@@ -306,7 +305,7 @@ async def agent_verify_request(message_body: Dict[str, Any]) -> Tuple[str, float
     found_tables = [t for t in valid_tables if t in rule_logic]
     
     if not found_tables:
-        reason = "Rule does not reference any known entities (patterns, episodes, guests, orgs, posts)"
+        reason = "Rule does not reference any known entities (patterns, guests, orgs, posts)"
         logger.info(f"  Decision: no (confidence: 0.82) - {reason}")
         return ("no", 0.82, reason)
     
