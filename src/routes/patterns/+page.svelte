@@ -199,7 +199,6 @@
                     handleSave(patternToEdit);
                 }}>
                     <div class="input">
-                        <label for="edit-name" class="input__label">Name</label>
                         <input
                             id="edit-name"
                             type="text"
@@ -208,10 +207,10 @@
                             class:input__text_changed={patternToEdit.name?.length > 0}
                             required
                         />
+                        <label for="edit-name" class="input__label">Name</label>
                     </div>
 
                     <div class="input">
-                        <label for="edit-description" class="input__label">Description</label>
                         <input
                             id="edit-description"
                             type="text"
@@ -220,10 +219,10 @@
                             class:input__text_changed={patternToEdit.description?.length > 0}
                             required
                         />
+                        <label for="edit-description" class="input__label">Description</label>
                     </div>
 
                     <div class="input input_select">
-                        <label for="edit-kind" class="input__label">Kind</label>
                         <select
                             id="edit-kind"
                             bind:value={patternToEdit.kind}
@@ -233,6 +232,7 @@
                             <option value="pattern">Pattern</option>
                             <option value="anti-pattern">Anti-Pattern</option>
                         </select>
+                        <label for="edit-kind" class="input__label">Kind</label>
                     </div>
 
                     <div class="modal-footer">
@@ -274,7 +274,6 @@
                     handleCreate();
                 }}>
                     <div class="input">
-                        <label for="add-name" class="input__label">Name</label>
                         <input
                             id="add-name"
                             type="text"
@@ -284,10 +283,10 @@
                             placeholder=""
                             required
                         />
+                        <label for="add-name" class="input__label">Name</label>
                     </div>
 
                     <div class="input">
-                        <label for="add-description" class="input__label">Description</label>
                         <input
                             id="add-description"
                             type="text"
@@ -297,10 +296,10 @@
                             placeholder=""
                             required
                         />
+                        <label for="add-description" class="input__label">Description</label>
                     </div>
 
                     <div class="input input_select">
-                        <label for="add-kind" class="input__label">Kind</label>
                         <select
                             id="add-kind"
                             bind:value={newPattern.kind}
@@ -310,6 +309,7 @@
                             <option value="pattern">Pattern</option>
                             <option value="anti-pattern">Anti-Pattern</option>
                         </select>
+                        <label for="add-kind" class="input__label">Kind</label>
                     </div>
 
                     <div class="modal-footer">

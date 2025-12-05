@@ -561,13 +561,22 @@ a.flask-link {
 	color: rgba(0,0,0,0.54);
 	transition-duration: 0.225s;
 }
-.input__text:focus + .input__label {
+.input__text:focus ~ .input__label {
 	top: 0px;
 	font-size: 12px;
 	line-height: 12px;
 	color: #03A9F4;
 }
-.input__text_changed + .input__label {
+.input__text:not(:placeholder-shown) ~ .input__label {
+	top: 0px;
+	font-size: 12px;
+	line-height: 12px;
+	color: rgba(0,0,0,0.38);
+}
+.input__text_changed {
+	padding-top: 12px;
+}
+.input__text_changed ~ .input__label {
 	top: 0px;
 	font-size: 12px;
 	line-height: 12px;
