@@ -31,6 +31,7 @@ CREATE TABLE orgs (
     linkedin_company_url TEXT,
     keywords TEXT[],
     content_source TEXT,          -- e.g., 'linkedin', 'crunchbase', 'website'
+    post_id BIGINT REFERENCES posts(id) ON DELETE SET NULL,          
     category_id BIGINT REFERENCES categories(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT now(),
     updated_at TIMESTAMP DEFAULT now(),
@@ -56,6 +57,7 @@ CREATE TABLE guests (
     updated_at TIMESTAMP DEFAULT now(),
     deleted_at TIMESTAMP
 );
+ALTER TABLE guests ADD CONSTRAINT guests_name_unique UNIQUE (name);
 
 -- =====================
 -- Episodes
@@ -206,3 +208,10 @@ CREATE TABLE IF NOT EXISTS views_registry (
 --
 ALTER TABLE views_registry DROP CONSTRAINT views_registry_table_name_key;
 ALTER TABLE views_registry ADD CONSTRAINT views_registry_table_name_key UNIQUE (table_name);
+
+-- =====================
+-- Unique Constraints for Upsert Operations
+-- =====================
+ALTER TABLE orgs ADD CONSTRAINT orgs_name_unique UNIQUE (name);
+ALTER TABLE posts ADD CONSTRAINT posts_name_unique UNIQUE (name);
+ALTER TABLE patterns ADD CONSTRAINT patterns_name_unique UNIQUE (name);

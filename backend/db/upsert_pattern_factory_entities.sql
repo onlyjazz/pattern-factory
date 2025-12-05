@@ -25,25 +25,25 @@ BEGIN
         INSERT INTO orgs (
             name,
             description,
-            tech_keywords,
+            keywords,
             content_url,
             content_source
         )
         VALUES (
             org_rec->>'name',
             org_rec->>'description',
-            (org_rec->'tech_keywords')::text[],
+            array(SELECT jsonb_array_elements_text(org_rec->'keywords')),
             org_rec->>'content_url',
             org_rec->>'content_source'
         )
         ON CONFLICT (name)
         DO UPDATE SET
             description     = EXCLUDED.description,
-            tech_keywords   = EXCLUDED.tech_keywords,
+            keywords   = EXCLUDED.keywords,
             content_url     = EXCLUDED.content_url,
             content_source  = EXCLUDED.content_source,
             updated_at      = NOW()
-        RETURNING org_id INTO v_org_id;
+        RETURNING id INTO v_org_id;
 
         results := results || jsonb_build_object('last_org_id', v_org_id);
     END LOOP;
@@ -65,7 +65,7 @@ BEGIN
         VALUES (
             post_rec->>'name',
             post_rec->>'description',
-            (post_rec->'keywords')::text[],
+            array(SELECT jsonb_array_elements_text(post_rec->'keywords')),
             post_rec->>'content_url',
             post_rec->>'content_source',
             NULLIF(post_rec->>'published_at','')::timestamp
@@ -100,7 +100,7 @@ BEGIN
             guest_rec->>'name',
             guest_rec->>'description',
             guest_rec->>'job_description',
-            (SELECT org_id FROM orgs WHERE name = guest_rec->>'org_name' LIMIT 1),
+            (SELECT id FROM orgs WHERE name = guest_rec->>'org_name' LIMIT 1),
             guest_rec->>'content_url',
             guest_rec->>'content_source'
         )
@@ -112,7 +112,7 @@ BEGIN
             content_url     = EXCLUDED.content_url,
             content_source  = EXCLUDED.content_source,
             updated_at      = NOW()
-        RETURNING guest_id INTO v_guest_id;
+        RETURNING id INTO v_guest_id;
 
         results := results || jsonb_build_object('last_guest_id', v_guest_id);
     END LOOP;
@@ -136,7 +136,7 @@ BEGIN
             pattern_rec->>'name',
             pattern_rec->>'description',
             pattern_rec->>'kind',
-            (pattern_rec->'keywords')::text[],
+            array(SELECT jsonb_array_elements_text(pattern_rec->'keywords')),
             COALESCE(pattern_rec->'metadata', '{}'::jsonb),
             COALESCE(pattern_rec->'highlights', '[]'::jsonb),
             pattern_rec->>'content_source'
@@ -177,7 +177,7 @@ BEGIN
         INSERT INTO pattern_org_link(pattern_id, org_id)
         SELECT
             (SELECT id FROM patterns WHERE name = link_rec->>'pattern_name'),
-            (SELECT org_id FROM orgs WHERE name = link_rec->>'org_name')
+            (SELECT id FROM orgs WHERE name = link_rec->>'org_name')
         ON CONFLICT DO NOTHING;
     END LOOP;
 
@@ -190,7 +190,7 @@ BEGIN
         INSERT INTO pattern_guest_link(pattern_id, guest_id)
         SELECT
             (SELECT id FROM patterns WHERE name = link_rec->>'pattern_name'),
-            (SELECT guest_id FROM guests WHERE name = link_rec->>'guest_name')
+            (SELECT id FROM guests WHERE name = link_rec->>'guest_name')
         ON CONFLICT DO NOTHING;
     END LOOP;
 
