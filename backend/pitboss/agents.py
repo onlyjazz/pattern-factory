@@ -16,6 +16,9 @@ import logging
 import random
 import json
 import os
+from urllib.parse import urlparse
+import urllib.request
+import re
 from openai import OpenAI
 
 logger = logging.getLogger(__name__)
@@ -553,17 +556,18 @@ async def agent_capo_content(message_body: Dict[str, Any]) -> Tuple[str, float, 
     """
     model.Capo (CONTENT flow)
     Initial validation of extraction request.
+    Deterministically pass when the user typed 'extract <url>'.
     """
     logger.info("🤖 [model.Capo] Validating extraction request...")
-    
-    decision = "yes" if random.random() < 0.80 else "no"
-    confidence = 0.83 if decision == "yes" else 0.70
-    reason = (
-        "Extraction request is well-formed"
-        if decision == "yes"
-        else "URL or content format not recognized"
-    )
-    
+
+    text = (message_body.get("raw_text") or "").strip().lower()
+    if text.startswith("extract "):
+        return ("yes", 0.99, "Recognized 'extract <url>' command")
+
+    # Fallback behavior
+    decision = "yes" if random.random() < 0.90 else "no"
+    confidence = 0.9 if decision == "yes" else 0.7
+    reason = "Extraction request looks ok" if decision == "yes" else "Could not recognize extraction format"
     logger.info(f"  Decision: {decision} (confidence: {confidence:.2f})")
     return (decision, confidence, reason)
 
@@ -571,39 +575,404 @@ async def agent_capo_content(message_body: Dict[str, Any]) -> Tuple[str, float, 
 async def agent_verify_request_content(message_body: Dict[str, Any]) -> Tuple[str, float, str]:
     """
     model.verifyRequest (CONTENT flow)
-    Validate that user is asking for entity extraction from newsletter/podcast.
+    Validate that user is asking for entity extraction and that a URL is present.
     """
     logger.info("🤖 [model.verifyRequest] Validating extraction semantics...")
-    
-    decision = "yes" if random.random() < 0.87 else "no"
-    confidence = 0.89 if decision == "yes" else 0.64
-    reason = (
-        "Extraction request targets valid entities (orgs, guests, patterns)"
-        if decision == "yes"
-        else "Request asks for unsupported entity types"
+
+    text = (message_body.get("raw_text") or "").strip()
+    url = (message_body.get("url") or "").strip() or _parse_url_from_text(text)
+
+    if url:
+        return ("yes", 0.96, "URL detected for extraction")
+
+    # If no URL yet, ask for one via HITL
+    reason = "Please provide a URL. Usage: extract <url>"
+    logger.info(f"  Decision: no (confidence: 0.98) - {reason}")
+    return ("no", 0.98, reason)
+
+
+def _parse_url_from_text(text: str) -> Optional[str]:
+    """Extract URL from text matching 'extract <url>' pattern; returns URL or None."""
+    if not text:
+        return None
+    parts = text.strip().split()
+    if len(parts) >= 2 and parts[0].lower() == "extract":
+        return parts[1]
+    return None
+
+
+async def _http_get_text(url: str, timeout: float = 8.0) -> Tuple[str, int, str]:
+    """Fetch URL content as text using stdlib in a background thread.
+    Returns (text, status_code, content_type)."""
+    import asyncio
+
+    def _fetch():
+        req = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": "PatternFactoryBot/1.0 (+https://example.local)",
+                "Accept": "text/html, text/plain;q=0.9, */*;q=0.8",
+            },
+            method="GET",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                status = getattr(resp, "status", 200)
+                ctype = resp.headers.get("Content-Type", "")
+                raw = resp.read(512_000)  # cap to 512KB for preview stage
+                # Try charset from header
+                charset = "utf-8"
+                if "charset=" in ctype:
+                    try:
+                        charset = ctype.split("charset=")[-1].split(";")[0].strip()
+                    except Exception:
+                        pass
+                try:
+                    text = raw.decode(charset, errors="replace")
+                except Exception:
+                    text = raw.decode("utf-8", errors="replace")
+                return text, status, ctype
+        except urllib.error.HTTPError as e:
+            try:
+                body = e.read().decode("utf-8", errors="replace")
+            except Exception:
+                body = str(e)
+            return body, getattr(e, "code", 500), e.headers.get("Content-Type", "") if hasattr(e, "headers") else ""
+        except Exception as e:
+            return str(e), 0, ""
+
+    return await asyncio.to_thread(_fetch)
+
+
+def _extract_post_title_and_subtitle(html: str) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Extract post title and subtitle from HTML.
+
+    Patterns:
+    - Title: <h1 ... class="post-title ...">TITLE</h1>
+    - Subtitle: <h3 ... class="subtitle ...">SUBTITLE</h3>
+
+    Returns: (title, subtitle) or (None, None) if not found
+    """
+    title = None
+    subtitle = None
+
+    # Extract title from h1 with post-title class
+    title_match = re.search(
+        r'<h1[^>]*class="[^"]*post-title[^"]*"[^>]*>(.+?)</h1>',
+        html,
+        re.IGNORECASE | re.DOTALL,
     )
-    
-    logger.info(f"  Decision: {decision} (confidence: {confidence:.2f})")
-    return (decision, confidence, reason)
+    if title_match:
+        title = title_match.group(1).strip()
+        # Remove any remaining HTML tags
+        title = re.sub(r'<[^>]+>', '', title).strip()
+
+    # Extract subtitle from h3 with subtitle class
+    subtitle_match = re.search(
+        r'<h3[^>]*class="[^"]*subtitle[^"]*"[^>]*>(.+?)</h3>',
+        html,
+        re.IGNORECASE | re.DOTALL,
+    )
+    if subtitle_match:
+        subtitle = subtitle_match.group(1).strip()
+        subtitle = re.sub(r'<[^>]+>', '', subtitle).strip()
+
+    return (title, subtitle)
+
+
+def _extract_published_date(html: str) -> Optional[str]:
+    """
+    Extract published date from HTML like 'Oct 24, 2025'.
+    Returns the matched date string or None if not found.
+    """
+    # Prefer dates inside likely meta/publish elements but fall back to any match
+    patterns = [
+        r'<(?:div|span)[^>]*class="[^"]*(meta|publish|date)[^"]*"[^>]*>\s*([A-Z][a-z]{2}\s+\d{1,2},\s+\d{4})\s*</',
+        r'\b([A-Z][a-z]{2}\s+\d{1,2},\s+\d{4})\b',
+    ]
+    for pat in patterns:
+        m = re.search(pat, html, re.IGNORECASE | re.DOTALL)
+        if m:
+            # If grouped, last group is the date
+            return (m.group(2) if m.lastindex and m.lastindex >= 2 else m.group(1)).strip()
+    return None
+
+
+def _heuristic_keywords(title: str, description: str, limit: int = 10) -> list:
+    """Very simple keyword heuristic from title/description (lowercase, dedup, stopword removal)."""
+    text = f"{title or ''} {description or ''}"
+    words = re.findall(r"[A-Za-z][A-Za-z0-9\-]{2,}", text)
+    stop = {
+        'the','and','for','with','from','into','about','this','that','your','their','our','how','could','would','should','a','an','of','in','to','on','by','as','at','up','down','over','under','big','small','new','next','early','stage'
+    }
+    out = []
+    seen = set()
+    for w in words:
+        wl = w.lower()
+        if wl in stop:
+            continue
+        if wl not in seen:
+            seen.add(wl)
+            out.append(wl)
+        if len(out) >= limit:
+            break
+    return out
+
+
+async def _extract_keywords_via_llm(title: str, description: str, content_preview: str) -> Optional[list]:
+    """
+    Use OpenAI to extract up to 10 keywords. Returns list or None on failure.
+    """
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        logger.warning("[extractKeywords] No OPENAI_API_KEY set; using heuristic keywords")
+        return None
+    try:
+        client = OpenAI(api_key=api_key)
+        system_prompt = (
+            "You extract concise topical keywords. Return a JSON object with a 'keywords' array. "
+            "Rules: 3-10 items, lowercase, single- or multi-word, no punctuation, deduplicate, most relevant first."
+        )
+        user_message = (
+            f"Title: {title}\n\nDescription: {description}\n\nContent preview: {content_preview[:4000]}"
+        )
+        response = await _call_openai_async(
+            client=client,
+            system_prompt=system_prompt,
+            user_message=user_message,
+            model="gpt-4o-mini",
+            temperature=0.2,
+            timeout=10.0,
+        )
+        data = json.loads(response)
+        kws = data.get("keywords") if isinstance(data, dict) else None
+        if isinstance(kws, list):
+            # Normalize
+            norm = []
+            seen = set()
+            for k in kws[:10]:
+                if not isinstance(k, str):
+                    continue
+                kl = k.strip().lower()
+                if not kl or kl in seen:
+                    continue
+                seen.add(kl)
+                norm.append(kl)
+            return norm
+        logger.warning(f"[extractKeywords] Unexpected response: {response}")
+        return None
+    except Exception as e:
+        logger.warning(f"[extractKeywords] LLM extraction failed: {e}")
+        return None
+
+
+def _get_extract_content_system_prompt(context_builder) -> Optional[str]:
+    """
+    Load the EXTRACT_CONTENT system prompt from pattern-factory.yaml CONTENT section.
+    Returns the prompt string or None if not found.
+    """
+    try:
+        yaml_data = context_builder.yaml_data if hasattr(context_builder, 'yaml_data') else {}
+        content_rules = yaml_data.get("CONTENT", [])
+        for rule in content_rules:
+            if rule.get("rule_code") == "EXTRACT_CONTENT":
+                prompt = rule.get("prompt", "").strip()
+                if prompt:
+                    return prompt
+    except Exception as e:
+        logger.warning(f"[getExtractContentPrompt] Failed to load prompt from YAML: {e}")
+    return None
 
 
 async def agent_request_to_extract_entities(message_body: Dict[str, Any]) -> Tuple[str, float, str]:
     """
     model.requestToExtractEntities (CONTENT flow)
-    Extractor agent produces upserts for orgs, guests, categories, patterns, etc.
+    Generalized entity extraction agent.
+    
+    Behavior:
+    - User types: 'extract <url>'
+    - Agent performs HTTP GET
+    - Calls LLM with EXTRACT_CONTENT system prompt from YAML
+    - Returns decision="no" with JSON structure (posts, patterns, orgs, guests, links) for human review
     """
-    logger.info("🤖 [model.requestToExtractEntities] Extracting entities from content...")
-    
-    decision = "yes" if random.random() < 0.81 else "no"
-    confidence = 0.84 if decision == "yes" else 0.62
-    reason = (
-        "Extracted 3 orgs, 5 guests, 7 patterns from content"
-        if decision == "yes"
-        else "Content analysis incomplete, insufficient context"
-    )
-    
-    logger.info(f"  Decision: {decision} (confidence: {confidence:.2f})")
-    return (decision, confidence, reason)
+    logger.info("🤖 [model.requestToExtractEntities] Fetching and extracting entities...")
+
+    # IMPORTANT: Clear stale metadata from previous extraction
+    message_body.pop("url", None)
+    message_body.pop("post_title", None)
+    message_body.pop("post_subtitle", None)
+    message_body.pop("published_at", None)
+    message_body.pop("content_summary", None)
+    message_body.pop("http_status", None)
+    message_body.pop("content_type", None)
+    message_body.pop("content_preview", None)
+    message_body.pop("extracted_entities", None)
+
+    raw_text = (message_body.get("raw_text") or "").strip()
+    # Prioritize URL from raw_text
+    url: Optional[str] = _parse_url_from_text(raw_text)
+    if not url:
+        url = (message_body.get("url") or "").strip() or None
+
+    if not url:
+        reason = "No URL provided. Usage: extract <url>"
+        logger.info(f"  Decision: no (confidence: 0.98) - {reason}")
+        return ("no", 0.98, reason)
+
+    # Normalize URL
+    parsed = urlparse(url)
+    if not parsed.scheme:
+        url = f"https://{url}"
+        parsed = urlparse(url)
+
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        reason = f"Invalid URL: {url}"
+        logger.info(f"  Decision: no (confidence: 0.98) - {reason}")
+        return ("no", 0.98, reason)
+
+    # Fetch HTML
+    text, status, ctype = await _http_get_text(url)
+    message_body["url"] = url
+    message_body["http_status"] = status
+    message_body["content_type"] = ctype
+    message_body["content_preview"] = (text or "").replace("\n", " ").replace("\r", " ")[:80]
+
+    if status != 200:
+        reason = f"HTTP {status} fetching {url}"
+        logger.info(f"  Decision: no (confidence: 0.95) - {reason}")
+        return ("no", 0.95, reason)
+
+    # Load system prompt from YAML
+    context_builder = message_body.get("_ctx")
+    system_prompt = _get_extract_content_system_prompt(context_builder) if context_builder else None
+
+    if not system_prompt:
+        reason = "Could not load EXTRACT_CONTENT system prompt from YAML"
+        logger.warning(f"  Decision: no (confidence: 0.70) - {reason}")
+        return ("no", 0.70, reason)
+
+    # Call LLM to extract entities (posts, patterns, orgs, guests, links)
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        reason = "No OPENAI_API_KEY set; cannot extract entities"
+        logger.warning(f"  Decision: no (confidence: 0.70) - {reason}")
+        return ("no", 0.70, reason)
+
+    try:
+        client = OpenAI(api_key=api_key)
+        
+        # Provide input in the exact structure the prompt expects
+        max_chars = 60000
+        input_payload = {
+            "url": url,
+            "markup": (text or "")[:max_chars],
+            "content_source": "substack",
+        }
+        user_message = json.dumps(input_payload, ensure_ascii=False)
+        
+        logger.info(f"  [LLM Call] Sending payload: url len={len(url)}, markup len={len(input_payload['markup'])}, source=substack")
+        logger.info(f"  [LLM Call] System prompt length: {len(system_prompt)} chars")
+        
+        response = await _call_openai_async(
+            client=client,
+            system_prompt=system_prompt,
+            user_message=user_message,
+            model="gpt-4o-mini",
+            temperature=0.2,
+            timeout=30.0,
+        )
+
+        logger.info(f"  [LLM Response] Received {len(response)} chars")
+        logger.debug(f"  [LLM Response] First 500 chars: {response[:500]}")
+
+        # Parse LLM response
+        try:
+            llm_obj = json.loads(response)
+        except json.JSONDecodeError as e:
+            logger.error(f"  [LLM Response] Failed to parse JSON: {e}")
+            logger.error(f"  [LLM Response] Raw response: {response[:1000]}")
+            raise
+        
+        logger.info(f"  [Extraction] Parsed JSON successfully")
+        if isinstance(llm_obj, dict):
+            logger.info(f"  [Extraction] Top-level keys: {list(llm_obj.keys())}")
+        
+        # Accept both envelope-style and bare-payload outputs
+        extracted_data = None
+        if isinstance(llm_obj, dict):
+            if all(k in llm_obj for k in ["orgs", "guests", "posts", "patterns", "pattern_post_link", "pattern_org_link", "pattern_guest_link"]):
+                extracted_data = llm_obj
+            elif isinstance(llm_obj.get("messageBody"), dict):
+                extracted_data = llm_obj.get("messageBody")
+                logger.info("  [Extraction] Using messageBody payload from LLM envelope")
+        
+        if extracted_data is None or not isinstance(extracted_data, dict):
+            logger.warning("  [Extraction] LLM did not return expected structure; initializing empty payload")
+            extracted_data = {}
+        
+        # Validate and normalize structure
+        required_keys = ["orgs", "guests", "posts", "patterns", "pattern_post_link", "pattern_org_link", "pattern_guest_link"]
+        for key in required_keys:
+            if key not in extracted_data:
+                logger.warning(f"  [Extraction] Missing key: {key}")
+                extracted_data[key] = []
+            elif not isinstance(extracted_data[key], list):
+                logger.warning(f"  [Extraction] {key} is not a list: {type(extracted_data[key])}")
+                extracted_data[key] = []
+            else:
+                logger.info(f"  [Extraction] {key}: {len(extracted_data[key])} items")
+        
+        # Deterministic fallback: ensure at least one post from H1/H3 if available
+        if len(extracted_data.get("posts", [])) == 0:
+            title, subtitle = _extract_post_title_and_subtitle(text or "")
+            published = _extract_published_date(text or "")
+            if title:
+                logger.info("  [Fallback] Creating post from H1/H3 extraction")
+                # Keywords via LLM (fallback to heuristic)
+                preview_for_llm = (text or "")[:4000]
+                kws = await _extract_keywords_via_llm(title or "", subtitle or "", preview_for_llm)
+                if kws is None:
+                    kws = _heuristic_keywords(title or "", subtitle or "")
+                extracted_data["posts"].append({
+                    "name": title,
+                    "description": subtitle,
+                    "keywords": kws or [],
+                    "content_url": url,
+                    "content_source": "substack",
+                    "published_at": published,
+                })
+        
+        # Also ensure any posts that have empty keywords get populated from heuristic/LLM
+        for post in extracted_data.get("posts", []):
+            if not post.get("keywords"):
+                logger.info("  [Fallback] Post has empty keywords; extracting from title/description")
+                kws = _heuristic_keywords(post.get("name", ""), post.get("description", ""))
+                if not kws:
+                    # Last resort: try LLM
+                    kws = await _extract_keywords_via_llm(
+                        post.get("name", ""),
+                        post.get("description", ""),
+                        (text or "")[:4000]
+                    )
+                post["keywords"] = kws or []
+        
+        # Store extracted entities in message_body for next agent
+        message_body["extracted_entities"] = extracted_data
+        
+        # Return the full JSON object to the human (pretty-printed), not an envelope
+        reason_json = json.dumps(extracted_data, ensure_ascii=False, indent=2)
+        logger.info("  Decision: no (confidence: 0.95) - Returning full JSON to human")
+        return ("no", 0.95, reason_json)
+
+    except json.JSONDecodeError as e:
+        reason = f"LLM response is not valid JSON: {str(e)}"
+        logger.warning(f"  Decision: no (confidence: 0.60) - {reason}")
+        return ("no", 0.60, reason)
+    except Exception as e:
+        reason = f"Entity extraction failed: {str(e)}"
+        logger.error(f"  Decision: no (confidence: 0.60) - {reason}", exc_info=True)
+        return ("no", 0.60, reason)
 
 
 async def agent_verify_upsert(message_body: Dict[str, Any]) -> Tuple[str, float, str]:
@@ -689,5 +1058,4 @@ async def call_agent(agent_name: str, verb: str, message_body: Dict[str, Any]):
         return (decision, confidence, reason)
     except Exception as e:
         logger.error(f"❌ Agent {agent_name} crashed: {e}", exc_info=True)
-        return ("no", 0.0, f"Agent error: {str(e)}")
         return ("no", 0.0, f"Agent error: {str(e)}")

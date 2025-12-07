@@ -469,6 +469,35 @@ CONTENT:
       ------------------------------------------------------------
       ENTITY EXTRACTION RULES
       ------------------------------------------------------------
+      POSTS:
+      A post has 6 fields:
+      Required fields:
+      {
+        "name": "...",
+        "description": "...",
+        "keywords": ["keyword1", "keyword2", ...],
+        "content_url": <from the human user input>,
+        "content_source": "substack",
+        "published_at": "..."
+      }
+      The name is in the H1 tag like this
+      <h1 dir="auto" class="post-title published title-X77sOw">Debug the TechBio development process</h1>
+
+      The description is in the H3 tag class=subtitle like this
+      <h3 dir="auto" class="subtitle subtitle-HEEcLo">Start by deciding if you are a tech or a service company.</h3>
+
+      The published_at field is extracted from the HTML content.
+      The field looks like this: "Oct 24, 2025" and will be in an HTML snippet like this
+      <div class="pencraft pc-reset color-pub-secondary-text-hGQ02T line-height-20-t4M0El font-meta-MWBumP size-11-NuY2Zx weight-medium-fw81nC transform-uppercase-yKDgcq reset-IxiVJZ meta-EgzBVA">Oct 11, 2025</div>
+
+      KEYWORDS FOR POSTS:
+      Extract 3-8 topical keywords from the post content. Keywords should be:
+      - Lowercase, single words or short phrases (e.g., "techbio", "automation", "drug discovery")
+      - Representative of the main topics discussed
+      - Derived from both the post title/description and the main body content
+      - Deduplicated (no repeated keywords)
+      Example: ["techbio", "software engineering", "service models", "drug discovery"]
+      Return empty array [] only if no clear topics can be extracted.
 
       ORGS:
       Extract organizations such as startups, CROs, labs, pharma, biotech, accelerators.
@@ -476,14 +505,21 @@ CONTENT:
       {
         "name": "...",
         "description": "...",
-        "tech_keywords": [],
-        "content_url": "...",
+        "keywords": [],
+        "content_url": <from the post>
         "content_source": "..."
       }
       No hallucinated orgs. tech_keywords must be lowercase terms.
 
       GUESTS:
-      Extract identifiable humans (CEOs, founders, researchers, speakers).
+      Extract identifiable humans (CEOs, founders, researchers, speakers) MENTIONED IN THE CONTENT.
+      IMPORTANT:
+      - Do NOT extract the newsletter/post author or byline as a guest.
+      - Prefer explicit cues like: "guest", "A recent guest was ...", "interview with ...",
+        or role phrases like "Co‑Founder and CEO at <Org>", "Founder of <Org>", "CEO at <Org>".
+      - When an organization is clearly associated in text ("at <Org>", "from <Org>"), set org_name to that org
+        and include the org in the orgs array if not already present.
+      - Avoid duplicates; normalize repeated mentions to a single guest entry.
       Required fields:
       {
         "name": "...",
@@ -491,23 +527,10 @@ CONTENT:
         "job_description": "...",
         "org_name": "...",       // link to an extracted org or null
         "tech_keywords": [],
-        "content_url": "...",
-        "content_source": "..."
+        "content_url": <from the post>,
+        "content_source": "substack"
       }
       If no org is known, org_name = null.
-
-      POSTS:
-      All content becomes a post (Substack, Beehiiv, podcast episodes, X threads, Granola summaries).
-      Required fields:
-      {
-        "name": "...",
-        "description": "...",
-        "keywords": [],
-        "content_url": "...",
-        "content_source": "...",
-        "published_at": null or timestamp
-      }
-      If no title exists, infer a short descriptive title. No fake dates.
 
       PATTERNS:
       Extract conceptual patterns or anti-patterns explicitly or strongly implied.
@@ -517,8 +540,8 @@ CONTENT:
         "name": "...",
         "description": "...",
         "kind": "pattern | anti-pattern",
-        "content_url": "...",
-        "content_source": "..."
+        "content_url": <from the post>,
+        "content_source": "substack"
       }
       Use deterministic pattern_code generation. No invented patterns.
 
