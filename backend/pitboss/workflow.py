@@ -30,10 +30,10 @@ class WorkflowNode:
 
 class WorkflowEngine:
     """
-    Executes YAML-based decision trees for Pattern Factory agents.
+    Executes Pattern Factory agents.
     
     Responsibilities:
-    - Load workflow definitions from YAML
+    - start a RULE or CONTENT flow where agents determine nextAgent
     - Track current position in decision tree
     - Branch on agent decisions (yes/no)
     - Route to terminal nodes (sendMessageToChat, etc)
