@@ -165,6 +165,14 @@
     return typeof value === 'string' && value.startsWith('http');
   }
 
+  function isHtmlLink(value: any): boolean {
+    return typeof value === 'string' && /<a\s+href=/.test(value);
+  }
+
+  function addTargetBlank(html: string): string {
+    return html.replace(/<a\s+href=/gi, '<a target="_blank" rel="noopener noreferrer" href=');
+  }
+
   // Convert view name to display name
   function getDisplayName(): string {
     const names: Record<string, string> = {
@@ -228,7 +236,9 @@
                   <tr class={idx % 2 === 0 ? 'stripe1' : 'stripe2'}>
                     {#each columns as col}
                       <td class="tal">
-                        {#if isUrl(row[col])}
+                        {#if isHtmlLink(row[col])}
+                          {@html addTargetBlank(row[col])}
+                        {:else if isUrl(row[col])}
                           <a href={row[col]} target="_blank" rel="noopener noreferrer" class="text-link text-link_blue">
                             {row[col].substring(0, 50)}...
                           </a>
@@ -249,7 +259,16 @@
 </div>
 
 <style>
-.results-info {
+  :global(td a) {
+    color: #0066cc;
+    text-decoration: underline;
+  }
+
+  :global(td a:hover) {
+    color: #0052a3;
+  }
+
+  .results-info {
     margin-bottom: 1rem;
   }
   

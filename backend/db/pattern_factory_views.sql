@@ -42,3 +42,18 @@ FROM patterns p
 JOIN pattern_post_link ppl ON p.id = ppl.pattern_id
 JOIN posts po ON ppl.post_id = po.id
 WHERE p.deleted_at IS NULL AND po.deleted_at IS NULL;
+
+DROP VIEW IF EXISTS "PIP";
+CREATE OR REPLACE VIEW "PIP" AS
+ SELECT 
+    p.name,
+    p.description,
+    '<a href="' || po.content_url || '">'||po.name || '</a>' AS post_title,
+    p.kind,
+    p.metadata,
+    p.highlights,
+    p.keywords
+   FROM patterns p
+     JOIN pattern_post_link ppl ON p.id = ppl.pattern_id
+     JOIN posts po ON ppl.post_id = po.id
+     ORDER BY p.name ASC;
