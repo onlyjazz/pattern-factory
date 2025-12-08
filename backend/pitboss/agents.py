@@ -698,75 +698,6 @@ def _extract_published_date(html: str) -> Optional[str]:
             return (m.group(2) if m.lastindex and m.lastindex >= 2 else m.group(1)).strip()
     return None
 
-
-def _heuristic_keywords(title: str, description: str, limit: int = 10) -> list:
-    """Very simple keyword heuristic from title/description (lowercase, dedup, stopword removal)."""
-    text = f"{title or ''} {description or ''}"
-    words = re.findall(r"[A-Za-z][A-Za-z0-9\-]{2,}", text)
-    stop = {
-        'the','and','for','with','from','into','about','this','that','your','their','our','how','could','would','should','a','an','of','in','to','on','by','as','at','up','down','over','under','big','small','new','next','early','stage'
-    }
-    out = []
-    seen = set()
-    for w in words:
-        wl = w.lower()
-        if wl in stop:
-            continue
-        if wl not in seen:
-            seen.add(wl)
-            out.append(wl)
-        if len(out) >= limit:
-            break
-    return out
-
-
-async def _extract_keywords_via_llm(title: str, description: str, content_preview: str) -> Optional[list]:
-    """
-    Use OpenAI to extract up to 10 keywords. Returns list or None on failure.
-    """
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        logger.warning("[extractKeywords] No OPENAI_API_KEY set; using heuristic keywords")
-        return None
-    try:
-        client = OpenAI(api_key=api_key)
-        system_prompt = (
-            "You extract concise topical keywords. Return a JSON object with a 'keywords' array. "
-            "Rules: 3-10 items, lowercase, single- or multi-word, no punctuation, deduplicate, most relevant first."
-        )
-        user_message = (
-            f"Title: {title}\n\nDescription: {description}\n\nContent preview: {content_preview[:4000]}"
-        )
-        response = await _call_openai_async(
-            client=client,
-            system_prompt=system_prompt,
-            user_message=user_message,
-            model="gpt-4o-mini",
-            temperature=0.2,
-            timeout=10.0,
-        )
-        data = json.loads(response)
-        kws = data.get("keywords") if isinstance(data, dict) else None
-        if isinstance(kws, list):
-            # Normalize
-            norm = []
-            seen = set()
-            for k in kws[:10]:
-                if not isinstance(k, str):
-                    continue
-                kl = k.strip().lower()
-                if not kl or kl in seen:
-                    continue
-                seen.add(kl)
-                norm.append(kl)
-            return norm
-        logger.warning(f"[extractKeywords] Unexpected response: {response}")
-        return None
-    except Exception as e:
-        logger.warning(f"[extractKeywords] LLM extraction failed: {e}")
-        return None
-
-
 def _get_extract_content_system_prompt(context_builder) -> Optional[str]:
     """
     Load the EXTRACT_CONTENT system prompt from pattern-factory.yaml CONTENT section.
@@ -931,31 +862,13 @@ async def agent_request_to_extract_entities(message_body: Dict[str, Any]) -> Tup
                 logger.info("  [Fallback] Creating post from H1/H3 extraction")
                 # Keywords via LLM (fallback to heuristic)
                 preview_for_llm = (text or "")[:4000]
-                kws = await _extract_keywords_via_llm(title or "", subtitle or "", preview_for_llm)
-                if kws is None:
-                    kws = _heuristic_keywords(title or "", subtitle or "")
                 extracted_data["posts"].append({
                     "name": title,
                     "description": subtitle,
-                    "keywords": kws or [],
                     "content_url": url,
                     "content_source": "substack",
                     "published_at": published,
                 })
-        
-        # Also ensure any posts that have empty keywords get populated from heuristic/LLM
-        for post in extracted_data.get("posts", []):
-            if not post.get("keywords"):
-                logger.info("  [Fallback] Post has empty keywords; extracting from title/description")
-                kws = _heuristic_keywords(post.get("name", ""), post.get("description", ""))
-                if not kws:
-                    # Last resort: try LLM
-                    kws = await _extract_keywords_via_llm(
-                        post.get("name", ""),
-                        post.get("description", ""),
-                        (text or "")[:4000]
-                    )
-                post["keywords"] = kws or []
         
         # Store extracted entities in message_body for next agent
         message_body["extracted_entities"] = extracted_data

@@ -1,207 +1,231 @@
-CREATE OR REPLACE FUNCTION upsert_pattern_factory_entities(payload JSONB)
-RETURNS JSONB
+CREATE OR REPLACE PROCEDURE upsert_pattern_factory_entities(
+    v_payload JSONB,
+    OUT v_result JSONB
+)
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    org_rec      JSONB;
-    guest_rec    JSONB;
-    post_rec     JSONB;
-    pattern_rec  JSONB;
-    link_rec     JSONB;
-
-    v_org_id     BIGINT;
-    v_guest_id   BIGINT;
-    v_post_id    BIGINT;
-    v_pattern_id BIGINT;
-
-    results JSONB := '{}'::jsonb;
-
+    v_org_count     INTEGER := 0;
+    v_guest_count   INTEGER := 0;
+    v_post_count    INTEGER := 0;
+    v_pattern_count INTEGER := 0;
+    v_link_count    INTEGER := 0;
 BEGIN
     ---------------------------------------------------------------------
-    -- 1. UPSERT ORGANIZATIONS
+    -- VALIDATE PAYLOAD STRUCTURE
     ---------------------------------------------------------------------
-    FOR org_rec IN SELECT * FROM jsonb_array_elements(payload->'orgs')
-    LOOP
+    IF v_payload IS NULL THEN
+        v_result := jsonb_build_object(
+            'status', 'error',
+            'message', 'Payload cannot be NULL'
+        );
+        RETURN;
+    END IF;
+
+    ---------------------------------------------------------------------
+    -- 1. BULK UPSERT ORGANIZATIONS
+    ---------------------------------------------------------------------
+    WITH upserted_orgs AS (
         INSERT INTO orgs (
             name,
             description,
-            keywords,
             content_url,
             content_source
         )
-        VALUES (
-            org_rec->>'name',
-            org_rec->>'description',
-            array(SELECT jsonb_array_elements_text(org_rec->'keywords')),
-            org_rec->>'content_url',
-            org_rec->>'content_source'
-        )
+        SELECT 
+            value->>'name',
+            value->>'description',
+            value->>'content_url',
+            value->>'content_source'
+        FROM jsonb_array_elements(COALESCE(v_payload->'orgs', '[]'::jsonb))
+        WHERE value->>'name' IS NOT NULL  -- Skip nulls
         ON CONFLICT (name)
         DO UPDATE SET
-            description     = EXCLUDED.description,
-            keywords   = EXCLUDED.keywords,
-            content_url     = EXCLUDED.content_url,
-            content_source  = EXCLUDED.content_source,
-            updated_at      = NOW()
-        RETURNING id INTO v_org_id;
-
-        results := results || jsonb_build_object('last_org_id', v_org_id);
-    END LOOP;
+            description    = EXCLUDED.description,
+            content_url    = EXCLUDED.content_url,
+            content_source = EXCLUDED.content_source,
+            updated_at     = NOW()
+        RETURNING id
+    )
+    SELECT COUNT(*) INTO v_org_count FROM upserted_orgs;
 
 
     ---------------------------------------------------------------------
-    -- 2. UPSERT POSTS
+    -- 2. BULK UPSERT POSTS
     ---------------------------------------------------------------------
-    FOR post_rec IN SELECT * FROM jsonb_array_elements(payload->'posts')
-    LOOP
+    WITH upserted_posts AS (
         INSERT INTO posts (
             name,
             description,
-            keywords,
             content_url,
             content_source,
             published_at
         )
-        VALUES (
-            post_rec->>'name',
-            post_rec->>'description',
-            array(SELECT jsonb_array_elements_text(post_rec->'keywords')),
-            post_rec->>'content_url',
-            post_rec->>'content_source',
-            NULLIF(post_rec->>'published_at','')::timestamp
-        )
+        SELECT 
+            value->>'name',
+            value->>'description',
+            value->>'content_url',
+            value->>'content_source',
+            NULLIF(value->>'published_at', '')::timestamp
+        FROM jsonb_array_elements(COALESCE(v_payload->'posts', '[]'::jsonb))
+        WHERE value->>'name' IS NOT NULL
         ON CONFLICT (name)
         DO UPDATE SET
-            description     = EXCLUDED.description,
-            keywords        = EXCLUDED.keywords,
-            content_url     = EXCLUDED.content_url,
-            content_source  = EXCLUDED.content_source,
-            updated_at      = NOW()
-        RETURNING id INTO v_post_id;
-
-        results := results || jsonb_build_object('last_post_id', v_post_id);
-    END LOOP;
+            description    = EXCLUDED.description,
+            content_url    = EXCLUDED.content_url,
+            content_source = EXCLUDED.content_source,
+            published_at   = EXCLUDED.published_at,
+            updated_at     = NOW()
+        RETURNING id
+    )
+    SELECT COUNT(*) INTO v_post_count FROM upserted_posts;
 
 
     ---------------------------------------------------------------------
-    -- 3. UPSERT GUESTS
+    -- 3. BULK UPSERT GUESTS
     ---------------------------------------------------------------------
-    FOR guest_rec IN SELECT * FROM jsonb_array_elements(payload->'guests')
-    LOOP
+    WITH upserted_guests AS (
         INSERT INTO guests (
             name,
             description,
             job_description,
             org_id,
+            post_id,
             content_url,
             content_source
         )
-        VALUES (
-            guest_rec->>'name',
-            guest_rec->>'description',
-            guest_rec->>'job_description',
-            (SELECT id FROM orgs WHERE name = guest_rec->>'org_name' LIMIT 1),
-            guest_rec->>'content_url',
-            guest_rec->>'content_source'
-        )
+        SELECT 
+            value->>'name',
+            value->>'description',
+            value->>'job_description',
+            o.id,
+            p.id,
+            value->>'content_url',
+            value->>'content_source'
+        FROM jsonb_array_elements(COALESCE(v_payload->'guests', '[]'::jsonb))
+        LEFT JOIN orgs o ON o.name = value->>'org_name'
+        LEFT JOIN posts p ON p.name = value->>'post_name'
+        WHERE value->>'name' IS NOT NULL
         ON CONFLICT (name)
         DO UPDATE SET
             description     = EXCLUDED.description,
             job_description = EXCLUDED.job_description,
             org_id          = EXCLUDED.org_id,
+            post_id         = EXCLUDED.post_id,
             content_url     = EXCLUDED.content_url,
             content_source  = EXCLUDED.content_source,
             updated_at      = NOW()
-        RETURNING id INTO v_guest_id;
-
-        results := results || jsonb_build_object('last_guest_id', v_guest_id);
-    END LOOP;
+        RETURNING id
+    )
+    SELECT COUNT(*) INTO v_guest_count FROM upserted_guests;
 
 
     ---------------------------------------------------------------------
-    -- 4. UPSERT PATTERNS (Using name as natural key)
+    -- 4. BULK UPSERT PATTERNS
     ---------------------------------------------------------------------
-    FOR pattern_rec IN SELECT * FROM jsonb_array_elements(payload->'patterns')
-    LOOP
+    WITH upserted_patterns AS (
         INSERT INTO patterns (
             name,
             description,
             kind,
-            keywords,
-            metadata,
-            highlights,
             content_source
         )
-        VALUES (
-            pattern_rec->>'name',
-            pattern_rec->>'description',
-            pattern_rec->>'kind',
-            array(SELECT jsonb_array_elements_text(pattern_rec->'keywords')),
-            COALESCE(pattern_rec->'metadata', '{}'::jsonb),
-            COALESCE(pattern_rec->'highlights', '[]'::jsonb),
-            pattern_rec->>'content_source'
-        )
+        SELECT 
+            value->>'name',
+            value->>'description',
+            value->>'kind',
+            value->>'content_source'
+        FROM jsonb_array_elements(COALESCE(v_payload->'patterns', '[]'::jsonb))
+        WHERE value->>'name' IS NOT NULL
         ON CONFLICT (name)
         DO UPDATE SET
-            description     = EXCLUDED.description,
-            kind            = EXCLUDED.kind,
-            keywords        = EXCLUDED.keywords,
-            metadata        = EXCLUDED.metadata,
-            highlights      = EXCLUDED.highlights,
-            content_source  = EXCLUDED.content_source,
-            updated_at      = NOW()
-        RETURNING id INTO v_pattern_id;
-
-        results := results || jsonb_build_object('last_pattern_id', v_pattern_id);
-    END LOOP;
+            description    = EXCLUDED.description,
+            kind           = EXCLUDED.kind,
+            content_source = EXCLUDED.content_source,
+            updated_at     = NOW()
+        RETURNING id
+    )
+    SELECT COUNT(*) INTO v_pattern_count FROM upserted_patterns;
 
 
     ---------------------------------------------------------------------
-    -- 5. PATTERN → POST LINKS
+    -- 5. BULK INSERT PATTERN → POST LINKS
     ---------------------------------------------------------------------
-    FOR link_rec IN SELECT * FROM jsonb_array_elements(payload->'pattern_post_link')
-    LOOP
+    WITH inserted_links AS (
         INSERT INTO pattern_post_link(pattern_id, post_id)
-        SELECT
-            (SELECT id FROM patterns WHERE name = link_rec->>'pattern_name'),
-            (SELECT id FROM posts    WHERE name = link_rec->>'post_name')
-        ON CONFLICT DO NOTHING;
-    END LOOP;
+        SELECT DISTINCT
+            pat.id,
+            pos.id
+        FROM jsonb_array_elements(COALESCE(v_payload->'pattern_post_link', '[]'::jsonb))
+        INNER JOIN patterns pat ON pat.name = value->>'pattern_name'
+        INNER JOIN posts pos ON pos.name = value->>'post_name'
+        WHERE value->>'pattern_name' IS NOT NULL 
+          AND value->>'post_name' IS NOT NULL
+        ON CONFLICT DO NOTHING
+        RETURNING 1
+    )
+    SELECT COUNT(*) INTO v_link_count FROM inserted_links;
 
 
     ---------------------------------------------------------------------
-    -- 6. PATTERN → ORG LINKS
+    -- 6. BULK INSERT PATTERN → ORG LINKS
     ---------------------------------------------------------------------
-    FOR link_rec IN SELECT * FROM jsonb_array_elements(payload->'pattern_org_link')
-    LOOP
+    WITH inserted_links AS (
         INSERT INTO pattern_org_link(pattern_id, org_id)
-        SELECT
-            (SELECT id FROM patterns WHERE name = link_rec->>'pattern_name'),
-            (SELECT id FROM orgs WHERE name = link_rec->>'org_name')
-        ON CONFLICT DO NOTHING;
-    END LOOP;
+        SELECT DISTINCT
+            pat.id,
+            org.id
+        FROM jsonb_array_elements(COALESCE(v_payload->'pattern_org_link', '[]'::jsonb))
+        INNER JOIN patterns pat ON pat.name = value->>'pattern_name'
+        INNER JOIN orgs org ON org.name = value->>'org_name'
+        WHERE value->>'pattern_name' IS NOT NULL 
+          AND value->>'org_name' IS NOT NULL
+        ON CONFLICT DO NOTHING
+        RETURNING 1
+    )
+    SELECT v_link_count + COUNT(*) INTO v_link_count FROM inserted_links;
 
 
     ---------------------------------------------------------------------
-    -- 7. PATTERN → GUEST LINKS
+    -- 7. BULK INSERT PATTERN → GUEST LINKS
     ---------------------------------------------------------------------
-    FOR link_rec IN SELECT * FROM jsonb_array_elements(payload->'pattern_guest_link')
-    LOOP
+    WITH inserted_links AS (
         INSERT INTO pattern_guest_link(pattern_id, guest_id)
-        SELECT
-            (SELECT id FROM patterns WHERE name = link_rec->>'pattern_name'),
-            (SELECT id FROM guests WHERE name = link_rec->>'guest_name')
-        ON CONFLICT DO NOTHING;
-    END LOOP;
+        SELECT DISTINCT
+            pat.id,
+            guest.id
+        FROM jsonb_array_elements(COALESCE(v_payload->'pattern_guest_link', '[]'::jsonb))
+        INNER JOIN patterns pat ON pat.name = value->>'pattern_name'
+        INNER JOIN guests guest ON guest.name = value->>'guest_name'
+        WHERE value->>'pattern_name' IS NOT NULL 
+          AND value->>'guest_name' IS NOT NULL
+        ON CONFLICT DO NOTHING
+        RETURNING 1
+    )
+    SELECT v_link_count + COUNT(*) INTO v_link_count FROM inserted_links;
 
 
     ---------------------------------------------------------------------
     -- RETURN SUMMARY
     ---------------------------------------------------------------------
-    RETURN jsonb_build_object(
+    v_result := jsonb_build_object(
         'status', 'success',
-        'details', results
+        'summary', jsonb_build_object(
+            'orgs_upserted', v_org_count,
+            'posts_upserted', v_post_count,
+            'guests_upserted', v_guest_count,
+            'patterns_upserted', v_pattern_count,
+            'links_created', v_link_count
+        )
     );
 
+EXCEPTION
+    WHEN OTHERS THEN
+        v_result := jsonb_build_object(
+            'status', 'error',
+            'message', SQLERRM,
+            'detail', SQLSTATE
+        );
+        RAISE;  -- Re-raise to rollback transaction
 END;
 $$;

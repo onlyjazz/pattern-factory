@@ -37,7 +37,6 @@ DATA:
       - description
       - linkedin_url
       - job_description
-      - keywords
       - content_source
       - org_id
       - post_id
@@ -54,7 +53,6 @@ DATA:
       - date_funded
       - date_founded
       - linkedin_company_url
-      - keywords
       - content_source
       - category_id
       - created_at
@@ -79,10 +77,7 @@ DATA:
       - description
       - content_source
       - kind
-      - metadata
-      - highlights
       - search_vector
-      - keywords
       - created_at
       - updated_at
       - deleted_at
@@ -91,7 +86,6 @@ DATA:
       - id
       - name
       - description
-      - keywords
       - content_url
       - content_source
       - published_at
@@ -470,12 +464,11 @@ CONTENT:
       ENTITY EXTRACTION RULES
       ------------------------------------------------------------
       POSTS:
-      A post has 6 fields:
-      Required fields:
+      
+      A post has 5 required fields:
       {
         "name": "...",
         "description": "...",
-        "keywords": ["keyword1", "keyword2", ...],
         "content_url": <from the human user input>,
         "content_source": "substack",
         "published_at": "..."
@@ -490,73 +483,68 @@ CONTENT:
       The field looks like this: "Oct 24, 2025" and will be in an HTML snippet like this
       <div class="pencraft pc-reset color-pub-secondary-text-hGQ02T line-height-20-t4M0El font-meta-MWBumP size-11-NuY2Zx weight-medium-fw81nC transform-uppercase-yKDgcq reset-IxiVJZ meta-EgzBVA">Oct 11, 2025</div>
 
-      KEYWORDS FOR POSTS:
-      Extract 3-8 topical keywords from the post content. Keywords should be:
-      - Lowercase, single words or short phrases (e.g., "techbio", "automation", "drug discovery")
-      - Representative of the main topics discussed
-      - Derived from both the post title/description and the main body content
-      - Deduplicated (no repeated keywords)
-      Example: ["techbio", "software engineering", "service models", "drug discovery"]
-      Return empty array [] only if no clear topics can be extracted.
-
       ORGS:
-      Extract organizations such as startups, CROs, labs, pharma, biotech, accelerators.
-      Required fields:
+      Extract organizations such as investors, startups, CROs, labs, pharma, biotech, accelerators.
+      An org has 4 required fields:
       {
         "name": "...",
         "description": "...",
-        "keywords": [],
         "content_url": <from the post>
-        "content_source": "..."
+        "content_source": "substack"
       }
-      No hallucinated orgs. tech_keywords must be lowercase terms.
+      No hallucinated orgs. 
+      No null org names.
+      No "Clear Thinking with Danny Lieberman" org names
+
 
       GUESTS:
       Extract identifiable humans (CEOs, founders, researchers, speakers) MENTIONED IN THE CONTENT.
       IMPORTANT:
-      - Do NOT extract the newsletter/post author or byline as a guest.
+      - Do NOT extract Clear Thinking with Danny Lieberman as a guest. 
+      - Do not extract Danny Lieberman as a guest.
       - Prefer explicit cues like: "guest", "A recent guest was ...", "interview with ...",
-        or role phrases like "Co‑Founder and CEO at <Org>", "Founder of <Org>", "CEO at <Org>".
+        or role phrases like "Co‑Founder and CEO at <Org>", "Founder of <Org>", "CEO at <Org>"
+        or I hosted "So and so"
       - When an organization is clearly associated in text ("at <Org>", "from <Org>"), set org_name to that org
         and include the org in the orgs array if not already present.
       - Avoid duplicates; normalize repeated mentions to a single guest entry.
-      Required fields:
+      - The guest org_name will be inferred from the name of the Org extracted in the post
+      - If you can't infer the org_name, set it to None
+
+      A guest record has 6 required fields:
       {
         "name": "...",
         "description": "...",
         "job_description": "...",
-        "org_name": "...",       // link to an extracted org or null
-        "tech_keywords": [],
+        "org_name": "...",       // Default None
         "content_url": <from the post>,
         "content_source": "substack"
       }
-      If no org is known, org_name = null.
 
       PATTERNS:
       Extract conceptual patterns or anti-patterns explicitly or strongly implied.
-      Required fields:
+
+      A pattern has 4 required fields:
       {
-        "pattern_code": "UPPERCASE_UNDERSCORE",
-        "name": "...",
-        "description": "...",
-        "kind": "pattern | anti-pattern",
-        "content_url": <from the post>,
-        "content_source": "substack"
+            "name": "...",
+            "description": "...",
+            "kind": "pattern | anti-pattern",
+            "content_source": "substack"
       }
-      Use deterministic pattern_code generation. No invented patterns.
 
       ------------------------------------------------------------
       LINK TABLES
       ------------------------------------------------------------
-
+      The link tables will have entity names. The upsert procedure in the executeSQL agent will 
+      convert the names into id fields of the tables.
       pattern_post_link:
-      { "pattern_code": "...", "post_name": "..." }
+      { "pattern_name": "...", "post_name": "..." }
 
       pattern_org_link:
-      { "pattern_code": "...", "org_name": "..." }
+      { "pattern_name": "...", "org_name": "..." }
 
       pattern_guest_link:
-      { "pattern_code": "...", "guest_name": "..." }
+      { "pattern_name": "...", "guest_name": "..." }
 
       Names must exactly match extracted entities. No orphan links.
 
@@ -565,7 +553,6 @@ CONTENT:
       ------------------------------------------------------------
       - Never hallucinate orgs, guests, posts, or patterns.
       - Return null or empty fields when uncertain.
-      - pattern_code must be deterministic: uppercase with underscores.
       - No SQL generation. Only JSON.
       - Always include all arrays.
       - Normalize duplicates.
@@ -630,17 +617,16 @@ CONTENT:
          ORGS:
            - name must exist and be non-empty.
          GUESTS:
-           - name must exist.
+           - name must exist and be non-empty.
          POSTS:
-           - name must exist.
+           - name must exist and be non-empty.
          PATTERNS:
-           - pattern_code, name, kind must exist.
-           - pattern_code must be uppercase with underscores.
+           - name, kind must exist.
 
       3. LINK TABLE CONSISTENCY
-         - pattern_post_link.post_name must match an extracted post.name.
-         - pattern_org_link.org_name must match an extracted org.name.
-         - pattern_guest_link.guest_name must match an extracted guest.name.
+         - pattern_post_link.post_name    must match an extracted post.name.
+         - pattern_org_link.org_name      must match an extracted org.name.
+         - pattern_guest_link.guest_name  must match an extracted guest.name.
          - No orphan links.
          - No duplicates.
 
@@ -651,7 +637,6 @@ CONTENT:
 
       5. SEMANTIC CHECKS
          - content_url and content_source must be identical for all extracted entities.
-         - tech_keywords and keywords arrays must contain simple strings.
          - published_at must be null or a valid timestamp.
 
       ------------------------------------------------------------

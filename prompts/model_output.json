@@ -1,0 +1,93 @@
+{
+    "orgs": [
+        {
+            "name": "Clear Thinking with Danny Lieberman",
+            "description": "Insights on simplicity and clarity from my strange and wonderful world of software, jazz, cycling, tech startups and Qigong.",
+            "content_url": "https://newsletter.dannylieberman.com/p/why-do-we-buy-brands-for-good-feeling",
+            "content_source": "substack"
+        }
+    ],
+    "guests": [
+        {
+            "name": "Martin Rapaport",
+            "description": "Founder of the Rapaport Diamond Report (\u201cthe Rap Sheet\u201d).",
+            "job_description": "Founder of Rapaport",
+            "org_name": null,
+            "content_url": "https://newsletter.dannylieberman.com/p/why-do-we-buy-brands-for-good-feeling",
+            "content_source": "substack"
+        },
+        {
+            "name": "Bar Rafaeli",
+            "description": "Israeli supermodel and investor in Carolina Lemke Berlin.",
+            "job_description": "Supermodel",
+            "org_name": "Carolina Lemke Berlin",
+            "content_url": "https://newsletter.dannylieberman.com/p/why-do-we-buy-brands-for-good-feeling",
+            "content_source": "substack"
+        }
+    ],
+    "posts": [
+        {
+            "name": "The 5 step hack to Brand Power if you\u2019re a super model",
+            "description": "Why do we buy Brands: For good feeling or good value?",
+            "content_url": "https://newsletter.dannylieberman.com/p/why-do-we-buy-brands-for-good-feeling",
+            "content_source": "substack",
+            "published_at": "Nov 07, 2025",
+            "keywords": [
+                "step",
+                "hack",
+                "brand",
+                "power",
+                "you",
+                "super",
+                "model",
+                "why",
+                "buy",
+                "brands"
+            ]
+        }
+    ],
+    "patterns": [
+        {
+            "name": "Branding",
+            "description": "Customers attribute higher value based on reputation and trust, not just product features.",
+            "kind": "pattern",
+            "content_source": "substack"
+        },
+        {
+            "name": "Counter-Positioning",
+            "description": "A newcomer adopts a superior business model that incumbents can\u2019t copy without damaging their existing business.",
+            "kind": "pattern",
+            "content_source": "substack"
+        }
+    ],
+    "pattern_post_link": [
+        {
+            "pattern_name": "Branding",
+            "post_name": "The 5 step hack to Brand Power if you\u2019re a super model"
+        },
+        {
+            "pattern_name": "Counter-Positioning",
+            "post_name": "The 5 step hack to Brand Power if you\u2019re a super model"
+        }
+    ],
+    "pattern_org_link": [
+        {
+            "pattern_name": "Branding",
+            "org_name": "Clear Thinking with Danny Lieberman"
+        },
+        {
+            "pattern_name": "Counter-Positioning",
+            "org_name": "Clear Thinking with Danny Lieberman"
+        }
+    ],
+    "pattern_guest_link": [
+        {
+            "pattern_name": "Branding",
+            "guest_name": "Bar Rafaeli"
+        },
+        {
+            "pattern_name": "Counter-Positioning",
+            "guest_name": "Martin Rapaport"
+        }
+    ]
+}
