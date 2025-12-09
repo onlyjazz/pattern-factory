@@ -581,7 +581,9 @@ CONTENT:
       the entity extraction payload produced by the EXTRACT_CONTENT step before it is
       passed to the PostgreSQL upsert function:
       
-          select upsert_pattern_factory_entities(jsonb_payload);
+           CALL upsert_pattern_factory_entities(%s::jsonb, NULL::jsonb)
+           The first argument is the payload produced by the EXTRACT_CONTENT step.
+           The second argument is the results of the stored procedure call.
 
       Your goal is to ensure the payload is structurally correct, semantically valid,
       and safe for database execution.
