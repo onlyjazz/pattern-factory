@@ -174,8 +174,7 @@ RULES:
     name: "Time to Funding After Founding"
     description: "Compute time from founding date to funding date for organizations."
     logic: |
-      compute the number of years between date_founded and date_funded for each organization, 
-      and show the organization name, stage, and the calculated years
+     show name, stage, and the number of years from date_founded to date_funded for all orgs
 
 CAPO:
   - rule_code: CAPO

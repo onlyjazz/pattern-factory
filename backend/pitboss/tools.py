@@ -218,6 +218,62 @@ class RegisterViewTool(Tool):
 
 
 # -------------------------------------------------------------------------
+# Execute Upsert Tool — Call upsert_pattern_factory_entities procedure
+# -------------------------------------------------------------------------
+class ExecuteUpsertTool(Tool):
+    """
+    Execute the PostgreSQL upsert procedure for entity extraction.
+    
+    Calls: CALL upsert_pattern_factory_entities(%s::jsonb, NULL::jsonb)
+    Where %s is the validated JSON payload from verifyUpsert.
+    """
+
+    def __init__(self, db_pool):
+        super().__init__("execute_upsert", db_pool)
+
+    async def execute(self, jsonb_payload: Dict[str, Any], **kwargs):
+        start = datetime.now()
+        try:
+            import json as json_module
+            
+            # Convert payload to JSON string for parameterized query
+            payload_json = json_module.dumps(jsonb_payload)
+            
+            async with self.db_pool.acquire() as conn:
+                # Execute the upsert procedure
+                # The procedure signature expects:
+                #   IN p_entities jsonb,
+                #   IN p_results jsonb
+                # We pass the extracted entities and NULL for results (output-only)
+                result = await conn.fetchrow(
+                    "CALL upsert_pattern_factory_entities($1::jsonb, NULL::jsonb)",
+                    payload_json
+                )
+                
+                row_count = 0
+                if result:
+                    # Procedure may return row counts or status
+                    row_count = result.get(0) if isinstance(result, tuple) else 0
+            
+            duration = (datetime.now() - start).total_seconds()
+            self.log_execution(True, duration)
+            
+            return {
+                "status": "success",
+                "row_count": row_count,
+                "duration": duration,
+                "message": "Entities upserted successfully"
+            }
+
+        except Exception as e:
+            duration = (datetime.now() - start).total_seconds()
+            self.log_execution(False, duration)
+            logger.error(f"[ExecuteUpsertTool] Error: {e}")
+            
+            return {"status": "error", "error": str(e), "duration": duration}
+
+
+# -------------------------------------------------------------------------
 # Tool Registry
 # -------------------------------------------------------------------------
 class ToolRegistry:
@@ -232,6 +288,7 @@ class ToolRegistry:
         self.register(SqlPitbossTool(self.db_pool, self.config))
         self.register(DataTableTool(self.db_pool))
         self.register(RegisterViewTool(self.db_pool))
+        self.register(ExecuteUpsertTool(self.db_pool))
 
     def register(self, tool: Tool):
         self.tools[tool.name] = tool

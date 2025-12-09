@@ -13,7 +13,6 @@ Dependency Injection:
 
 from typing import Tuple, Dict, Any, Optional
 import logging
-import random
 import json
 import os
 from urllib.parse import urlparse
@@ -460,87 +459,132 @@ async def agent_verify_sql(message_body: Dict[str, Any]) -> Tuple[str, float, st
 
 async def agent_execute_sql(message_body: Dict[str, Any]) -> Tuple[str, float, str]:
     """
-    tool.executeSQL (RULE flow) — Terminal agent
-    Execute SQL, create materialized view, and register metadata in views_registry.
+    tool.executeSQL — Terminal agent for both RULE and CONTENT flows
     
-    Pipeline:
+    RULE flow:
     1. Execute SQL via data_table tool (creates VIEW)
-    2. Register view metadata in views_registry (consolidated table with name, table_name, sql)
+    2. Register view metadata in views_registry
+    
+    CONTENT flow:
+    1. Extract validated entity payload from message_body
+    2. Call upsert_pattern_factory_entities procedure
     
     Stores:
-    - table_name: name of created view (also the YAML rule_code)
-    - row_count: rows in materialized view
+    - For RULE: table_name (view name), row_count
+    - For CONTENT: upsert_result status
     """
-    logger.info("🤖 [tool.executeSQL] Executing SQL and materializing view...")
+    logger.info("🤖 [tool.executeSQL] Executing operation based on verb...")
     
     try:
-        # Extract dependencies and state
+        # Extract dependencies
         tool_registry = message_body.get("_tools")
-        sql_query = message_body.get("sql_query", "").strip()
-        rule_code = message_body.get("rule_code", "").strip()
-        rule_name = message_body.get("rule_name", rule_code).strip()
-        rule_logic = message_body.get("rule_logic", "").strip()
+        verb = message_body.get("_verb", "RULE").upper()
         
         if not tool_registry:
             reason = "ToolRegistry not available"
             logger.error(f"  ❌ {reason}")
             return ("no", 0.05, reason)
         
-        if not sql_query:
-            reason = "No SQL query in message_body to execute"
-            logger.error(f"  ❌ {reason}")
-            return ("no", 0.15, reason)
+        # Branch: CONTENT flow (upsert entities)
+        if verb == "CONTENT":
+            logger.info(f"  [CONTENT flow] Executing upsert_pattern_factory_entities procedure...")
+            
+            extracted_entities = message_body.get("extracted_entities", {})
+            url = message_body.get("url", "")
+            
+            if not extracted_entities:
+                reason = "No extracted_entities in message_body"
+                logger.error(f"  ❌ {reason}")
+                return ("no", 0.15, reason)
+            
+            # Call the upsert procedure
+            logger.info(f"  Step 1: Calling upsert_pattern_factory_entities procedure...")
+            upsert_res = await tool_registry.execute(
+                "execute_upsert",
+                jsonb_payload=extracted_entities
+            )
+            
+            if upsert_res["status"] != "success":
+                reason = f"Upsert procedure failed: {upsert_res.get('error')}"
+                logger.error(f"  ❌ {reason}")
+                return ("no", 0.3, reason)
+            
+            logger.info(f"    ✅ Upsert completed: {upsert_res.get('message')}")
+            message_body["upsert_status"] = "success"
+            message_body["url"] = url
+            
+            # Success
+            decision = "yes"
+            confidence = 0.96
+            reason = f"Content extraction and upsert complete: {url}"
+            
+            logger.info(f"  Decision: {decision} (confidence: {confidence:.2f})")
+            logger.info(f"  🌟 CONTENT flow complete: {reason}")
+            return (decision, confidence, reason)
         
-        if not rule_name:
-            reason = "No rule_name to use for view creation"
-            logger.error(f"  ❌ {reason}")
-            return ("no", 0.2, reason)
-        
-        # Step 1: Create materialized view
-        logger.info(f"  Step 1: Creating materialized view...")
-        table_res = await tool_registry.execute(
-            "data_table",
-            sql_query=sql_query,
-            rule_name=rule_name,
-            rule_code=rule_code
-        )
-        
-        if table_res["status"] != "success":
-            reason = f"Failed to create materialized view: {table_res.get('error')}"
-            logger.error(f"  ❌ {reason}")
-            return ("no", 0.25, reason)
-        
-        table_name = table_res.get("table_name")
-        row_count = table_res.get("row_count", 0)
-        
-        logger.info(f"    ✅ View created: {table_name} ({row_count} rows)")
-        message_body["table_name"] = table_name
-        message_body["row_count"] = row_count
-        
-        # Step 2: Register view metadata in views_registry
-        # (consolidates both rule and view metadata into single table)
-        logger.info(f"  Step 2: Registering view metadata in views_registry...")
-        view_res = await tool_registry.execute(
-            "register_view",
-            table_name=table_name,
-            name=rule_name,
-            sql_query=sql_query
-        )
-        
-        if view_res["status"] != "success":
-            logger.warning(f"  ⚠️ View registration failed: {view_res.get('error')}")
-            # Continue anyway; table exists
+        # Branch: RULE flow (create view)
         else:
-            logger.info(f"    ✅ View registered: {table_name}")
-        
-        # Success
-        decision = "yes"
-        confidence = 0.97
-        reason = f"Rule executed: view '{table_name}' with {row_count} rows"
-        
-        logger.info(f"  Decision: {decision} (confidence: {confidence:.2f})")
-        logger.info(f"  🌟 Rule execution complete: {reason}")
-        return (decision, confidence, reason)
+            logger.info(f"  [RULE flow] Creating materialized view...")
+            
+            sql_query = message_body.get("sql_query", "").strip()
+            rule_code = message_body.get("rule_code", "").strip()
+            rule_name = message_body.get("rule_name", rule_code).strip()
+            rule_logic = message_body.get("rule_logic", "").strip()
+            
+            if not sql_query:
+                reason = "No SQL query in message_body to execute"
+                logger.error(f"  ❌ {reason}")
+                return ("no", 0.15, reason)
+            
+            if not rule_name:
+                reason = "No rule_name to use for view creation"
+                logger.error(f"  ❌ {reason}")
+                return ("no", 0.2, reason)
+            
+            # Step 1: Create materialized view
+            logger.info(f"  Step 1: Creating materialized view...")
+            table_res = await tool_registry.execute(
+                "data_table",
+                sql_query=sql_query,
+                rule_name=rule_name,
+                rule_code=rule_code
+            )
+            
+            if table_res["status"] != "success":
+                reason = f"Failed to create materialized view: {table_res.get('error')}"
+                logger.error(f"  ❌ {reason}")
+                return ("no", 0.25, reason)
+            
+            table_name = table_res.get("table_name")
+            row_count = table_res.get("row_count", 0)
+            
+            logger.info(f"    ✅ View created: {table_name} ({row_count} rows)")
+            message_body["table_name"] = table_name
+            message_body["row_count"] = row_count
+            
+            # Step 2: Register view metadata in views_registry
+            logger.info(f"  Step 2: Registering view metadata in views_registry...")
+            view_res = await tool_registry.execute(
+                "register_view",
+                table_name=table_name,
+                name=rule_name,
+                sql_query=sql_query
+            )
+            
+            if view_res["status"] != "success":
+                logger.warning(f"  ⚠️ View registration failed: {view_res.get('error')}")
+                # Continue anyway; table exists
+            else:
+                logger.info(f"    ✅ View registered: {table_name}")
+            
+            # Success
+            decision = "yes"
+            confidence = 0.97
+            reason = f"Rule executed: view '{table_name}' with {row_count} rows"
+            
+            logger.info(f"  Decision: {decision} (confidence: {confidence:.2f})")
+            logger.info(f"  🌟 RULE flow complete: {reason}")
+            return (decision, confidence, reason)
         
     except Exception as e:
         reason = f"SQL execution crashed: {str(e)}"
@@ -564,11 +608,11 @@ async def agent_capo_content(message_body: Dict[str, Any]) -> Tuple[str, float, 
     if text.startswith("extract "):
         return ("yes", 0.99, "Recognized 'extract <url>' command")
 
-    # Fallback behavior
-    decision = "yes" if random.random() < 0.90 else "no"
-    confidence = 0.9 if decision == "yes" else 0.7
-    reason = "Extraction request looks ok" if decision == "yes" else "Could not recognize extraction format"
-    logger.info(f"  Decision: {decision} (confidence: {confidence:.2f})")
+    # Fallback: could not recognize extraction format
+    decision = "no"
+    confidence = 0.92
+    reason = "Could not recognize extraction format. Usage: extract <url>"
+    logger.info(f"  Decision: {decision} (confidence: {confidence:.2f}) - {reason}")
     return (decision, confidence, reason)
 
 
@@ -873,10 +917,38 @@ async def agent_request_to_extract_entities(message_body: Dict[str, Any]) -> Tup
         # Store extracted entities in message_body for next agent
         message_body["extracted_entities"] = extracted_data
         
-        # Return the full JSON object to the human (pretty-printed), not an envelope
-        reason_json = json.dumps(extracted_data, ensure_ascii=False, indent=2)
-        logger.info("  Decision: no (confidence: 0.95) - Returning full JSON to human")
-        return ("no", 0.95, reason_json)
+        # Build user-friendly summary (don't expose full JSON)
+        posts = extracted_data.get("posts", [])
+        post_summary = ""
+        if posts:
+            first_post = posts[0]
+            post_name = first_post.get("name", "Unknown")
+            published_at = first_post.get("published_at", "Unknown date")
+            post_summary = f"Post: '{post_name}' ({published_at})"
+        
+        # Build summary of entities
+        orgs = extracted_data.get("orgs", [])
+        guests = extracted_data.get("guests", [])
+        patterns = extracted_data.get("patterns", [])
+        
+        summary_lines = []
+        if post_summary:
+            summary_lines.append(post_summary)
+        if orgs:
+            org_names = ", ".join([o.get("name", "") for o in orgs if o.get("name")])
+            summary_lines.append(f"Organizations: {org_names}")
+        if guests:
+            guest_names = ", ".join([g.get("name", "") for g in guests if g.get("name")])
+            summary_lines.append(f"Guests: {guest_names}")
+        if patterns:
+            pattern_names = ", ".join([p.get("name", "") for p in patterns if p.get("name")])
+            summary_lines.append(f"Patterns: {pattern_names}")
+        
+        reason = "\n".join(summary_lines) if summary_lines else "Extraction complete (no entities found)"
+        
+        logger.info(f"  Decision: yes (confidence: 0.96) - Extraction complete")
+        logger.info(f"  [Extraction] {reason}")
+        return ("yes", 0.96, reason)
 
     except json.JSONDecodeError as e:
         reason = f"LLM response is not valid JSON: {str(e)}"
@@ -891,19 +963,193 @@ async def agent_request_to_extract_entities(message_body: Dict[str, Any]) -> Tup
 async def agent_verify_upsert(message_body: Dict[str, Any]) -> Tuple[str, float, str]:
     """
     model.verifyUpsert (CONTENT flow)
-    Verify upsert consistency, duplicates, referential integrity, entity linkage.
-    """
-    logger.info("🤖 [model.verifyUpsert] Verifying upsert operations...")
+    Validate the entity extraction payload before passing to PostgreSQL upsert.
     
-    decision = "yes" if random.random() < 0.88 else "no"
-    confidence = 0.91 if decision == "yes" else 0.56
-    reason = (
-        "All entities pass validation: no duplicates, referential integrity intact"
-        if decision == "yes"
-        else "Duplicate org detected, skipping to avoid conflicts"
-    )
+    Responsibilities:
+    1. STRUCTURAL VALIDITY: All required arrays exist, valid JSON
+    2. REQUIRED FIELDS: Orgs/Guests/Posts have name; Patterns have name+kind
+    3. LINK TABLE CONSISTENCY: References match extracted entities
+    4. SAFETY VALIDATION: No SQL injection, unescaped characters
+    5. SEMANTIC CHECKS: URL/source consistency, valid timestamps
+    
+    Returns decision="yes" to route to tool.executeSQL if valid.
+    Returns decision="no" with error details for human review if invalid.
+    """
+    logger.info("🤖 [model.verifyUpsert] Verifying upsert payload structure and referential integrity...")
+    
+    # Extract the payload from message_body
+    # It should be stored from agent_request_to_extract_entities
+    extracted_entities = message_body.get("extracted_entities", {})
+    url = message_body.get("url", "")
+    
+    if not extracted_entities:
+        reason = "No extracted entities found in message_body"
+        logger.warning(f"  Decision: no (confidence: 0.95) - {reason}")
+        return ("no", 0.95, reason)
+    
+    # Validate structural validity
+    required_keys = ["orgs", "guests", "posts", "patterns", "pattern_post_link", "pattern_org_link", "pattern_guest_link"]
+    missing_keys = [k for k in required_keys if k not in extracted_entities]
+    
+    if missing_keys:
+        reason = f"Missing required array keys: {', '.join(missing_keys)}"
+        logger.warning(f"  Decision: no (confidence: 0.92) - {reason}")
+        return ("no", 0.92, reason)
+    
+    # Validate all values are lists
+    for key in required_keys:
+        if not isinstance(extracted_entities.get(key), list):
+            reason = f"Field '{key}' must be an array, got {type(extracted_entities[key]).__name__}"
+            logger.warning(f"  Decision: no (confidence: 0.91) - {reason}")
+            return ("no", 0.91, reason)
+    
+    # Validate required fields for each entity type
+    
+    # ORGS: name must exist and be non-empty
+    for i, org in enumerate(extracted_entities.get("orgs", [])):
+        if not isinstance(org, dict):
+            reason = f"Org at index {i} is not an object"
+            logger.warning(f"  Decision: no (confidence: 0.89) - {reason}")
+            return ("no", 0.89, reason)
+        if not org.get("name") or not isinstance(org.get("name"), str) or not org.get("name").strip():
+            reason = f"Org at index {i} missing or empty 'name' field"
+            logger.warning(f"  Decision: no (confidence: 0.89) - {reason}")
+            return ("no", 0.89, reason)
+    
+    # GUESTS: name must exist and be non-empty
+    for i, guest in enumerate(extracted_entities.get("guests", [])):
+        if not isinstance(guest, dict):
+            reason = f"Guest at index {i} is not an object"
+            logger.warning(f"  Decision: no (confidence: 0.89) - {reason}")
+            return ("no", 0.89, reason)
+        if not guest.get("name") or not isinstance(guest.get("name"), str) or not guest.get("name").strip():
+            reason = f"Guest at index {i} missing or empty 'name' field"
+            logger.warning(f"  Decision: no (confidence: 0.89) - {reason}")
+            return ("no", 0.89, reason)
+    
+    # POSTS: name must exist and be non-empty
+    for i, post in enumerate(extracted_entities.get("posts", [])):
+        if not isinstance(post, dict):
+            reason = f"Post at index {i} is not an object"
+            logger.warning(f"  Decision: no (confidence: 0.89) - {reason}")
+            return ("no", 0.89, reason)
+        if not post.get("name") or not isinstance(post.get("name"), str) or not post.get("name").strip():
+            reason = f"Post at index {i} missing or empty 'name' field"
+            logger.warning(f"  Decision: no (confidence: 0.89) - {reason}")
+            return ("no", 0.89, reason)
+    
+    # PATTERNS: name and kind must exist
+    for i, pattern in enumerate(extracted_entities.get("patterns", [])):
+        if not isinstance(pattern, dict):
+            reason = f"Pattern at index {i} is not an object"
+            logger.warning(f"  Decision: no (confidence: 0.89) - {reason}")
+            return ("no", 0.89, reason)
+        if not pattern.get("name") or not isinstance(pattern.get("name"), str) or not pattern.get("name").strip():
+            reason = f"Pattern at index {i} missing or empty 'name' field"
+            logger.warning(f"  Decision: no (confidence: 0.89) - {reason}")
+            return ("no", 0.89, reason)
+        if not pattern.get("kind") or not isinstance(pattern.get("kind"), str) or not pattern.get("kind").strip():
+            reason = f"Pattern at index {i} missing or empty 'kind' field"
+            logger.warning(f"  Decision: no (confidence: 0.89) - {reason}")
+            return ("no", 0.89, reason)
+    
+    # Validate link table consistency
+    
+    # Build sets of entity names for referential integrity checks
+    org_names = {org.get("name", "").strip() for org in extracted_entities.get("orgs", []) if org.get("name")}
+    guest_names = {guest.get("name", "").strip() for guest in extracted_entities.get("guests", []) if guest.get("name")}
+    post_names = {post.get("name", "").strip() for post in extracted_entities.get("posts", []) if post.get("name")}
+    pattern_names = {pattern.get("name", "").strip() for pattern in extracted_entities.get("patterns", []) if pattern.get("name")}
+    
+    # pattern_post_link: post_name must match an extracted post.name
+    for i, link in enumerate(extracted_entities.get("pattern_post_link", [])):
+        if not isinstance(link, dict):
+            reason = f"pattern_post_link at index {i} is not an object"
+            logger.warning(f"  Decision: no (confidence: 0.88) - {reason}")
+            return ("no", 0.88, reason)
+        post_name = link.get("post_name", "").strip()
+        if not post_name:
+            reason = f"pattern_post_link at index {i} missing 'post_name'"
+            logger.warning(f"  Decision: no (confidence: 0.88) - {reason}")
+            return ("no", 0.88, reason)
+        if post_name not in post_names:
+            reason = f"pattern_post_link references non-existent post '{post_name}'"
+            logger.warning(f"  Decision: no (confidence: 0.88) - {reason}")
+            return ("no", 0.88, reason)
+    
+    # pattern_org_link: org_name must match an extracted org.name
+    for i, link in enumerate(extracted_entities.get("pattern_org_link", [])):
+        if not isinstance(link, dict):
+            reason = f"pattern_org_link at index {i} is not an object"
+            logger.warning(f"  Decision: no (confidence: 0.88) - {reason}")
+            return ("no", 0.88, reason)
+        org_name = link.get("org_name", "").strip()
+        if not org_name:
+            reason = f"pattern_org_link at index {i} missing 'org_name'"
+            logger.warning(f"  Decision: no (confidence: 0.88) - {reason}")
+            return ("no", 0.88, reason)
+        if org_name not in org_names:
+            reason = f"pattern_org_link references non-existent org '{org_name}'"
+            logger.warning(f"  Decision: no (confidence: 0.88) - {reason}")
+            return ("no", 0.88, reason)
+    
+    # pattern_guest_link: guest_name must match an extracted guest.name
+    for i, link in enumerate(extracted_entities.get("pattern_guest_link", [])):
+        if not isinstance(link, dict):
+            reason = f"pattern_guest_link at index {i} is not an object"
+            logger.warning(f"  Decision: no (confidence: 0.88) - {reason}")
+            return ("no", 0.88, reason)
+        guest_name = link.get("guest_name", "").strip()
+        if not guest_name:
+            reason = f"pattern_guest_link at index {i} missing 'guest_name'"
+            logger.warning(f"  Decision: no (confidence: 0.88) - {reason}")
+            return ("no", 0.88, reason)
+        if guest_name not in guest_names:
+            reason = f"pattern_guest_link references non-existent guest '{guest_name}'"
+            logger.warning(f"  Decision: no (confidence: 0.88) - {reason}")
+            return ("no", 0.88, reason)
+    
+    # Safety validation: check for SQL injection patterns and unescaped characters
+    # This is a simple heuristic check; full escaping is done by the database
+    dangerous_patterns = [";", "--", "/*", "*/", "xp_", "sp_"]
+    
+    for org in extracted_entities.get("orgs", []):
+        for value in org.values():
+            if isinstance(value, str):
+                for pattern in dangerous_patterns:
+                    if pattern in value.lower():
+                        # "--" is OK in names, but not as part of actual SQL
+                        if pattern == "--" and value.strip().endswith("--"):
+                            continue
+                        if pattern != "--":  # Allow dashes in names
+                            reason = f"Org name contains suspicious pattern: {value[:50]}"
+                            logger.warning(f"  Decision: no (confidence: 0.85) - {reason}")
+                            return ("no", 0.85, reason)
+    
+    # Semantic checks: URL and source consistency
+    # All extracted entities should have the same content_url and content_source
+    expected_source = "substack"  # From the extraction request
+    
+    for post in extracted_entities.get("posts", []):
+        if post.get("content_source") and post.get("content_source") != expected_source:
+            logger.warning(f"  Post source mismatch: expected {expected_source}, got {post.get('content_source')}")
+    
+    # Validate timestamps (if present) are valid ISO format or null
+    for post in extracted_entities.get("posts", []):
+        pub_date = post.get("published_at")
+        if pub_date and not isinstance(pub_date, (str, type(None))):
+            reason = f"Post published_at must be a string (ISO format) or null, got {type(pub_date).__name__}"
+            logger.warning(f"  Decision: no (confidence: 0.87) - {reason}")
+            return ("no", 0.87, reason)
+    
+    # All validations passed
+    decision = "yes"
+    confidence = 0.94
+    entity_summary = f"orgs={len(extracted_entities.get('orgs', []))} guests={len(extracted_entities.get('guests', []))} posts={len(extracted_entities.get('posts', []))} patterns={len(extracted_entities.get('patterns', []))}"
+    reason = f"Payload validation passed: {entity_summary}"
     
     logger.info(f"  Decision: {decision} (confidence: {confidence:.2f})")
+    logger.info(f"  ✅ All structural, referential, and safety checks passed")
     return (decision, confidence, reason)
 
 

@@ -180,6 +180,9 @@ class PitbossSupervisor:
             env.messageBody["_ctx"] = self.context_builder
         if "_tools" not in env.messageBody:
             env.messageBody["_tools"] = self.tool_registry
+        
+        # Pass verb into message_body for agents to detect flow (RULE vs CONTENT)
+        env.messageBody["_verb"] = verb_str
 
         # Walk the decision tree until terminal or HITL (decision=no)
         while True:
