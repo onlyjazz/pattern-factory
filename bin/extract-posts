@@ -1,0 +1,10 @@
+#!/bin/bash
+# Wrapper script for extract-posts CLI
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Run the Python CLI module
+cd "$PROJECT_ROOT" || exit 1
+exec python -m backend.cli.extract_posts "$@"
