@@ -104,6 +104,27 @@ uvicorn services.api:app --reload --host 0.0.0.0 --port 8000
 python -m pitboss.supervisor
 ```
 
+### CLI Tools
+
+**Extract Posts** (`bin/extract-posts`):
+Extract entities (posts, patterns, orgs, guests) from web URLs and upsert to database.
+
+```bash
+# Extract and upsert
+./bin/extract-posts https://example.substack.com/p/post-title
+
+# Validate without upserting (dry-run)
+./bin/extract-posts https://example.substack.com/p/post-title --dry-run
+
+# Get JSON output for automation
+./bin/extract-posts https://example.substack.com/p/post-title --json
+
+# Enable debug logging
+./bin/extract-posts https://example.substack.com/p/post-title --verbose
+```
+
+Requires `DATABASE_URL` and `OPENAI_API_KEY` env vars. See `docs/CLI_EXTRACT_POSTS.md` for full documentation.
+
 ### Database Setup
 
 ```bash
