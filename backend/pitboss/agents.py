@@ -292,8 +292,24 @@ async def agent_verify_request(message_body: Dict[str, Any]) -> Tuple[str, float
     context_builder = message_body.get("_ctx")
     if context_builder and hasattr(context_builder, 'yaml_data'):
         # Extract all table names from YAML DATA section
-        yaml_tables = context_builder.yaml_data.get("DATA", {}).get("tables", {}).keys()
-        valid_tables = set(yaml_tables)
+        # Support both flat structure (DATA.tables) and nested schema structure (DATA.schemas.*.tables)
+        data_section = context_builder.yaml_data.get("DATA", {})
+        yaml_tables = set()
+        
+        # Try flat structure first
+        if "tables" in data_section:
+            yaml_tables.update(data_section.get("tables", {}).keys())
+        
+        # Then try nested schema structure (DATA.schemas.<schema_name>.tables)
+        schemas = data_section.get("schemas", {})
+        if schemas:
+            for schema_name, schema_data in schemas.items():
+                if isinstance(schema_data, dict):
+                    schema_tables = schema_data.get("tables", {})
+                    if isinstance(schema_tables, dict):
+                        yaml_tables.update(schema_tables.keys())
+        
+        valid_tables = yaml_tables
         logger.info(f"  Loaded {len(valid_tables)} tables from YAML: {sorted(list(valid_tables))[:5]}...")
     else:
         # Fallback to hardcoded list if context builder unavailable

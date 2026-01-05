@@ -20,100 +20,285 @@ SYSTEM:
     - Do NOT substitute or omit columns mentioned in the request.
 
     The database schema is described in the DATA section below.
-    You MUST use ONLY these tables and columns.
+    IMPORTANT SCHEMA RULES:
+    - Tables listed under schema "threat" MUST be referenced as threat.<table_name>.
+    - Tables listed under schema "public" MUST be referenced as public.<table_name>.
+    - Never assume a table belongs to the public schema unless explicitly listed there.
+    - Do NOT invent schemas, tables, or columns.
+    - Use ONLY the tables and columns defined in DATA.
 
 DATA:
-  tables:
-    categories:
-      - id
-      - description
-      - created_at
-      - updated_at
-      - deleted_at
+relationship_constraints:
+    - description: "Threats and patterns are linked ONLY via pattern_threat"
+      rule:
+        threats -> pattern_threat -> patterns
+      forbidden:
+        - threats -> patterns
 
-    guests:
-      - id
-      - name
-      - description
-      - linkedin_url
-      - job_description
-      - content_source
-      - org_id
-      - post_id
-      - created_at
-      - updated_at
-      - deleted_at
+schemas:
 
-    orgs:
-      - id
-      - name
-      - description
-      - stage
-      - funding
-      - date_funded
-      - date_founded
-      - linkedin_company_url
-      - content_source
-      - category_id
-      - created_at
-      - updated_at
-      - deleted_at
+    public:
+      tables:
 
-    pattern_guest_link:
-      - pattern_id
-      - guest_id
+        categories:
+          - id
+          - description
+          - created_at
+          - updated_at
+          - deleted_at
 
-    pattern_org_link:
-      - pattern_id
-      - org_id
+        guests:
+          - id
+          - name
+          - description
+          - linkedin_url
+          - job_description
+          - org_id
+          - post_id
+          - content_source
+          - created_at
+          - updated_at
+          - deleted_at
 
-    pattern_post_link:
-      - pattern_id
-      - post_id
+        orgs:
+          - id
+          - name
+          - description
+          - stage
+          - funding
+          - date_funded
+          - date_founded
+          - linkedin_company_url
+          - content_source
+          - category_id
+          - created_at
+          - updated_at
+          - deleted_at
 
-    patterns:
-      - id
-      - name
-      - description
-      - content_source
-      - kind
-      - search_vector
-      - created_at
-      - updated_at
-      - deleted_at
+        projects:
+          - id
+          - name
+          - version
+          - author
+          - company
+          - category
+          - keywords
+          - description
 
-    posts:
-      - id
-      - name
-      - description
-      - content_url
-      - content_source
-      - published_at
-      - created_at
-      - updated_at
-      - deleted_at
+        patterns:
+          - id
+          - name
+          - description
+          - content_source
+          - kind
+          - search_vector
+          - created_at
+          - updated_at
+          - deleted_at
 
-    system_log:
-      - id
-      - event
-      - context
-      - created_at
+        posts:
+          - id
+          - name
+          - description
+          - content_url
+          - content_source
+          - published_at
+          - created_at
+          - updated_at
+          - deleted_at
 
-    views_registry:
-      - id
-      - name
-      - table_name
-      - sql
-      - created_at
-      - updated_at
+        pattern_guest_link:
+          - pattern_id
+          - guest_id
+
+        pattern_org_link:
+          - pattern_id
+          - org_id
+
+        pattern_post_link:
+          - pattern_id
+          - post_id
+
+        system_log:
+          - id
+          - event
+          - context
+          - created_at
+
+        views_registry:
+          - id
+          - name
+          - table_name
+          - sql
+          - created_at
+          - updated_at
+
+
+    threat:
+      tables:
+
+        areas:
+          - id
+          - project_id
+          - name
+          - description
+          - use_for_threats
+          - use_for_vulnerabilities
+          - use_for_countermeasures
+          - use_for_assets
+
+        assets:
+          - id
+          - project_id
+          - name
+          - description
+          - fixed_value
+          - fixed_value_period
+          - recurring_value
+          - include_fixed_value
+          - include_recurring_value
+          - disabled
+
+        threats:
+          - id
+          - project_id
+          - name
+          - description
+          - probability
+          - damage_description
+          - spoofing
+          - tampering
+          - repudiation
+          - information_disclosure
+          - denial_of_service
+          - elevation_of_privilege
+          - mitigation_level
+          - disabled
+
+        vulnerabilities:
+          - id
+          - project_id
+          - name
+          - description
+          - disabled
+
+        countermeasures:
+          - id
+          - project_id
+          - name
+          - description
+          - fixed_implementation_cost
+          - fixed_cost_period
+          - recurring_implementation_cost
+          - detailed_design
+          - implemented
+          - include_fixed_cost
+          - include_recurring_cost
+          - disabled
+
+        entrypoints:
+          - id
+          - project_id
+          - name
+          - description
+
+        attacker_types:
+          - id
+          - name
+          - description
+          - tools_available
+
+        pattern_threat:
+          - project_id
+          - pattern_id
+          - threat_id
+
+        area_asset:
+          - project_id
+          - area_id
+          - asset_id
+
+        area_threat:
+          - project_id
+          - area_id
+          - threat_id
+
+        area_vulnerability:
+          - project_id
+          - area_id
+          - vulnerability_id
+
+        area_countermeasure:
+          - project_id
+          - area_id
+          - countermeasure_id
+
+        asset_threat:
+          - project_id
+          - asset_id
+          - threat_id
+          - damage
+
+        vulnerability_threat:
+          - project_id
+          - vulnerability_id
+          - threat_id
+
+        countermeasure_threat:
+          - project_id
+          - countermeasure_id
+          - threat_id
+          - mitigation_level
+          - included_in_mitigation
+
+        attacker_threat:
+          - project_id
+          - attacker_type_id
+          - threat_id
+
+        entrypoint_threat:
+          - project_id
+          - entrypoint_id
+          - threat_id
+
+        additional_documentation:
+          - id
+          - document_file
+          - document_title
+          - description
+
+        threat_documentation:
+          - threat_id
+          - document_id
+
+        parameters:
+          - id
+          - parameter_name
+          - display_name
+          - value
+
+        risk_history:
+          - time
+          - series
+          - value
 
 RULES:
+
   - rule_code: PIP
     name: "All patterns all posts"
     description: "A list of patterns in posts."
     logic: |
       select * from pattern_posts
 
+  - rule_code: LAAS_THREATS
+    name: "Show all threats in the Lab as a Service project linked to patterns"
+    description: "Show all threats in the Lab as a Service project linked to patterns."
+    logic: |
+      show all the threats in the Lab as a Service project
+      in threat.projects
+      joined to public.patterns
+      using the threat.pattern_threat join table
+      
   - rule_code: PIE
     name: "Patterns in Episodes"
     description: "Show patterns that appear in podcast episode."
