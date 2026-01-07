@@ -1,0 +1,15 @@
+flowchart LR
+    A[Assumption: Device is not networked] --> B[Decision: Skip threat modeling]
+
+    B --> C[Decision: Add remote monitoring feature]
+    C --> D[State: Device now exposed to hospital network]
+
+    D --> E[Decision: Defer cybersecurity controls]
+    E --> F[State: Device deployed in clinical workflow]
+
+    F --> G[OPTIONALITY COLLAPSE: Installed base exists]
+
+    G --> H[Event: Vulnerability discovered]
+    H --> I[State: Incident response required]
+
+    style G stroke:#ff0000,stroke-width:4px

@@ -4,6 +4,7 @@
   import { globalSearch } from '$lib/searchStore';
   
   let viewName = '';
+  let viewTitle = 'Views';
   let viewSummary = '';
   let data: any[] = [];
   let columns: string[] = [];
@@ -95,8 +96,13 @@
         const registryData = await registryResponse.json();
         const viewEntry = registryData.find((v: any) => v.table_name === view);
         if (viewEntry) {
+          viewTitle = viewEntry.name || getDisplayName();
           viewSummary = viewEntry.summary || '';
+        } else {
+          viewTitle = getDisplayName();
         }
+      } else {
+        viewTitle = getDisplayName();
       }
       
       // Fetch view data
@@ -195,7 +201,7 @@
 
 <div id="application-content-area">
   <div class="page-title">
-    <h1 class="heading heading_1">Views</h1>
+    <h1 class="heading heading_1">{viewTitle}</h1>
   </div>
 
   <div class="grid-row">

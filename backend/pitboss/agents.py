@@ -87,6 +87,13 @@ async def agent_language_capo(message_body: Dict[str, Any]) -> Tuple[str, float,
         reason = f"User wants to run rule: '{code}'"
         logger.info(f"  Detected 'RUN' syntax → routing to RULE workflow")
         return ("yes", 0.95, reason, "RULE")
+    
+    # Fast-path: recognize explicit "extract <URL>" syntax → route to CONTENT
+    if text.upper().startswith("EXTRACT "):
+        url = text[8:].strip()
+        reason = f"User wants to extract from URL: '{url}'"
+        logger.info(f"  Detected 'EXTRACT' syntax → routing to CONTENT workflow")
+        return ("yes", 0.95, reason, "CONTENT")
 
     # Try LLM-based classification first
     api_key = os.getenv("OPENAI_API_KEY")
@@ -263,20 +270,29 @@ async def agent_capo_rule(message_body: Dict[str, Any]) -> Tuple[str, float, str
 async def agent_verify_request(message_body: Dict[str, Any]) -> Tuple[str, float, str]:
     """
     model.verifyRequest (RULE flow)
-    Validate semantics of the rule request.
+    Validate basic structure of the rule request.
     
     Checks:
     - Rule code exists in YAML (if provided)
-    - Rule logic references valid entities/tables
-    - Rule intent is clear (not ambiguous)
-    - Begin context building for LLM (store in message_body)
+    - Rule has logic
+    - Message envelope is valid
+    
+    NOTE: We do NOT validate rule logic or table references here.
+    The LLM (model.ruleToSQL) will handle semantic validation when generating SQL.
+    This keeps the system simple and avoids brittleness from string matching.
     """
-    logger.info("🤖 [model.verifyRequest] Validating rule semantics...")
+    logger.info("🤖 [model.verifyRequest] Validating rule structure...")
     
     rule_code = message_body.get("rule_code", "").strip()
-    rule_logic = message_body.get("rule_logic", "").lower()
+    rule_logic = message_body.get("rule_logic", "").strip()
     
-    # First: Verify rule exists in YAML (if rule_code was extracted)
+    # Validate rule logic is present
+    if not rule_logic:
+        reason = "Rule has no logic defined"
+        logger.info(f"  Decision: no (confidence: 0.95) - {reason}")
+        return ("no", 0.95, reason)
+    
+    # Validate rule code if provided
     if rule_code:
         context_builder = message_body.get("_ctx")
         if context_builder and hasattr(context_builder, 'yaml_data'):
@@ -288,58 +304,10 @@ async def agent_verify_request(message_body: Dict[str, Any]) -> Tuple[str, float
                 logger.info(f"  Decision: no (confidence: 0.98) - {reason}")
                 return ("no", 0.98, reason)
     
-    # Get valid tables from context builder (loads from YAML dynamically)
-    context_builder = message_body.get("_ctx")
-    if context_builder and hasattr(context_builder, 'yaml_data'):
-        # Extract all table names from YAML DATA section
-        # Support both flat structure (DATA.tables) and nested schema structure (DATA.schemas.*.tables)
-        data_section = context_builder.yaml_data.get("DATA", {})
-        yaml_tables = set()
-        
-        # Try flat structure first
-        if "tables" in data_section:
-            yaml_tables.update(data_section.get("tables", {}).keys())
-        
-        # Then try nested schema structure (DATA.schemas.<schema_name>.tables)
-        schemas = data_section.get("schemas", {})
-        if schemas:
-            for schema_name, schema_data in schemas.items():
-                if isinstance(schema_data, dict):
-                    schema_tables = schema_data.get("tables", {})
-                    if isinstance(schema_tables, dict):
-                        yaml_tables.update(schema_tables.keys())
-        
-        valid_tables = yaml_tables
-        logger.info(f"  Loaded {len(valid_tables)} tables from YAML: {sorted(list(valid_tables))[:5]}...")
-    else:
-        # Fallback to hardcoded list if context builder unavailable
-        valid_tables = {
-            "patterns", "guests", "organizations", "posts",
-            "pattern_guests", "pattern_orgs", "pattern_posts",
-            "orgs", "org", "guest", "episode", "post", "pattern"
-        }
-        logger.warning("Using fallback hardcoded table list; context_builder not available")
-    
-    found_tables = [t for t in valid_tables if t in rule_logic]
-    
-    if not found_tables:
-        reason = "Rule does not reference any known entities (patterns, guests, orgs, posts)"
-        logger.info(f"  Decision: no (confidence: 0.82) - {reason}")
-        return ("no", 0.82, reason)
-    
-    # Semantic check: look for SELECT or query-like intent
-    query_keywords = ["show", "find", "list", "select", "display", "get", "view", "count", "group"]
-    has_query_intent = any(kw in rule_logic for kw in query_keywords)
-    
-    if not has_query_intent and len(found_tables) < 1:
-        reason = "Rule intent is unclear; could not identify query action"
-        logger.info(f"  Decision: no (confidence: 0.76) - {reason}")
-        return ("no", 0.76, reason)
-    
-    # Semantics validated
+    # Basic validation passed - let LLM handle semantic validation
     decision = "yes"
-    confidence = 0.89
-    reason = f"Rule semantics valid: references {', '.join(found_tables[:3])} and intent is clear"
+    confidence = 0.95
+    reason = f"Rule structure valid. LLM will generate SQL."
     
     logger.info(f"  Decision: {decision} (confidence: {confidence:.2f})")
     return (decision, confidence, reason)

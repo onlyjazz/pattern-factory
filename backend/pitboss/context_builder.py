@@ -72,7 +72,17 @@ class ContextBuilder:
                 
                 # Log what was loaded
                 system_keys = list(data.get("SYSTEM", {}).keys()) if data.get("SYSTEM") else []
-                data_tables = len(data.get("DATA", {}).get("tables", {}))
+                
+                # Count tables from both flat and nested schema structures
+                data_section = data.get("DATA", {})
+                data_tables = len(data_section.get("tables", {}))  # Flat structure
+                # Add tables from nested schemas
+                schemas = data_section.get("schemas", {})
+                if schemas:
+                    for schema_data in schemas.values():
+                        if isinstance(schema_data, dict):
+                            data_tables += len(schema_data.get("tables", {}))
+                
                 rules_count = len(data.get("RULES", []))
                 logger.info(f"   SYSTEM sections: {', '.join(system_keys)}")
                 logger.info(f"   DATA tables: {data_tables}")
@@ -148,20 +158,38 @@ class ContextBuilder:
     def _format_data_section(self) -> str:
         """
         Format DATA section (tables + columns) into readable text.
+        Supports both flat structure (DATA.tables) and nested schema structure (DATA.schemas.*.tables).
         """
         data_section = self.yaml_data.get("DATA", {})
-        tables = data_section.get("tables", {})
-        
-        if not tables:
-            return "(No DATA.tables section found in YAML)"
-
         lines = ["Available Tables:"]
-        for table_name, columns in tables.items():
-            if isinstance(columns, list):
-                col_str = ", ".join(columns)
-            else:
-                col_str = str(columns)
-            lines.append(f"  {table_name}: {col_str}")
+        
+        # Try flat structure first
+        tables = data_section.get("tables", {})
+        if tables:
+            for table_name, columns in tables.items():
+                if isinstance(columns, list):
+                    col_str = ", ".join(columns)
+                else:
+                    col_str = str(columns)
+                lines.append(f"  {table_name}: {col_str}")
+        
+        # Then try nested schema structure (DATA.schemas.<schema_name>.tables)
+        schemas = data_section.get("schemas", {})
+        if schemas:
+            for schema_name, schema_data in schemas.items():
+                if isinstance(schema_data, dict):
+                    schema_tables = schema_data.get("tables", {})
+                    if schema_tables:
+                        lines.append(f"  # Schema: {schema_name}")
+                        for table_name, columns in schema_tables.items():
+                            if isinstance(columns, list):
+                                col_str = ", ".join(columns)
+                            else:
+                                col_str = str(columns)
+                            lines.append(f"  {table_name}: {col_str}")
+        
+        if len(lines) == 1:  # Only header, no tables found
+            return "(No DATA.tables or DATA.schemas found in YAML)"
 
         return "\n".join(lines)
 

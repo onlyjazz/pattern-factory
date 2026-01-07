@@ -1,6 +1,6 @@
 SYSTEM:
-  rev: 0.5
-  date: 2025-12-05
+  rev: 0.6
+  date: 2026-01-06
   author: D. Lieberman
 
   prompt: |
@@ -28,14 +28,10 @@ SYSTEM:
     - Use ONLY the tables and columns defined in DATA.
 
 DATA:
-relationship_constraints:
-    - description: "Threats and patterns are linked ONLY via pattern_threat"
-      rule:
-        threats -> pattern_threat -> patterns
-      forbidden:
-        - threats -> patterns
-
-schemas:
+  relationships:
+    - public.projects -> public.patterns (many-to-many via threat.pattern_threat)
+    
+  schemas:
 
     public:
       tables:
@@ -209,9 +205,9 @@ schemas:
           - tools_available
 
         pattern_threat:
-          - project_id
-          - pattern_id
-          - threat_id
+          - project_id REFERENCES public.projects(id)
+          - pattern_id REFERENCES public.patterns(id)
+          - threat_id REFERENCES threat.threats(id)
 
         area_asset:
           - project_id
@@ -290,15 +286,18 @@ RULES:
     logic: |
       select * from pattern_posts
 
-  - rule_code: LAAS_THREATS
-    name: "Show all threats in the Lab as a Service project linked to patterns"
-    description: "Show all threats in the Lab as a Service project linked to patterns."
+  - rule_code: POSTS
+    name: "List of posts"
+    description: "A list of posts."
     logic: |
-      show all the threats in the Lab as a Service project
-      in threat.projects
-      joined to public.patterns
-      using the threat.pattern_threat join table
-      
+      select name, description, content_url, content_source, published_at from posts
+
+  - rule_code: LAAS_THREATS
+    name: "Threats and patterns in the Lab as a Service project"
+    description: "Threats and patterns in the Lab as a Service project"
+    logic: |
+      Show all threats in the "Lab as a Service" project and their associated patterns
+
   - rule_code: PIE
     name: "Patterns in Episodes"
     description: "Show patterns that appear in podcast episode."
@@ -659,13 +658,19 @@ CONTENT:
       }
       The name is in the H1 tag like this
       <h1 dir="auto" class="post-title published title-X77sOw">Debug the TechBio development process</h1>
+      or like this:
+      <h1>Debug the TechBio development process</h1>
 
       The description is in the H3 tag class=subtitle like this
       <h3 dir="auto" class="subtitle subtitle-HEEcLo">Start by deciding if you are a tech or a service company.</h3>
+      or like this:
+      <h3>Start by deciding if you are a tech or a service company.</h3>
 
       The published_at field is extracted from the HTML content.
       The field looks like this: "Oct 24, 2025" and will be in an HTML snippet like this
       <div class="pencraft pc-reset color-pub-secondary-text-hGQ02T line-height-20-t4M0El font-meta-MWBumP size-11-NuY2Zx weight-medium-fw81nC transform-uppercase-yKDgcq reset-IxiVJZ meta-EgzBVA">Oct 11, 2025</div>
+      or like this:
+      <p>Oct 24, 2025</p>
 
       ORGS:
       Extract organizations such as investors, startups, CROs, labs, pharma, biotech, accelerators.
@@ -682,13 +687,17 @@ CONTENT:
 
 
       GUESTS:
-      Extract identifiable humans (CEOs, founders, researchers, speakers) MENTIONED IN THE CONTENT.
+      Extract identifiable humans (CEOs, founders, researchers, speakers, analysts) MENTIONED IN THE CONTENT.
       IMPORTANT:
       - Do NOT extract Clear Thinking with Danny Lieberman as a guest. 
       - Do not extract Danny Lieberman as a guest.
-      - Prefer explicit cues like: "guest", "A recent guest was ...", "interview with ...",
-        or role phrases like "Co‑Founder and CEO at <Org>", "Founder of <Org>", "CEO at <Org>"
-        or I hosted "So and so"
+      - EXPLICIT ROLE INDICATORS (must extract):
+        * "Source: <Name>", "Source/<Name>", "Guest: <Name>"
+        * "Security Analyst", "Security analysts", followed by name
+        * "A recent guest was <Name>", "interview with <Name>"
+        * Role phrases: "Co‑Founder and CEO at <Org>", "Founder of <Org>", "CEO at <Org>", "Director at <Org>"
+        * "I hosted <Name>", "we spoke with <Name>"
+      - PATTERN CARDS FORMAT: Look for "Source/Guest" or "Source" labels followed by person names (e.g., "Source/Guest Security Analyst <Name>")
       - When an organization is clearly associated in text ("at <Org>", "from <Org>"), set org_name to that org
         and include the org in the orgs array if not already present.
       - Avoid duplicates; normalize repeated mentions to a single guest entry.
@@ -706,14 +715,56 @@ CONTENT:
       }
 
       PATTERNS:
-      Extract conceptual patterns or anti-patterns explicitly or strongly implied.
+      Extract conceptual patterns and anti-patterns from the content.
+      A pattern is a recurring problem, solution, practice, or mistake that appears in business, technology, or healthcare.
+      
+      WHAT TO EXTRACT:
+      - Explicit patterns: "Pattern: X", "Anti-pattern: X", "Common mistake: X"
+      - Implicit patterns: Best practices, common pitfalls, recurring challenges, design approaches
+      - Domain patterns: Security patterns, development patterns, organizational patterns, process patterns
+      - Business patterns: Business models, business strategies, business practices, revenue, paying customers, cash flows
+      - Team patterns: Team structures, team roles, team practices, team challenges - for  example Dissent in your team is an act of faith.
+      - Problem patterns: Things teams do wrong, false assumptions, common errors
+      - Solution patterns: Things teams do right, best practices, effective strategies
+      - Anti-patterns: Things teams do wrong, false assumptions, common errors, not this, this statements - for example 
+        Customers don’t want to hear your vision. They want to understand your logic.
 
+      EXTRACTION RULES:
+      1. Look for problem statements ("Teams often...", "A common mistake...", "Many organizations...")
+      2. Look for solution statements ("Best practice...", "Successful teams...", "The right way...")
+      3. Look for contrasts/contradictions ("Instead of X, do Y", "X is wrong because...")
+      4. Extract domain-specific practices (security, development, management, etc.)
+      5. Be generous - if it's a recurring theme or lesson, extract it as a pattern
+      
+      DO NOT skip patterns because you're uncertain. If the content discusses a practice, approach, or mistake, extract it.
+      
       A pattern has 4 required fields:
       {
             "name": "...",
             "description": "...",
             "kind": "pattern | anti-pattern",
             "content_source": "substack"
+      }
+      
+      EXAMPLES:
+      - Name: "Assuming non-networked devices are inherently secure", kind: "anti-pattern"
+      - Name: "Security review early in development", kind: "pattern"
+      - Name: "Treating infrastructure as cattle, not pets", kind: "pattern"
+      - Name: "Siloed security teams", kind: "anti-pattern"
+      
+      CRITICAL: POST FALLBACK RULE
+      If you extract ANY patterns, orgs, or guests from the URL but NO post is found:
+      - You MUST create at least one post entry using the page/site name or title tag
+      - Use empty string for description if unavailable
+      - Set published_at to null if unavailable
+      - This ensures extracted entities can be linked to a post in the link tables
+      Example fallback post:
+      {
+        "name": "Pattern Factory",
+        "description": "",
+        "content_url": "https://pattern-cards.netlify.app/",
+        "content_source": "substack",
+        "published_at": null
       }
 
       ------------------------------------------------------------
