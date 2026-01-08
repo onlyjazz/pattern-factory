@@ -222,6 +222,7 @@ class PathNode(BaseModel):
     id: str
     type: str  # assumption, decision, state
     label: str
+    serial: Optional[int] = None
     optionality: Optional[dict] = None  # {collapses: bool, reason: str}
 
 class PathEdge(BaseModel):
@@ -238,6 +239,7 @@ class PathUpdate(BaseModel):
     name: Optional[str] = None
     nodes: Optional[list[PathNode]] = None
     edges: Optional[list[PathEdge]] = None
+    youAreHere: Optional[int] = None
 
 @app.get("/paths")
 async def get_paths():
@@ -265,7 +267,7 @@ async def get_paths():
 async def create_path(path: PathCreate):
     pool = get_pg_pool()
     
-    # Build YAML structure
+    # Build YAML structure - pass through frontend data as-is
     yaml_data = {
         "nodes": [n.model_dump() for n in path.nodes],
         "edges": [e.model_dump() for e in path.edges]
@@ -310,9 +312,9 @@ async def get_path(path_id: int):
 async def update_path(path_id: int, patch: PathUpdate):
     pool = get_pg_pool()
     
-    # Build updated YAML if nodes/edges provided
+    # Build updated YAML if any data provided
     yaml_data = None
-    if patch.nodes is not None or patch.edges is not None:
+    if patch.nodes is not None or patch.edges is not None or patch.youAreHere is not None:
         # Fetch current data first
         async with pool.acquire() as conn:
             row = await conn.fetchrow(
@@ -329,11 +331,13 @@ async def update_path(path_id: int, patch: PathUpdate):
             except:
                 pass
         
-        # Update with new values
+        # Update with new values - pass through frontend data as-is
         if patch.nodes is not None:
             current_yaml['nodes'] = [n.model_dump() for n in patch.nodes]
         if patch.edges is not None:
             current_yaml['edges'] = [e.model_dump() for e in patch.edges]
+        if patch.youAreHere is not None:
+            current_yaml['youAreHere'] = patch.youAreHere
         
         yaml_data = json.dumps(current_yaml)
     

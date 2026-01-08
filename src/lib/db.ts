@@ -5,9 +5,11 @@ export interface PathNode {
     id: string;
     type: string; // assumption, decision, state
     label: string;
+    serial?: number;
     optionality?: {
         collapses: boolean;
         reason: string;
+        irreversible: boolean;
     };
 }
 
