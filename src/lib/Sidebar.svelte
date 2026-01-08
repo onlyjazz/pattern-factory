@@ -9,7 +9,8 @@
 	const apiBase = 'http://localhost:8000';
 
 	const links = [
-		{ name: "Patterns", href: "/patterns" }
+		{ name: "Patterns", href: "/patterns" },
+		{ name: "Paths", href: "/paths" }
 	];
 
 	onMount(() => {

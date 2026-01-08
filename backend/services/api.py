@@ -215,6 +215,164 @@ async def delete_pattern(pattern_id: int):
             return {"error": f"Pattern {pattern_id} not found"}
     return {"status": "ok", "deleted_id": pattern_id}
 
+# -------------------------------------------------------------------------
+# Paths CRUD
+# -------------------------------------------------------------------------
+class PathNode(BaseModel):
+    id: str
+    type: str  # assumption, decision, state
+    label: str
+    optionality: Optional[dict] = None  # {collapses: bool, reason: str}
+
+class PathEdge(BaseModel):
+    from_node: str  # node id
+    to_node: str    # node id
+    reason: str
+
+class PathCreate(BaseModel):
+    name: str
+    nodes: list[PathNode] = []
+    edges: list[PathEdge] = []
+
+class PathUpdate(BaseModel):
+    name: Optional[str] = None
+    nodes: Optional[list[PathNode]] = None
+    edges: Optional[list[PathEdge]] = None
+
+@app.get("/paths")
+async def get_paths():
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT id, name, yaml, created_at, updated_at
+            FROM paths
+            ORDER BY created_at DESC
+        """)
+    
+    result = []
+    for row in rows:
+        r = dict(row)
+        # Parse yaml field if it exists
+        if r.get('yaml'):
+            try:
+                r['yaml'] = json.loads(r['yaml'])
+            except:
+                pass
+        result.append(r)
+    return result
+
+@app.post("/paths", tags=["Paths"])
+async def create_path(path: PathCreate):
+    pool = get_pg_pool()
+    
+    # Build YAML structure
+    yaml_data = {
+        "nodes": [n.model_dump() for n in path.nodes],
+        "edges": [e.model_dump() for e in path.edges]
+    }
+    
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            INSERT INTO paths (name, yaml)
+            VALUES ($1, $2)
+            RETURNING id, name, yaml, created_at, updated_at
+            """,
+            path.name,
+            json.dumps(yaml_data)
+        )
+        r = dict(row)
+        if r.get('yaml'):
+            r['yaml'] = json.loads(r['yaml'])
+        return r
+
+@app.get("/paths/{path_id}")
+async def get_path(path_id: int):
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT id, name, yaml, created_at, updated_at FROM paths WHERE id = $1",
+            path_id
+        )
+    
+    if not row:
+        raise HTTPException(status_code=404, detail="Path not found")
+    
+    r = dict(row)
+    if r.get('yaml'):
+        try:
+            r['yaml'] = json.loads(r['yaml'])
+        except:
+            pass
+    return r
+
+@app.put("/paths/{path_id}", tags=["Paths"])
+async def update_path(path_id: int, patch: PathUpdate):
+    pool = get_pg_pool()
+    
+    # Build updated YAML if nodes/edges provided
+    yaml_data = None
+    if patch.nodes is not None or patch.edges is not None:
+        # Fetch current data first
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow(
+                "SELECT yaml FROM paths WHERE id = $1", path_id
+            )
+        
+        if not row:
+            raise HTTPException(status_code=404, detail="Path not found")
+        
+        current_yaml = {}
+        if row['yaml']:
+            try:
+                current_yaml = json.loads(row['yaml'])
+            except:
+                pass
+        
+        # Update with new values
+        if patch.nodes is not None:
+            current_yaml['nodes'] = [n.model_dump() for n in patch.nodes]
+        if patch.edges is not None:
+            current_yaml['edges'] = [e.model_dump() for e in patch.edges]
+        
+        yaml_data = json.dumps(current_yaml)
+    
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            UPDATE paths
+            SET 
+                name = COALESCE($1, name),
+                yaml = COALESCE($2, yaml),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $3
+            RETURNING id, name, yaml, created_at, updated_at
+            """,
+            patch.name,
+            yaml_data,
+            path_id
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="Path not found")
+        
+        r = dict(row)
+        if r.get('yaml'):
+            try:
+                r['yaml'] = json.loads(r['yaml'])
+            except:
+                pass
+        return r
+
+@app.delete("/paths/{path_id}", tags=["Paths"])
+async def delete_path(path_id: int):
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        result = await conn.execute(
+            "DELETE FROM paths WHERE id = $1", path_id
+        )
+        if result == "DELETE 0":
+            raise HTTPException(status_code=404, detail="Path not found")
+    return {"status": "ok", "deleted_id": path_id}
 
 # -------------------------------------------------------------------------
 # GET /query/{table}  (Universal table reader)
