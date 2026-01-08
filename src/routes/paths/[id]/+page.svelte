@@ -450,6 +450,9 @@
 		width: 18px;
 		height: 18px;
 		cursor: pointer;
+		border: 1px solid #ccc;
+		border-radius: 3px;
+		box-sizing: border-box;
 	}
 
 	.button-icon {
