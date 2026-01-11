@@ -13,7 +13,9 @@
         let showAddModal = false;
         let showEditModal = false;
         let showStoryEditor = false;
+        let showStoryViewer = false;
         let patternToEdit = {} as Pattern;
+        let patternToView = {} as Pattern;
         let newPattern: Partial<Pattern> = { name: '', description: '', kind: 'pattern' };
         const kinds = ['', 'pattern', 'anti-pattern'];
         
@@ -114,6 +116,16 @@
         function closeStoryEditor() {
                 showStoryEditor = false;
         }
+        
+        function openStoryViewer(pattern: Pattern) {
+                patternToView = { ...pattern };
+                showStoryViewer = true;
+        }
+        
+        function closeStoryViewer() {
+                showStoryViewer = false;
+                patternToView = {} as Pattern;
+        }
 </script>
 
 <!-- PAGE HEADER -->
@@ -164,7 +176,7 @@
 
                         <tbody>
                             {#each filteredPatterns as p (p.id)}
-                                <tr>
+                                <tr onclick={() => p.story_md && openStoryViewer(p)} class="pattern-row" class:has-story={p.story_md}>
                                     <td class="tal">{p.name}</td>
                                     <td class="tal">{p.description}</td>
                                     <td class="tal">{p.kind}</td>
@@ -172,7 +184,10 @@
                                     <td class="tar">
                                         <button
                                             class="button button_small"
-                                            onclick={() => handleEdit(p)}
+                                            onclick={(e) => {
+                                                e.stopPropagation();
+                                                handleEdit(p);
+                                            }}
                                             title="Edit"
                                         >
                                             ✎
@@ -388,6 +403,33 @@
                 >
                     Done
                 </button>
+            </div>
+        </div>
+    </div>
+{/if}
+
+<!-- STORY VIEWER MODAL -->
+{#if showStoryViewer && Object.keys(patternToView).length > 0}
+    <div class="modal-overlay" onclick={closeStoryViewer}>
+        <div class="story-viewer-content" role="dialog" aria-labelledby="story-viewer-title" onclick={(e) => e.stopPropagation()}>
+            <div class="modal-header">
+                <div>
+                    <h2 id="story-viewer-title" class="heading heading_2">{patternToView.name}</h2>
+                    <p class="story-viewer-subtitle">{patternToView.description}</p>
+                </div>
+                <button
+                    class="modal-close"
+                    onclick={closeStoryViewer}
+                    title="Close"
+                >
+                    ×
+                </button>
+            </div>
+
+            <div class="story-viewer-body">
+                <div class="story-viewer-content-area">
+                    {@html marked(patternToView.story_md || '')}
+                </div>
             </div>
         </div>
     </div>
@@ -634,6 +676,114 @@
         padding-left: 10px;
         margin: 8px 0;
         color: #666;
+        font-style: italic;
+    }
+
+    :global(.pattern-row) {
+        transition: background-color 0.2s ease;
+    }
+
+    :global(.pattern-row.has-story) {
+        cursor: pointer;
+    }
+
+    :global(.pattern-row.has-story:hover) {
+        background-color: #f5f5f5;
+    }
+
+    :global(.story-viewer-content) {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        max-width: 800px;
+        width: 90%;
+        max-height: 85vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    :global(.story-viewer-subtitle) {
+        font-size: 14px;
+        color: #666;
+        margin: 5px 0 0 0;
+        font-weight: normal;
+    }
+
+    :global(.story-viewer-body) {
+        flex: 1;
+        padding: 25px;
+        overflow-y: auto;
+        min-height: 0;
+    }
+
+    :global(.story-viewer-content-area) {
+        font-size: 15px;
+        line-height: 1.7;
+        color: #333;
+    }
+
+    :global(.story-viewer-content-area h1) {
+        font-size: 28px;
+        font-weight: bold;
+        margin: 20px 0 12px 0;
+    }
+
+    :global(.story-viewer-content-area h2) {
+        font-size: 22px;
+        font-weight: bold;
+        margin: 16px 0 10px 0;
+    }
+
+    :global(.story-viewer-content-area h3) {
+        font-size: 18px;
+        font-weight: bold;
+        margin: 12px 0 8px 0;
+    }
+
+    :global(.story-viewer-content-area p) {
+        margin: 10px 0;
+    }
+
+    :global(.story-viewer-content-area ul),
+    :global(.story-viewer-content-area ol) {
+        margin: 10px 0 10px 25px;
+    }
+
+    :global(.story-viewer-content-area li) {
+        margin: 5px 0;
+    }
+
+    :global(.story-viewer-content-area code) {
+        background: #f0f0f0;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-family: 'Monaco', 'Courier New', monospace;
+        font-size: 13px;
+        color: #d63384;
+    }
+
+    :global(.story-viewer-content-area pre) {
+        background: #f5f5f5;
+        padding: 12px;
+        border-radius: 4px;
+        overflow-x: auto;
+        margin: 10px 0;
+    }
+
+    :global(.story-viewer-content-area blockquote) {
+        border-left: 4px solid #ddd;
+        padding-left: 15px;
+        margin: 12px 0;
+        color: #666;
+        font-style: italic;
+    }
+
+    :global(.story-viewer-content-area strong) {
+        font-weight: bold;
+    }
+
+    :global(.story-viewer-content-area em) {
         font-style: italic;
     }
 </style>
