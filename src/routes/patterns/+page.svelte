@@ -33,6 +33,7 @@
                         const data = await response.json();
                         // Ensure all IDs are strings for consistent comparison
                         patterns = data.map((p: any) => ({ ...p, id: String(p.id) }));
+                        console.log('Loaded patterns:', patterns.map(p => ({ id: p.id, name: p.name })));
                         filterPatterns();
                 } catch (e) {
                         error = e instanceof Error ? e.message : 'Unknown error';
@@ -131,7 +132,11 @@
                 console.log('After toggle, viewing:', viewingPatternId);
         }
         
-        $: viewingPattern = getViewingPattern();
+        $: {
+                console.log('Reactive: viewingPatternId changed to:', viewingPatternId);
+                viewingPattern = getViewingPattern();
+                console.log('Reactive: viewingPattern set to:', viewingPattern ? viewingPattern.name : 'undefined');
+        }
 </script>
 
 <!-- PAGE HEADER -->
