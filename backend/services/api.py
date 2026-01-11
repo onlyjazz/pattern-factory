@@ -143,7 +143,7 @@ async def get_patterns():
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
-            SELECT id, name, description, kind, created_at, updated_at
+            SELECT id, name, description, kind, story_md, created_at, updated_at
             FROM patterns
             ORDER BY created_at DESC
         """)
@@ -157,6 +157,7 @@ class PatternCreate(BaseModel):
     name: str
     description: str
     kind: str
+    story_md: str | None = None
 
 @app.post("/patterns", tags=["Patterns"])
 async def create_pattern(pattern: PatternCreate):
@@ -164,13 +165,14 @@ async def create_pattern(pattern: PatternCreate):
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
             """
-            INSERT INTO patterns (name, description, kind)
-            VALUES ($1, $2, $3)
-            RETURNING id, name, description, kind, created_at, updated_at
+            INSERT INTO patterns (name, description, kind, story_md)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id, name, description, kind, story_md, created_at, updated_at
             """,
             pattern.name,
             pattern.description,
-            pattern.kind
+            pattern.kind,
+            pattern.story_md
         )
         return dict(row)
 # Upda
@@ -178,6 +180,7 @@ class PatternUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
     kind: str | None = None
+    story_md: str | None = None
 
 @app.put("/patterns/{pattern_id}", tags=["Patterns"])
 async def update_pattern(pattern_id: int, patch: PatternUpdate):
@@ -190,13 +193,15 @@ async def update_pattern(pattern_id: int, patch: PatternUpdate):
                 name = COALESCE($1, name),
                 description = COALESCE($2, description),
                 kind = COALESCE($3, kind),
+                story_md = COALESCE($4, story_md),
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = $4
-            RETURNING id, name, description, kind, created_at, updated_at
+            WHERE id = $5
+            RETURNING id, name, description, kind, story_md, created_at, updated_at
             """,
             patch.name,
             patch.description,
             patch.kind,
+            patch.story_md,
             pattern_id
         )
         if not row:

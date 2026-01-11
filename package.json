@@ -46,6 +46,7 @@
 		"js-yaml": "^4.1.0",
 		"jszip": "^3.10.1",
 		"lucide-svelte": "^0.511.0",
+		"marked": "^17.0.1",
 		"node-fetch": "^3.3.2",
 		"pdfmake": "^0.2.20",
 		"svelte-skeleton-collapsible-sidebar": "^1.0.0",

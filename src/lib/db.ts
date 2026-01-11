@@ -1,5 +1,5 @@
 export type ID = string
-export interface Pattern { id: ID; name: string; description: string; kind: string; }
+export interface Pattern { id: ID; name: string; description: string; kind: string; story_md?: string | null; }
 
 export interface PathNode {
     id: string;

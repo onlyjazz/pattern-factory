@@ -95,6 +95,7 @@ CREATE TABLE patterns (
     description TEXT,
     content_source TEXT,                        -- e.g., 'substack', 'website', 'blog'
     kind TEXT CHECK (kind IN ('pattern','anti-pattern')) DEFAULT 'pattern',
+    story_md TEXT,                              -- markdown-formatted story
     metadata JSONB DEFAULT '{}'::jsonb,         -- LLM summary, confidence, etc.
     highlights JSONB DEFAULT '[]'::jsonb,       -- quotes, snippets
     search_vector tsvector,                     -- for full-text search
