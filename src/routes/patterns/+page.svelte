@@ -13,15 +13,9 @@
         let showAddModal = false;
         let showEditModal = false;
         let showStoryEditor = false;
-        let viewingPatternId: string | null = null;
-        let viewingPattern: Pattern | undefined = undefined;
         let patternToEdit = {} as Pattern;
         let newPattern: Partial<Pattern> = { name: '', description: '', kind: 'pattern' };
         const kinds = ['', 'pattern', 'anti-pattern'];
-        
-        function getViewingPattern(): Pattern | undefined {
-                return viewingPatternId ? patterns.find(p => p.id === viewingPatternId) : undefined;
-        }
         
         const apiBase = "http://localhost:8000";
         
@@ -123,116 +117,86 @@
                 showStoryEditor = false;
         }
         
-        function toggleStoryView(patternId: string | number) {
-                const id = String(patternId);
-                viewingPatternId = viewingPatternId === id ? null : id;
-        }
-        
-        $: if (viewingPatternId || patterns) viewingPattern = getViewingPattern();
 </script>
 
 <!-- PAGE HEADER -->
 <div id="application-content-area">
-{#if viewingPatternId && viewingPattern}
-    <div class="page-title">
-        <h1 class="heading heading_1">{viewingPattern.name}</h1>
-    </div>
-{:else}
-    <div class="page-title">
-        <button class="button button_green" onclick={() => (showAddModal = true)}>
-            Add Pattern
-        </button>
-        <h1 class="heading heading_1">Patterns</h1>
-    </div>
-{/if}
+<div class="page-title">
+    <button class="button button_green" onclick={() => (showAddModal = true)}>
+        Add Pattern
+    </button>
+    <h1 class="heading heading_1">Patterns</h1>
+</div>
 
 <div class="grid-row">
     <!-- FULL WIDTH TABLE -->
     <div class="grid-col grid-col_24">
-        {#if viewingPatternId && viewingPattern}
-            <!-- STORY VIEW -->
-            <div class="studies card">
-                <div class="story-view-content">
-                    {@html marked(viewingPattern.story_md || '')}
-                </div>
-                <div class="story-view-footer">
-                    <button
-                        class="button button_secondary"
-                        onclick={() => toggleStoryView(viewingPatternId || '')}
+        <div class="studies card">
+            <div class="card-header">
+                <div class="heading heading_3">Pattern Library</div>
+                <div class="kind-filter">
+                    <select
+                        id="pattern-kind-filter"
+                        bind:value={selectedKind}
+                        class="kind-filter-select"
                     >
-                        Back to Patterns
-                    </button>
-                    <button
-                        class="button button_secondary"
-                        onclick={() => handleEdit(viewingPattern)}
-                    >
-                        Edit
-                    </button>
+                        {#each kinds as k}
+                            <option value={k}>{k || 'All Kinds'}</option>
+                        {/each}
+                    </select>
                 </div>
             </div>
-        {:else}
-            <!-- PATTERNS TABLE VIEW -->
-            <div class="studies card">
-                <div class="card-header">
-                    <div class="heading heading_3">Pattern Library</div>
-                    <div class="kind-filter">
-                        <select
-                            id="pattern-kind-filter"
-                            bind:value={selectedKind}
-                            class="kind-filter-select"
-                        >
-                            {#each kinds as k}
-                                <option value={k}>{k || 'All Kinds'}</option>
-                            {/each}
-                        </select>
-                    </div>
-                </div>
 
-                {#if loading}
-                    <div class="message">Loading patterns...</div>
-                {:else if error}
-                    <div class="message message-error">Error: {error}</div>
-                {:else if filteredPatterns.length === 0}
-                    <div class="message">No patterns found</div>
-                {:else}
-                    <div class="table">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th class="tal">Name</th>
-                                    <th class="tal">Description</th>
-                                    <th class="tal">Kind</th>
-                                    <th class="tar">Actions</th>
+            {#if loading}
+                <div class="message">Loading patterns...</div>
+            {:else if error}
+                <div class="message message-error">Error: {error}</div>
+            {:else if filteredPatterns.length === 0}
+                <div class="message">No patterns found</div>
+            {:else}
+                <div class="table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="tal">Name</th>
+                                <th class="tal">Description</th>
+                                <th class="tal">Kind</th>
+                                <th class="tar">Actions</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {#each filteredPatterns as p (p.id)}
+                                <tr class="pattern-row" class:has-story={p.story_md}>
+                                    <td class="tal">
+                                        {#if p.story_md}
+                                            <a href="/patterns/story/{p.id}" class="pattern-link">{p.name}</a>
+                                        {:else}
+                                            {p.name}
+                                        {/if}
+                                    </td>
+                                    <td class="tal">{p.description}</td>
+                                    <td class="tal">{p.kind}</td>
+
+                                    <td class="tar">
+                                        <button
+                                            class="button button_small"
+                                            onclick={(e) => {
+                                                e.stopPropagation();
+                                                handleEdit(p);
+                                            }}
+                                            title="Edit"
+                                        >
+                                            ✎
+                                        </button>
+                                    </td>
                                 </tr>
-                            </thead>
-
-                            <tbody>
-                                {#each filteredPatterns as p (p.id)}
-                                    <tr onclick={() => toggleStoryView(p.id)} class="pattern-row" class:has-story={p.story_md}>
-                                        <td class="tal">{p.name}</td>
-                                        <td class="tal">{p.description}</td>
-                                        <td class="tal">{p.kind}</td>
-
-                                        <td class="tar">
-                                            <button
-                                                class="button button_small"
-                                                onclick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleEdit(p);
-                                                }}
-                                                title="Edit"
-                                            >
-                                                ✎
-                                            </button>
-                                        </td>
-                                    </tr>
-                                {/each}
-                            </tbody>
-                        </table>
-                    </div>
-                {/if}
-            </div>
-        {/if}
+                            {/each}
+                        </tbody>
+                    </table>
+                </div>
+            {/if}
+        </div>
     </div>
 </div>
 </div> <!-- end application-content-area -->
@@ -689,93 +653,18 @@
         transition: background-color 0.2s ease;
     }
 
-    :global(.pattern-row.has-story) {
-        cursor: pointer;
-    }
-
     :global(.pattern-row.has-story:hover) {
         background-color: #f5f5f5;
     }
 
-    .story-view-content {
-        padding: 20px;
-        font-size: 15px;
-        line-height: 1.7;
-        color: #495057;
+    :global(.pattern-link) {
+        color: #0066cc;
+        text-decoration: none;
+        cursor: pointer;
     }
 
-    .story-view-content :global(h1) {
-        font-size: 24px;
-        font-weight: 600;
-        margin: 20px 0 12px 0;
-    }
-
-    .story-view-content :global(h2) {
-        font-size: 20px;
-        font-weight: 600;
-        margin: 16px 0 10px 0;
-    }
-
-    .story-view-content :global(h3) {
-        font-size: 16px;
-        font-weight: 600;
-        margin: 12px 0 8px 0;
-    }
-
-    .story-view-content :global(p) {
-        margin: 10px 0;
-    }
-
-    .story-view-content :global(ul),
-    .story-view-content :global(ol) {
-        margin: 10px 0 10px 25px;
-    }
-
-    .story-view-content :global(li) {
-        margin: 5px 0;
-    }
-
-    .story-view-content :global(code) {
-        background: #f0f0f0;
-        padding: 2px 6px;
-        border-radius: 3px;
-        font-family: 'Monaco', 'Courier New', monospace;
-        font-size: 13px;
-        color: #d63384;
-    }
-
-    .story-view-content :global(pre) {
-        background: #f5f5f5;
-        padding: 12px;
-        border-radius: 4px;
-        overflow-x: auto;
-        margin: 10px 0;
-        font-size: 13px;
-    }
-
-    .story-view-content :global(blockquote) {
-        border-left: 4px solid #dee2e6;
-        padding-left: 15px;
-        margin: 12px 0;
-        color: #6c757d;
-        font-style: italic;
-    }
-
-    .story-view-content :global(strong) {
-        font-weight: 600;
-    }
-
-    .story-view-content :global(em) {
-        font-style: italic;
-    }
-
-    .story-view-footer {
-        display: flex;
-        gap: 10px;
-        justify-content: flex-end;
-        padding: 15px 20px;
-        border-top: 1px solid #dee2e6;
-        background-color: #f8f9fa;
+    :global(.pattern-link:hover) {
+        text-decoration: underline;
     }
 </style>
 
