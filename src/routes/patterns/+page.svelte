@@ -19,7 +19,9 @@
         const kinds = ['', 'pattern', 'anti-pattern'];
         
         function getViewingPattern(): Pattern | undefined {
-                return viewingPatternId ? patterns.find(p => p.id === viewingPatternId) : undefined;
+                const result = viewingPatternId ? patterns.find(p => p.id === viewingPatternId) : undefined;
+                console.log('getViewingPattern - viewingPatternId:', viewingPatternId, 'Found:', result ? result.name : 'not found');
+                return result;
         }
         
         const apiBase = "http://localhost:8000";
@@ -122,7 +124,9 @@
         
         function toggleStoryView(patternId: string | number) {
                 const id = String(patternId);
+                console.log('Toggle story view for pattern:', id, 'Current viewing:', viewingPatternId);
                 viewingPatternId = viewingPatternId === id ? null : id;
+                console.log('After toggle, viewing:', viewingPatternId);
         }
         
         $: viewingPattern = getViewingPattern();
