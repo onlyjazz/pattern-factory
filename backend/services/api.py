@@ -143,7 +143,7 @@ async def get_patterns():
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
-            SELECT id, name, description, kind, story_md, created_at, updated_at
+            SELECT id, name, description, kind, story_md, taxonomy, created_at, updated_at
             FROM patterns
             ORDER BY created_at DESC
         """)
@@ -158,6 +158,7 @@ class PatternCreate(BaseModel):
     description: str
     kind: str
     story_md: str | None = None
+    taxonomy: str | None = None
 
 @app.get("/patterns/{pattern_id}", tags=["Patterns"])
 async def get_pattern(pattern_id: int):
@@ -165,7 +166,7 @@ async def get_pattern(pattern_id: int):
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
             """
-            SELECT id, name, description, kind, story_md, created_at, updated_at
+            SELECT id, name, description, kind, story_md, taxonomy, created_at, updated_at
             FROM patterns
             WHERE id = $1
             """,
@@ -181,14 +182,15 @@ async def create_pattern(pattern: PatternCreate):
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
             """
-            INSERT INTO patterns (name, description, kind, story_md)
-            VALUES ($1, $2, $3, $4)
-            RETURNING id, name, description, kind, story_md, created_at, updated_at
+            INSERT INTO patterns (name, description, kind, story_md, taxonomy)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id, name, description, kind, story_md, taxonomy, created_at, updated_at
             """,
             pattern.name,
             pattern.description,
             pattern.kind,
-            pattern.story_md
+            pattern.story_md,
+            pattern.taxonomy
         )
         return dict(row)
 # Upda
@@ -197,6 +199,7 @@ class PatternUpdate(BaseModel):
     description: str | None = None
     kind: str | None = None
     story_md: str | None = None
+    taxonomy: str | None = None
 
 @app.put("/patterns/{pattern_id}", tags=["Patterns"])
 async def update_pattern(pattern_id: int, patch: PatternUpdate):
@@ -210,14 +213,16 @@ async def update_pattern(pattern_id: int, patch: PatternUpdate):
                 description = COALESCE($2, description),
                 kind = COALESCE($3, kind),
                 story_md = COALESCE($4, story_md),
+                taxonomy = COALESCE($5, taxonomy),
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = $5
-            RETURNING id, name, description, kind, story_md, created_at, updated_at
+            WHERE id = $6
+            RETURNING id, name, description, kind, story_md, taxonomy, created_at, updated_at
             """,
             patch.name,
             patch.description,
             patch.kind,
             patch.story_md,
+            patch.taxonomy,
             pattern_id
         )
         if not row:

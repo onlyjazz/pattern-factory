@@ -96,7 +96,8 @@
                                         name: updatedPattern.name,
                                         description: updatedPattern.description,
                                         kind: updatedPattern.kind,
-                                        story_md: updatedPattern.story_md || null
+                                        story_md: updatedPattern.story_md || null,
+                                        taxonomy: updatedPattern.taxonomy || null
                                 })
                         });
                         if (!response.ok) throw new Error('Failed to update pattern');
@@ -256,6 +257,22 @@
                             <option value="anti-pattern">Anti-Pattern</option>
                         </select>
                         <label for="edit-kind" class="input__label">Kind</label>
+                    </div>
+
+                    <div class="input input_select">
+                        <select
+                            id="edit-taxonomy"
+                            bind:value={patternToEdit.taxonomy}
+                            class="input__text"
+                            class:input__text_changed={patternToEdit.taxonomy}
+                        >
+                            <option value="">Select Taxonomy (Optional)</option>
+                            <option value="Category Anti-Pattern">Category Anti-Pattern</option>
+                            <option value="Regulatory / GTM Anti-Pattern">Regulatory / GTM Anti-Pattern</option>
+                            <option value="Founder / Financing Anti-Pattern">Founder / Financing Anti-Pattern</option>
+                            <option value="Demand Formation Anti-Pattern">Demand Formation Anti-Pattern</option>
+                        </select>
+                        <label for="edit-taxonomy" class="input__label">Taxonomy</label>
                     </div>
 
                     <div class="modal-footer">
