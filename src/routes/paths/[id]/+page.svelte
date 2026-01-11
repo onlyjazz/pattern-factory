@@ -18,6 +18,9 @@
 	let showOptionalityModal = false;
 	let editingNodeIndex: number | null = null;
 	let currentOptionality = { collapses: false, reason: '', irreversible: false };
+	let modalPosition = { x: 0, y: 0 };
+	let isDragging = false;
+	let dragOffset = { x: 0, y: 0 };
 
 	// Empty nodes confirmation modal state
 	let showEmptyNodesModal = false;
@@ -131,12 +134,6 @@
 			return;
 		}
 
-		// Check for duplicate node IDs
-		const nodeIds = nodes.map(n => n.id).filter(id => id && id.trim());
-		if (nodeIds.length > 0 && new Set(nodeIds).size !== nodeIds.length) {
-			error = 'Node IDs must be unique';
-			return;
-		}
 
 		// Confirm if no nodes
 		if (nodes.length === 0) {
@@ -202,6 +199,28 @@
 		showOptionalityModal = false;
 		editingNodeIndex = null;
 		currentOptionality = { collapses: false, reason: '', irreversible: false };
+	}
+
+	function startDrag(e: MouseEvent) {
+		if (e.target === e.currentTarget || (e.target as HTMLElement).classList.contains('modal-header')) {
+			isDragging = true;
+			dragOffset = {
+				x: e.clientX - modalPosition.x,
+				y: e.clientY - modalPosition.y
+			};
+		}
+	}
+
+	function onDrag(e: MouseEvent) {
+		if (!isDragging) return;
+		modalPosition = {
+			x: e.clientX - dragOffset.x,
+			y: e.clientY - dragOffset.y
+		};
+	}
+
+	function stopDrag() {
+		isDragging = false;
 	}
 	
 	function saveOptionality() {
@@ -389,9 +408,15 @@
 
 		<!-- OPTIONALITY MODAL -->
 		{#if showOptionalityModal}
-			<div class="modal-overlay" onclick={closeOptionalityModal}>
-				<div class="modal-content" role="dialog" aria-labelledby="optionality-modal-title" onclick={(e) => e.stopPropagation()}>
-					<div class="modal-header">
+			<div class="modal-overlay" onmouseup={stopDrag} onmousemove={onDrag} onclick={closeOptionalityModal}>
+				<div
+					class="modal-content"
+					role="dialog"
+					aria-labelledby="optionality-modal-title"
+					onclick={(e) => e.stopPropagation()}
+					style="transform: translate({modalPosition.x}px, {modalPosition.y}px);"
+				>
+					<div class="modal-header" onmousedown={startDrag}>
 						<h2 id="optionality-modal-title" class="heading heading_2">Optionality</h2>
 						<button class="modal-close" onclick={closeOptionalityModal} title="Close">×</button>
 					</div>
@@ -416,7 +441,7 @@
 							<label for="irreversible-check">Irreversible</label>
 						</div>
 						{#if currentOptionality.irreversible}
-							<div class="reversible-note">After this point, fixes require regulatory, commercial, or reputational cost.</div>
+							<div class="reversible-note">After this point, fixes have personal, regulatory, commercial, and reputational costs.</div>
 						{/if}
 					</div>
 					<div class="modal-footer">
@@ -685,6 +710,17 @@
 		width: 90%;
 		max-height: 80vh;
 		overflow-y: auto;
+		position: fixed;
+		transition: none;
+	}
+
+	:global(.modal-header) {
+		cursor: grab;
+		user-select: none;
+	}
+
+	:global(.modal-header:active) {
+		cursor: grabbing;
 	}
 
 	:global(.modal-header) {
