@@ -14,6 +14,7 @@
         let showEditModal = false;
         let showStoryEditor = false;
         let viewingPatternId: string | null = null;
+        let viewingPattern: Pattern | undefined = undefined;
         let patternToEdit = {} as Pattern;
         let newPattern: Partial<Pattern> = { name: '', description: '', kind: 'pattern' };
         const kinds = ['', 'pattern', 'anti-pattern'];
