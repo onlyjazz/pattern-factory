@@ -30,7 +30,9 @@
                 try {
                         const response = await fetch(`${apiBase}/patterns`);
                         if (!response.ok) throw new Error('Failed to fetch patterns');
-                        patterns = await response.json();
+                        const data = await response.json();
+                        // Ensure all IDs are strings for consistent comparison
+                        patterns = data.map((p: any) => ({ ...p, id: String(p.id) }));
                         filterPatterns();
                 } catch (e) {
                         error = e instanceof Error ? e.message : 'Unknown error';
@@ -84,7 +86,7 @@
                         });
                         if (!response.ok) throw new Error('Failed to create pattern');
                         const created = await response.json();
-                        patterns = [...patterns, created];
+                        patterns = [...patterns, { ...created, id: String(created.id) }];
                         filterPatterns();
                         closeAddModal();
                 } catch (e) {
@@ -106,7 +108,7 @@
                         });
                         if (!response.ok) throw new Error('Failed to update pattern');
                         const updated = await response.json();
-                        patterns = patterns.map(p => p.id === updated.id ? updated : p);
+                        patterns = patterns.map(p => p.id === String(updated.id) ? { ...updated, id: String(updated.id) } : p);
                         filterPatterns();
                         closeEditModal();
                 } catch (e) {
