@@ -162,6 +162,7 @@
                                 <th class="tal">Name</th>
                                 <th class="tal">Description</th>
                                 <th class="tal">Kind</th>
+                                <th class="tal">Taxonomy</th>
                                 <th class="tar">Actions</th>
                             </tr>
                         </thead>
@@ -178,6 +179,7 @@
                                     </td>
                                     <td class="tal">{p.description}</td>
                                     <td class="tal">{p.kind}</td>
+                                    <td class="tal">{p.taxonomy || '-'}</td>
 
                                     <td class="tar">
                                         <button
