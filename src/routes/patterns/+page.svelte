@@ -20,9 +20,7 @@
         const kinds = ['', 'pattern', 'anti-pattern'];
         
         function getViewingPattern(): Pattern | undefined {
-                const result = viewingPatternId ? patterns.find(p => p.id === viewingPatternId) : undefined;
-                console.log('getViewingPattern - viewingPatternId:', viewingPatternId, 'Found:', result ? result.name : 'not found');
-                return result;
+                return viewingPatternId ? patterns.find(p => p.id === viewingPatternId) : undefined;
         }
         
         const apiBase = "http://localhost:8000";
@@ -34,7 +32,6 @@
                         const data = await response.json();
                         // Ensure all IDs are strings for consistent comparison
                         patterns = data.map((p: any) => ({ ...p, id: String(p.id) }));
-                        console.log('Loaded patterns:', patterns.map(p => ({ id: p.id, name: p.name })));
                         filterPatterns();
                 } catch (e) {
                         error = e instanceof Error ? e.message : 'Unknown error';
@@ -128,16 +125,10 @@
         
         function toggleStoryView(patternId: string | number) {
                 const id = String(patternId);
-                console.log('Toggle story view for pattern:', id, 'Current viewing:', viewingPatternId);
                 viewingPatternId = viewingPatternId === id ? null : id;
-                console.log('After toggle, viewing:', viewingPatternId);
         }
         
-        $: {
-                console.log('Reactive: viewingPatternId changed to:', viewingPatternId);
-                viewingPattern = getViewingPattern();
-                console.log('Reactive: viewingPattern set to:', viewingPattern ? viewingPattern.name : 'undefined');
-        }
+        $: viewingPattern = getViewingPattern();
 </script>
 
 <!-- PAGE HEADER -->
