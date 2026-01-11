@@ -120,8 +120,9 @@
                 showStoryEditor = false;
         }
         
-        function toggleStoryView(patternId: string) {
-                viewingPatternId = viewingPatternId === patternId ? null : patternId;
+        function toggleStoryView(patternId: string | number) {
+                const id = String(patternId);
+                viewingPatternId = viewingPatternId === id ? null : id;
         }
         
         $: viewingPattern = getViewingPattern();
@@ -204,7 +205,7 @@
 
                             <tbody>
                                 {#each filteredPatterns as p (p.id)}
-                                    <tr onclick={() => p.story_md && toggleStoryView(p.id)} class="pattern-row" class:has-story={p.story_md}>
+                                    <tr onclick={() => toggleStoryView(p.id)} class="pattern-row" class:has-story={p.story_md}>
                                         <td class="tal">{p.name}</td>
                                         <td class="tal">{p.description}</td>
                                         <td class="tal">{p.kind}</td>
