@@ -123,11 +123,13 @@
         function toggleStoryView(patternId: string) {
                 viewingPatternId = viewingPatternId === patternId ? null : patternId;
         }
+        
+        $: viewingPattern = getViewingPattern();
 </script>
 
 <!-- PAGE HEADER -->
 <div id="application-content-area">
-{#if viewingPatternId && getViewingPattern() as viewingPattern}
+{#if viewingPatternId && viewingPattern}
     <div class="page-title">
         <h1 class="heading heading_1">{viewingPattern.name}</h1>
     </div>
@@ -143,7 +145,7 @@
 <div class="grid-row">
     <!-- FULL WIDTH TABLE -->
     <div class="grid-col grid-col_24">
-        {#if viewingPatternId && getViewingPattern() as viewingPattern}
+        {#if viewingPatternId && viewingPattern}
             <!-- STORY VIEW -->
             <div class="studies card">
                 <div class="story-view-content">
