@@ -159,6 +159,22 @@ class PatternCreate(BaseModel):
     kind: str
     story_md: str | None = None
 
+@app.get("/patterns/{pattern_id}", tags=["Patterns"])
+async def get_pattern(pattern_id: int):
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT id, name, description, kind, story_md, created_at, updated_at
+            FROM patterns
+            WHERE id = $1
+            """,
+            pattern_id
+        )
+    if not row:
+        return {"error": f"Pattern {pattern_id} not found"}
+    return dict(row)
+
 @app.post("/patterns", tags=["Patterns"])
 async def create_pattern(pattern: PatternCreate):
     pool = get_pg_pool()
