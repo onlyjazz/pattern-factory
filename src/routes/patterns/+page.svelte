@@ -128,7 +128,7 @@
                 viewingPatternId = viewingPatternId === id ? null : id;
         }
         
-        $: viewingPattern = getViewingPattern();
+        $: if (viewingPatternId || patterns) viewingPattern = getViewingPattern();
 </script>
 
 <!-- PAGE HEADER -->
