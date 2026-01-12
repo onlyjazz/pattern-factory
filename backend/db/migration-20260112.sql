@@ -11,35 +11,36 @@ alter table threat.threats
 -- UI like patterns.story 
 
 --
--- PatternCard belongsTo Pattern
-DROP TABLE IF EXISTS public.pattern_cards;
-CREATE TABLE public.pattern_cards (
+-- Card belongsTo Pattern, Pattern hasMany Cards
+DROP TABLE IF EXISTS public.cards CASCADE;
+CREATE TABLE public.cards (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(255) NOT NULL,
+    name VARCHAR(255),
     description TEXT,
      -- MD text with common_contexts, typical_impact, early_signals, why_teams_miss_this, domain, audience, maturity
      -- UI like patterns.story
-    card text not null,
+    markdown text   default '#Pattern card',
     order_index INT DEFAULT 0,   -- position in the patterns' collection of cards
     -- Operational metadata (NOT semantic)
-    domain TEXT,
-    audience TEXT,
-    maturity TEXT CHECK (maturity IN ('draft','validated','instrumented')) DEFAULT 'draft',
+    domain      TEXT,
+    audience    TEXT,
+    -- Front end will offer select box with options 'draft','validated','instrumented'
+    maturity    TEXT DEFAULT 'draft',
     -- 
-    pattern_id bigint NOT NULL references patterns(id),
+    pattern_id  bigint references patterns(id),
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+--  Threat may have multiple cards — but cards never reference Threats.
+DROP TABLE IF EXISTS threat.threat_cards CASCADE;
+CREATE TABLE threat.threat_cards (
+    id        bigserial                        PRIMARY KEY,
+    threat_id bigint                           NOT NULL REFERENCES threat.threats(id),
+    card_id   UUID                             NOT NULL REFERENCES public.cards(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
---  ThreatScenarios may reference many PatternCards — but PatternCards never reference ThreatScenarios.
-CREATE TABLE public.threat_scenario_pattern_card_refs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    threat_scenario_id bigint NOT NULL references threat.threats(id),
-    pattern_card_id UUID NOT NULL references pattern_cards(id),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-CREATE UNIQUE INDEX uniq_threat_pattern_card
-ON public.threat_scenario_pattern_card_refs (threat_scenario_id, pattern_card_id);
+
 --
 -- Trigger to update updated_at column
 --
@@ -51,8 +52,8 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
-CREATE OR REPLACE TRIGGER update_pattern_cards_updated_at
-BEFORE UPDATE ON public.pattern_cards
+CREATE OR REPLACE TRIGGER update_cards_updated_at
+BEFORE UPDATE ON public.cards
 FOR EACH ROW
 EXECUTE PROCEDURE update_updated_at_column();
 
@@ -70,3 +71,34 @@ CREATE OR REPLACE TRIGGER update_threats_updated_at
 BEFORE UPDATE ON threat.threats
 FOR EACH ROW
 EXECUTE PROCEDURE update_updated_at_column();
+--
+DROP TABLE IF EXISTS public.projects CASCADE;
+DROP TABLE IF EXISTS threat.pattern_threat;
+--
+-- Threat analysis projects table.  patterns, paths, cards are public and available to all projects 
+--
+CREATE TABLE IF NOT EXISTS threat.projects (
+    id          BIGSERIAL PRIMARY KEY,
+    name        VARCHAR(255),
+    version     VARCHAR(50),
+    author      VARCHAR(255),
+    company     VARCHAR(255),
+    category    VARCHAR(255),
+    keywords    TEXT,
+    description TEXT
+);
+
+CREATE TABLE IF NOT EXISTS threat.project_threats (
+    id          BIGSERIAL PRIMARY KEY,
+    project_id  BIGINT NOT NULL REFERENCES threat.projects(id),
+    threat_id   BIGINT NOT NULL REFERENCES threat.threats(id),
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+-- correct path
+threat.threats
+→ threat.threat_cards
+→ public.cards
+→ public.patterns
+--
+ALTER TABLE threat.threats drop column pattern_id;

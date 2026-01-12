@@ -350,6 +350,21 @@ async def agent_rule_to_sql(message_body: Dict[str, Any]) -> Tuple[str, float, s
             {"role": "user", "content": rule_logic}
         ]
         
+        # DEBUG: Log complete prompt being sent to LLM
+        logger.info("\n" + "="*80)
+        logger.info("[model.ruleToSQL] COMPLETE PROMPT BEING SENT TO LLM")
+        logger.info("="*80)
+        logger.info(f"\nSYSTEM PROMPT ({len(context['system'])} chars):\n{context['system']}\n")
+        logger.info(f"\nUSER PROMPT ({len(rule_logic)} chars):\n{rule_logic}\n")
+        logger.info("="*80 + "\n")
+        print("\n" + "="*80)
+        print("[model.ruleToSQL] COMPLETE PROMPT BEING SENT TO LLM")
+        print("="*80)
+        print(f"\nSYSTEM PROMPT ({len(context['system'])} chars) - FULL CONTENT:")
+        print(context['system'])
+        print(f"\nUSER PROMPT ({len(rule_logic)} chars):\n{rule_logic}\n")
+        print("="*80 + "\n")
+        
         # Call LLM via sql_pitboss tool
         sql_result = await tool_registry.execute("sql_pitboss", messages=messages)
         

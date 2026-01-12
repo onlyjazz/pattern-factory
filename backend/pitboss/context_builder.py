@@ -17,6 +17,7 @@ import logging
 from typing import Dict, Any, Optional
 import yaml
 import os
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -52,10 +53,51 @@ class ContextBuilder:
 
         # Load on init
         self.yaml_data = self._load_yaml()
+        
+        # Initialize mtime tracking AFTER loading (so we capture the current mtime)
+        try:
+            self._last_yaml_mtime = os.path.getmtime(self.rules_yaml_path) if os.path.exists(self.rules_yaml_path) else None
+            msg = f"[ContextBuilder] Initial YAML mtime cached: {self._last_yaml_mtime}"
+            logger.info(msg)
+            print(msg)  # Also print to ensure visibility
+        except Exception as e:
+            msg = f"[ContextBuilder] Failed to cache initial YAML mtime: {e}"
+            logger.warning(msg)
+            print(msg)
+            self._last_yaml_mtime = None
 
     # ---------------------------------------------------------------------
-    # YAML Loader
+    # YAML Loader with Hot-Reload
     # ---------------------------------------------------------------------
+    def reload_if_changed(self) -> bool:
+        """Check if YAML file has been modified and reload if needed.
+        Returns True if reloaded, False otherwise.
+        """
+        try:
+            if not os.path.exists(self.rules_yaml_path):
+                logger.warning(f"[ContextBuilder] YAML file does not exist: {self.rules_yaml_path}")
+                return False
+            
+            current_mtime = os.path.getmtime(self.rules_yaml_path)
+            logger.debug(f"[ContextBuilder] Checking YAML mtime: current={current_mtime}, last={self._last_yaml_mtime}")
+            
+            # Check if file was modified
+            if current_mtime != self._last_yaml_mtime:
+                msg = f"\n{'='*80}\n🔄 HOT-RELOAD: YAML file modified\n   File: {self.rules_yaml_path}\n   Old mtime: {self._last_yaml_mtime}\n   New mtime: {current_mtime}\n   Reloading rules...\n"
+                logger.warning(msg)
+                print(msg)
+                self.yaml_data = self._load_yaml()
+                self._last_yaml_mtime = current_mtime
+                success_msg = f"✅ YAML reloaded successfully\n{'='*80}\n"
+                logger.warning(success_msg)
+                print(success_msg)
+                return True
+            
+            return False
+        except Exception as e:
+            logger.warning(f"Error checking YAML modification: {e}")
+            return False
+    
     def _load_yaml(self) -> Dict[str, Any]:
         """Load pattern-factory.yaml file."""
         try:
@@ -134,8 +176,20 @@ class ContextBuilder:
         """
         system = self._extract_system_prompt()
         data_section = self._format_data_section()
+        
+        # DEBUG: Log assembly steps
+        logger.info(f"\n[ContextBuilder._assemble_system_block]")
+        logger.info(f"  System prompt: {len(system)} chars")
+        logger.info(f"  Data section: {len(data_section)} chars")
+        print(f"\n[ContextBuilder._assemble_system_block]")
+        print(f"  System prompt: {len(system)} chars")
+        print(f"  Data section: {len(data_section)} chars")
+        print(f"  Data section preview:\n{data_section[:300]}...")
 
-        return f"{system}\n\n# DATA\n{data_section}"
+        result = f"{system}\n\n# DATA\n{data_section}"
+        logger.info(f"  Final assembled prompt: {len(result)} chars")
+        print(f"  Final assembled prompt: {len(result)} chars")
+        return result
 
     def _extract_system_prompt(self) -> str:
         """Return SYSTEM.prompt from YAML, or fallback."""
@@ -161,37 +215,55 @@ class ContextBuilder:
         Supports both flat structure (DATA.tables) and nested schema structure (DATA.schemas.*.tables).
         """
         data_section = self.yaml_data.get("DATA", {})
+        logger.info(f"\n[_format_data_section] DATA section exists: {bool(data_section)}")
+        print(f"\n[_format_data_section] DATA section exists: {bool(data_section)}")
+        print(f"  DATA keys: {list(data_section.keys())}")
+        
         lines = ["Available Tables:"]
         
         # Try flat structure first
         tables = data_section.get("tables", {})
+        logger.info(f"  Flat tables: {len(tables)} found")
+        print(f"  Flat tables: {len(tables)} found")
         if tables:
             for table_name, columns in tables.items():
                 if isinstance(columns, list):
                     col_str = ", ".join(columns)
                 else:
                     col_str = str(columns)
-                lines.append(f"  {table_name}: {col_str}")
+                lines.append(f"  public.{table_name}: {col_str}")
         
         # Then try nested schema structure (DATA.schemas.<schema_name>.tables)
         schemas = data_section.get("schemas", {})
+        logger.info(f"  Nested schemas: {len(schemas)} found")
+        print(f"  Nested schemas: {len(schemas)} found")
+        print(f"    Schema names: {list(schemas.keys())}")
         if schemas:
             for schema_name, schema_data in schemas.items():
                 if isinstance(schema_data, dict):
                     schema_tables = schema_data.get("tables", {})
+                    logger.info(f"    Schema '{schema_name}': {len(schema_tables)} tables")
+                    print(f"    Schema '{schema_name}': {len(schema_tables)} tables")
                     if schema_tables:
-                        lines.append(f"  # Schema: {schema_name}")
+                        lines.append(f"")
+                        lines.append(f"  # Schema '{schema_name}': All tables below must be referenced as {schema_name}.<table_name>")
                         for table_name, columns in schema_tables.items():
                             if isinstance(columns, list):
                                 col_str = ", ".join(columns)
                             else:
                                 col_str = str(columns)
-                            lines.append(f"  {table_name}: {col_str}")
+                            lines.append(f"  {schema_name}.{table_name}: {col_str}")
+        
+        result = "\n".join(lines)
+        logger.info(f"  Final data section: {len(result)} chars, {len(lines)} lines")
+        print(f"  Final data section: {len(result)} chars, {len(lines)} lines")
         
         if len(lines) == 1:  # Only header, no tables found
+            logger.warning("  NO TABLES FOUND IN DATA SECTION!")
+            print("  NO TABLES FOUND IN DATA SECTION!")
             return "(No DATA.tables or DATA.schemas found in YAML)"
 
-        return "\n".join(lines)
+        return result
 
     # ---------------------------------------------------------------------
     # Token logging

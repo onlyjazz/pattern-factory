@@ -60,6 +60,9 @@ class PitbossSupervisor:
         
         Entry point: validate envelope structure and verb before proceeding.
         """
+        # Check for YAML hot-reload before processing any request
+        self.context_builder.reload_if_changed()
+        
         # Step 0: Validate envelope has required fields and valid verb
         session_id = envelope_dict.get("session_id", "")
         request_id = envelope_dict.get("request_id", "")
@@ -162,6 +165,9 @@ class PitbossSupervisor:
                         logger.info(f"📋 Looked up rule from YAML: {rule_code}")
                         rule_name = rule_entry.get("name") or rule_code
                         rule_logic = rule_entry.get("logic") or ""
+                        logger.info(f"   Rule entry keys: {list(rule_entry.keys())}")
+                        logger.info(f"   Rule name: {rule_name}")
+                        logger.info(f"   Rule logic ({len(rule_logic)} chars): {rule_logic[:100]}..." if rule_logic else f"   Rule logic: [EMPTY]")
                         env.messageBody["rule_code"] = rule_code
                         env.messageBody["rule_name"] = rule_name
                         env.messageBody["rule_logic"] = rule_logic
@@ -253,10 +259,20 @@ class PitbossSupervisor:
         """
         if not rule_code:
             return None
+        
+        # Hot-reload: Check if YAML file has been modified
+        if self.context_builder.reload_if_changed():
+            logger.warning("📋 [Supervisor] YAML hot-reload complete - new rules available")
+        
         rules = self.context_builder.yaml_data.get("RULES", [])
-        for rule in rules:
-            if rule.get("rule_code") == rule_code:
+        logger.info(f"📋 [DEBUG] Searching for rule_code='{rule_code}' in {len(rules)} rules")
+        for i, rule in enumerate(rules):
+            rule_code_in_yaml = rule.get("rule_code")
+            logger.info(f"   Rule {i}: code='{rule_code_in_yaml}' (match: {rule_code_in_yaml == rule_code})")
+            if rule_code_in_yaml == rule_code:
+                logger.info(f"   ✓ Found match!")
                 return rule
+        logger.info(f"   ✗ No match found for '{rule_code}'")
         return None
 
     def _list_rule_codes(self):

@@ -1,6 +1,6 @@
 SYSTEM:
-  rev: 0.6
-  date: 2026-01-06
+  rev: 0.7
+  date: 2026-01-12
   author: D. Lieberman
 
   prompt: |
@@ -16,20 +16,24 @@ SYSTEM:
     - Use table aliases for readability.
     - If something is ambiguous, choose the most reasonable interpretation.
     - NEVER invent columns or tables that are not in the schema.
-    - When the user specifies column names in natural language, SELECT exactly those columns (or their closest match in the schema).
-    - Do NOT substitute or omit columns mentioned in the request.
+
+    *** CRITICAL COLUMN SELECTION RULE (HIGHEST PRIORITY) ***
+    When the user requests specific columns by name or meaning:
+    - SELECT EXACTLY those columns and NOTHING else.
+    - Do NOT use SELECT *.
+    - Do NOT add extra columns.
+    - If the user says "list names", output: SELECT name FROM...
+    - If the user says "show id and name", output: SELECT id, name FROM...
+    - Map natural language to the closest matching column in the schema.
+    - This rule is NON-NEGOTIABLE and overrides all other considerations.
 
     The database schema is described in the DATA section below.
     IMPORTANT SCHEMA RULES:
     - Tables listed under schema "threat" MUST be referenced as threat.<table_name>.
     - Tables listed under schema "public" MUST be referenced as public.<table_name>.
     - Never assume a table belongs to the public schema unless explicitly listed there.
-    - Do NOT invent schemas, tables, or columns.
-    - Use ONLY the tables and columns defined in DATA.
 
 DATA:
-  relationships:
-    - public.projects -> public.patterns (many-to-many via threat.pattern_threat)
     
   schemas:
 
@@ -70,16 +74,6 @@ DATA:
           - created_at
           - updated_at
           - deleted_at
-
-        projects:
-          - id
-          - name
-          - version
-          - author
-          - company
-          - category
-          - keywords
-          - description
 
         patterns:
           - id
@@ -133,6 +127,16 @@ DATA:
     threat:
       tables:
 
+        projects:
+          - id
+          - name
+          - version
+          - author
+          - company
+          - category
+          - keywords
+          - description
+ 
         areas:
           - id
           - project_id
@@ -204,13 +208,19 @@ DATA:
           - description
           - tools_available
 
-        pattern_threat:
-          - project_id REFERENCES public.projects(id)
-          - pattern_id REFERENCES public.patterns(id)
-          - threat_id REFERENCES threat.threats(id)
+        project_threats:
+          - project_id   references threat.projects(id)
+          - threat_id    references threat.threats(id)
+
+        threat_cards:
+          - id
+          - threat_id     references threat.threats(id)
+          - card_id       references public.cards(id)
+          - created_at
+          - updated_at
 
         area_asset:
-          - project_id
+          - project_id  
           - area_id
           - asset_id
 
@@ -292,12 +302,6 @@ RULES:
     logic: |
       select name, description, content_url, content_source, published_at from posts
 
-  - rule_code: LAAS_THREATS
-    name: "Threats and patterns in the Lab as a Service project"
-    description: "Threats and patterns in the Lab as a Service project"
-    logic: |
-      Show all threats in the "Lab as a Service" project and their associated patterns
-
   - rule_code: PIE
     name: "Patterns in Episodes"
     description: "Show patterns that appear in podcast episode."
@@ -359,6 +363,12 @@ RULES:
     description: "Compute time from founding date to funding date for organizations."
     logic: |
      show name, stage, and the number of years from date_founded to date_funded for all orgs
+     
+  - rule_code: WCRT
+    name: "What Cards are used by threats?"
+    description: "What cards and threats in the Laas project"
+    logic: |
+      list threat name, card name and threat probability in the 'Laas' project
 
 CAPO:
   - rule_code: CAPO
