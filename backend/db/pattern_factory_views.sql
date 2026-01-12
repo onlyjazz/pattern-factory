@@ -53,7 +53,7 @@ CREATE OR REPLACE VIEW "PIP" AS
  SELECT 
     p.name,
     p.description,
-    '<a href="' || po.content_url || '">'||po.name || '</a>' AS post_title,
+    '<a href="' || po.content_url || '">'||po.name || '</a>' AS source,
     p.kind,
     p.created_at,
     p.updated_at

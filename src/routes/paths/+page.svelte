@@ -13,6 +13,9 @@
 	let pathToEdit = {} as Path;
 	let newPath: Partial<Path> = { name: '' };
 
+	let sortField: keyof Path | null = null;
+	let sortDirection: 'asc' | 'desc' = 'asc';
+
 	const apiBase = 'http://localhost:8000';
 
 	onMount(async () => {
@@ -35,6 +38,33 @@
 				p.description?.toLowerCase().includes($globalSearch.toLowerCase());
 			return matchesSearch;
 		});
+		sortPaths();
+	}
+
+	function sortPaths() {
+		if (!sortField) return;
+		filteredPaths = [...filteredPaths].sort((a, b) => {
+			const aVal = a[sortField] || '';
+			const bVal = b[sortField] || '';
+			// For numeric fields like node count, use numeric comparison
+			if (sortField === 'name') {
+				const comparison = String(aVal).localeCompare(String(bVal));
+				return sortDirection === 'asc' ? comparison : -comparison;
+			} else {
+				const comparison = String(aVal).localeCompare(String(bVal));
+				return sortDirection === 'asc' ? comparison : -comparison;
+			}
+		});
+	}
+
+	function toggleSort(field: keyof Path) {
+		if (sortField === field) {
+			sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+		} else {
+			sortField = field;
+			sortDirection = 'asc';
+		}
+		sortPaths();
 	}
 
 	$: if (paths) filterPaths();
@@ -152,8 +182,9 @@
 						<table>
 							<thead>
 									<tr>
-										<th class="tal">Name</th>
-										<th class="tal">Nodes</th>
+										<th class="tal sortable" class:sorted-asc={sortField === 'name' && sortDirection === 'asc'} class:sorted-desc={sortField === 'name' && sortDirection === 'desc'} onclick={() => toggleSort('name')}>
+											Name
+										</th>
 										<th class="tar">Actions</th>
 									</tr>
 							</thead>
@@ -162,7 +193,6 @@
 									{#each filteredPaths as p (p.id)}
 										<tr>
 											<td class="tal">{p.name}</td>
-											<td class="tal">{p.yaml?.nodes?.length || 0}</td>
 
 											<td class="tar">
 												<a href="/paths/{p.id}" class="button button_small" title="Edit">
@@ -402,5 +432,33 @@
 		justify-content: space-between;
 		align-items: center;
 		margin-bottom: 1rem;
+	}
+
+	th.sortable {
+		cursor: pointer;
+		user-select: none;
+		position: relative;
+	}
+
+	th.sortable:hover {
+		background-color: #f0f0f0;
+	}
+
+	th.sortable::after {
+		content: ' ↕';
+		opacity: 0.4;
+		font-size: 0.85em;
+	}
+
+	th.sortable.sorted-asc::after {
+		content: ' ▲';
+		opacity: 1;
+		color: #0066cc;
+	}
+
+	th.sortable.sorted-desc::after {
+		content: ' ▼';
+		opacity: 1;
+		color: #0066cc;
 	}
 </style>

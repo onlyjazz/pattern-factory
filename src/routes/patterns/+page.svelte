@@ -17,6 +17,9 @@
         let newPattern: Partial<Pattern> = { name: '', description: '', kind: 'pattern' };
         const kinds = ['', 'pattern', 'anti-pattern'];
         
+        let sortField: keyof Pattern | null = null;
+        let sortDirection: 'asc' | 'desc' = 'asc';
+        
         const apiBase = "http://localhost:8000";
         
         onMount(async () => {
@@ -34,13 +37,35 @@
                 }
         });
         
-        function filterPatterns() {
-                filteredPatterns = patterns.filter(p => {
-                        const matchesSearch = p.name.toLowerCase().includes($globalSearch.toLowerCase()) ||
-                                p.description.toLowerCase().includes($globalSearch.toLowerCase());
-                        const matchesKind = !selectedKind || p.kind === selectedKind;
-                        return matchesSearch && matchesKind;
+		function filterPatterns() {
+			filteredPatterns = patterns.filter(p => {
+				const matchesSearch = p.name.toLowerCase().includes($globalSearch.toLowerCase()) ||
+					p.description.toLowerCase().includes($globalSearch.toLowerCase()) ||
+					(p.taxonomy?.toLowerCase().includes($globalSearch.toLowerCase()) ?? false);
+				const matchesKind = !selectedKind || p.kind === selectedKind;
+				return matchesSearch && matchesKind;
+			});
+			sortPatterns();
+		}
+        
+        function sortPatterns() {
+                if (!sortField) return;
+                filteredPatterns = [...filteredPatterns].sort((a, b) => {
+                        const aVal = a[sortField] || '';
+                        const bVal = b[sortField] || '';
+                        const comparison = String(aVal).localeCompare(String(bVal));
+                        return sortDirection === 'asc' ? comparison : -comparison;
                 });
+        }
+        
+        function toggleSort(field: keyof Pattern) {
+                if (sortField === field) {
+                        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                        sortField = field;
+                        sortDirection = 'asc';
+                }
+                sortPatterns();
         }
         
         $: if (patterns) filterPatterns();
@@ -159,10 +184,18 @@
                     <table>
                         <thead>
                             <tr>
-                                <th class="tal">Name</th>
-                                <th class="tal">Description</th>
-                                <th class="tal">Kind</th>
-                                <th class="tal">Taxonomy</th>
+                                <th class="tal sortable" class:sorted-asc={sortField === 'name' && sortDirection === 'asc'} class:sorted-desc={sortField === 'name' && sortDirection === 'desc'} onclick={() => toggleSort('name')}>
+                                    Name
+                                </th>
+                                <th class="tal sortable" class:sorted-asc={sortField === 'description' && sortDirection === 'asc'} class:sorted-desc={sortField === 'description' && sortDirection === 'desc'} onclick={() => toggleSort('description')}>
+                                    Description
+                                </th>
+                                <th class="tal sortable" class:sorted-asc={sortField === 'kind' && sortDirection === 'asc'} class:sorted-desc={sortField === 'kind' && sortDirection === 'desc'} onclick={() => toggleSort('kind')}>
+                                    Kind
+                                </th>
+                                <th class="tal sortable" class:sorted-asc={sortField === 'taxonomy' && sortDirection === 'asc'} class:sorted-desc={sortField === 'taxonomy' && sortDirection === 'desc'} onclick={() => toggleSort('taxonomy')}>
+                                    Taxonomy
+                                </th>
                                 <th class="tar">Actions</th>
                             </tr>
                         </thead>
@@ -273,6 +306,7 @@
                             <option value="Regulatory / GTM Anti-Pattern">Regulatory / GTM Anti-Pattern</option>
                             <option value="Founder / Financing Anti-Pattern">Founder / Financing Anti-Pattern</option>
                             <option value="Demand Formation Anti-Pattern">Demand Formation Anti-Pattern</option>
+                            <option value="Decision & Cognitive Accelerator">Decision & Cognitive Accelerator</option>
                         </select>
                         <label for="edit-taxonomy" class="input__label">Taxonomy</label>
                     </div>
@@ -684,6 +718,34 @@
 
     :global(.pattern-link:hover) {
         text-decoration: underline;
+    }
+
+    th.sortable {
+        cursor: pointer;
+        user-select: none;
+        position: relative;
+    }
+
+    th.sortable:hover {
+        background-color: #f0f0f0;
+    }
+
+    th.sortable::after {
+        content: ' ↕';
+        opacity: 0.4;
+        font-size: 0.85em;
+    }
+
+    th.sortable.sorted-asc::after {
+        content: ' ▲';
+        opacity: 1;
+        color: #0066cc;
+    }
+
+    th.sortable.sorted-desc::after {
+        content: ' ▼';
+        opacity: 1;
+        color: #0066cc;
     }
 </style>
 
