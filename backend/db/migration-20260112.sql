@@ -11,7 +11,7 @@ alter table threat.threats
 -- UI like patterns.story 
 
 --
--- Pattern hasMany PatternCards. 
+-- PatternCard belongsTo Pattern
 DROP TABLE IF EXISTS public.pattern_cards;
 CREATE TABLE public.pattern_cards (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -19,7 +19,8 @@ CREATE TABLE public.pattern_cards (
     description TEXT,
      -- MD text with common_contexts, typical_impact, early_signals, why_teams_miss_this, domain, audience, maturity
      -- UI like patterns.story
-    card text,   
+    card text not null,
+    order_index INT DEFAULT 0,   -- position in the patterns' collection of cards
     -- Operational metadata (NOT semantic)
     domain TEXT,
     audience TEXT,
@@ -29,6 +30,16 @@ CREATE TABLE public.pattern_cards (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+--  ThreatScenarios may reference many PatternCards — but PatternCards never reference ThreatScenarios.
+CREATE TABLE public.threat_scenario_pattern_card_refs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    threat_scenario_id bigint NOT NULL references threat.threats(id),
+    pattern_card_id UUID NOT NULL references pattern_cards(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX uniq_threat_pattern_card
+ON public.threat_scenario_pattern_card_refs (threat_scenario_id, pattern_card_id);
 --
 -- Trigger to update updated_at column
 --
