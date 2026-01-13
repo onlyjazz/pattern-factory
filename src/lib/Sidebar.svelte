@@ -10,6 +10,8 @@
 
 	const links = [
 		{ name: "Patterns", href: "/patterns" },
+		{ name: "Cards", href: "/cards" },
+		{ name: "Threats", href: "/threats" },
 		{ name: "Paths", href: "/paths" }
 	];
 
@@ -100,13 +102,15 @@
 		overflow-y: auto;
 	}
 	.main-nav__item {
-		padding: 1rem 1.5rem;
+		padding: 0.2rem 1rem;
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
-		color: rgba(255,255,255,0.6);
+		gap: 0.5rem;
+		color: #ffffff;
 		text-decoration: none;
 		transition: all 0.2s ease;
+		font-size: 0.8em;
+		font-weight: 500;
 	}
 	.main-nav__item:hover {
 		color: rgba(255,255,255,0.8);
@@ -117,29 +121,29 @@
 		background: rgba(255,255,255,0.12);
 	}
 	.main-nav__item i {
-		font-size: 20px;
+		font-size: 18px;
 	}
 	.views-section {
-		margin-top: 1rem;
+		margin-top: 0.5rem;
 		border-top: 1px solid rgba(255,255,255,0.1);
-		padding-top: 1rem;
+		padding-top: 0.5rem;
 	}
 	.views-title {
-		padding: 0.75rem 1.5rem;
-		font-size: 0.75rem;
+		padding: 0.5rem 1rem;
+		font-size: 0.7rem;
 		font-weight: 600;
 		text-transform: uppercase;
 		color: rgba(255,255,255,0.5);
 		letter-spacing: 0.05em;
 	}
 	.main-nav__view {
-		padding: 0.75rem 1.5rem;
-		font-size: 0.875rem;
+		padding: 0.3rem 1rem;
+		font-size: 0.8em;
 	}
 	.views-loading,
 	.views-error {
-		padding: 1rem 1.5rem;
-		font-size: 0.875rem;
+		padding: 0.6rem 1rem;
+		font-size: 0.8rem;
 		color: rgba(255,255,255,0.5);
 	}
 	.views-error {

@@ -8,7 +8,7 @@ import json
 import logging
 from datetime import datetime
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 import asyncpg
@@ -60,7 +60,7 @@ PG_POOL: Optional[asyncpg.Pool] = None
 # -------------------------------------------------------------------------
 # Import Pitboss Supervisor
 # -------------------------------------------------------------------------
-from pitboss.supervisor import PitbossSupervisor
+from backend.pitboss.supervisor import PitbossSupervisor
 logger.info("🧠 Imported Pitboss Supervisor successfully")
 
 # -------------------------------------------------------------------------
@@ -160,6 +160,24 @@ class PatternCreate(BaseModel):
     story_md: str | None = None
     taxonomy: str | None = None
 
+# -------------------------------------------------------------------------
+# GET /patterns/search (MUST come before /patterns/{pattern_id})
+# -------------------------------------------------------------------------
+@app.get("/patterns/search", tags=["Patterns"])
+async def search_patterns(q: str = Query("")):
+    """Search patterns by name or description for autocomplete."""
+    pool = get_pg_pool()
+    search_term = f"%{q}%"
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT id, name, description, kind
+            FROM patterns
+            WHERE name ILIKE $1 OR description ILIKE $1
+            ORDER BY name ASC
+            LIMIT 50
+        """, search_term)
+    return [dict(r) for r in rows]
+
 @app.get("/patterns/{pattern_id}", tags=["Patterns"])
 async def get_pattern(pattern_id: int):
     pool = get_pg_pool()
@@ -240,6 +258,160 @@ async def delete_pattern(pattern_id: int):
         if result == "DELETE 0":
             return {"error": f"Pattern {pattern_id} not found"}
     return {"status": "ok", "deleted_id": pattern_id}
+
+# -------------------------------------------------------------------------
+# Cards CRUD
+# -------------------------------------------------------------------------
+class CardCreate(BaseModel):
+    name: str
+    description: str
+    pattern_id: int
+    markdown: str | None = None
+    order_index: int | None = 0
+    domain: str | None = None
+    audience: str | None = None
+    maturity: str | None = None
+
+class CardUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    pattern_id: int | None = None
+    markdown: str | None = None
+    order_index: int | None = None
+    domain: str | None = None
+    audience: str | None = None
+    maturity: str | None = None
+
+@app.get("/cards", tags=["Cards"])
+async def get_cards():
+    """Get all cards with pattern information."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT 
+                c.id, c.name, c.description, c.markdown, c.order_index, 
+                c.domain, c.audience, c.maturity, c.pattern_id, 
+                c.created_at, c.updated_at,
+                p.name as pattern_name
+            FROM cards c
+            LEFT JOIN patterns p ON c.pattern_id = p.id
+            ORDER BY c.created_at DESC
+        """)
+    return [dict(r) for r in rows]
+
+@app.post("/cards", tags=["Cards"])
+async def create_card(card: CardCreate):
+    """Create a new card."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        # Verify pattern exists
+        pattern_exists = await conn.fetchval(
+            "SELECT id FROM patterns WHERE id = $1", card.pattern_id
+        )
+        if not pattern_exists:
+            raise HTTPException(status_code=400, detail="Pattern not found")
+        
+        row = await conn.fetchrow(
+            """
+            INSERT INTO cards (name, description, pattern_id, markdown, order_index, domain, audience, maturity)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING id, name, description, markdown, order_index, domain, audience, maturity, pattern_id, created_at, updated_at
+            """,
+            card.name,
+            card.description,
+            card.pattern_id,
+            card.markdown,
+            card.order_index,
+            card.domain,
+            card.audience,
+            card.maturity
+        )
+        return dict(row)
+
+@app.get("/cards/{card_id}", tags=["Cards"])
+async def get_card(card_id: str):
+    """Get a single card."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT id, name, description, markdown, order_index, domain, audience, maturity, pattern_id, created_at, updated_at
+            FROM cards
+            WHERE id = $1
+            """,
+            card_id
+        )
+    if not row:
+        raise HTTPException(status_code=404, detail="Card not found")
+    return dict(row)
+
+@app.put("/cards/{card_id}", tags=["Cards"])
+async def update_card(card_id: str, patch: CardUpdate):
+    """Update a card."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        # Verify pattern exists if updating pattern_id
+        if patch.pattern_id is not None:
+            pattern_exists = await conn.fetchval(
+                "SELECT id FROM patterns WHERE id = $1", patch.pattern_id
+            )
+            if not pattern_exists:
+                raise HTTPException(status_code=400, detail="Pattern not found")
+        
+        row = await conn.fetchrow(
+            """
+            UPDATE cards
+            SET 
+                name = COALESCE($1, name),
+                description = COALESCE($2, description),
+                pattern_id = COALESCE($3, pattern_id),
+                markdown = COALESCE($4, markdown),
+                order_index = COALESCE($5, order_index),
+                domain = COALESCE($6, domain),
+                audience = COALESCE($7, audience),
+                maturity = COALESCE($8, maturity),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $9
+            RETURNING id, name, description, markdown, order_index, domain, audience, maturity, pattern_id, created_at, updated_at
+            """,
+            patch.name,
+            patch.description,
+            patch.pattern_id,
+            patch.markdown,
+            patch.order_index,
+            patch.domain,
+            patch.audience,
+            patch.maturity,
+            card_id
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="Card not found")
+        return dict(row)
+
+@app.delete("/cards/{card_id}", tags=["Cards"])
+async def delete_card(card_id: str):
+    """Delete a card."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        result = await conn.execute(
+            "DELETE FROM cards WHERE id = $1", card_id
+        )
+        if result == "DELETE 0":
+            raise HTTPException(status_code=404, detail="Card not found")
+    return {"status": "ok", "deleted_id": card_id}
+
+@app.get("/patterns/{pattern_id}/cards", tags=["Cards"])
+async def get_pattern_cards(pattern_id: int):
+    """Get all cards for a specific pattern."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT id, name, description, markdown, order_index, domain, audience, maturity, pattern_id, created_at, updated_at
+            FROM cards
+            WHERE pattern_id = $1
+            ORDER BY order_index ASC, created_at DESC
+        """, pattern_id)
+    return [dict(r) for r in rows]
 
 # -------------------------------------------------------------------------
 # Paths CRUD
@@ -403,6 +575,296 @@ async def delete_path(path_id: int):
         if result == "DELETE 0":
             raise HTTPException(status_code=404, detail="Path not found")
     return {"status": "ok", "deleted_id": path_id}
+
+# -------------------------------------------------------------------------
+# Threats CRUD
+# -------------------------------------------------------------------------
+class ThreatCreate(BaseModel):
+    name: str
+    description: str
+    scenario: str | None = None
+    probability: int | None = None
+    damage_description: str | None = None
+    spoofing: bool = False
+    tampering: bool = False
+    repudiation: bool = False
+    information_disclosure: bool = False
+    denial_of_service: bool = False
+    elevation_of_privilege: bool = False
+    mitigation_level: int = 0
+    disabled: bool = False
+    project_id: int = 1
+    card_ids: list[str] | None = None
+
+class ThreatUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    scenario: str | None = None
+    probability: int | None = None
+    damage_description: str | None = None
+    spoofing: bool | None = None
+    tampering: bool | None = None
+    repudiation: bool | None = None
+    information_disclosure: bool | None = None
+    denial_of_service: bool | None = None
+    elevation_of_privilege: bool | None = None
+    mitigation_level: int | None = None
+    disabled: bool | None = None
+    card_ids: list[str] | None = None
+
+@app.get("/threats", tags=["Threats"])
+async def get_threats():
+    """Get all threats across all projects."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT id, name, description, scenario, probability, damage_description,
+                   spoofing, tampering, repudiation, information_disclosure, 
+                   denial_of_service, elevation_of_privilege, mitigation_level, 
+                   disabled, project_id, created_at, updated_at
+            FROM threat.threats
+            ORDER BY created_at DESC
+        """)
+    return [dict(r) for r in rows]
+
+@app.post("/threats", tags=["Threats"])
+async def create_threat(threat: ThreatCreate):
+    """Create a new threat and associate cards."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            INSERT INTO threat.threats 
+            (name, description, scenario, probability, damage_description,
+             spoofing, tampering, repudiation, information_disclosure,
+             denial_of_service, elevation_of_privilege, mitigation_level, disabled, project_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            RETURNING id, name, description, scenario, probability, damage_description,
+                      spoofing, tampering, repudiation, information_disclosure,
+                      denial_of_service, elevation_of_privilege, mitigation_level,
+                      disabled, project_id, created_at, updated_at
+            """,
+            threat.name,
+            threat.description,
+            threat.scenario,
+            threat.probability,
+            threat.damage_description,
+            threat.spoofing,
+            threat.tampering,
+            threat.repudiation,
+            threat.information_disclosure,
+            threat.denial_of_service,
+            threat.elevation_of_privilege,
+            threat.mitigation_level,
+            threat.disabled,
+            threat.project_id
+        )
+        threat_id = row['id']
+        
+        if threat.card_ids:
+            for card_id in threat.card_ids:
+                await conn.execute(
+                    "INSERT INTO threat.threat_cards (threat_id, card_id) VALUES ($1, $2)",
+                    threat_id, card_id
+                )
+        
+        return dict(row)
+
+@app.get("/threats/search", tags=["Threats"])
+async def search_threats(q: str = Query("")):
+    """Search threats by name or description."""
+    pool = get_pg_pool()
+    search_term = f"%{q}%"
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT id, name, description, probability, mitigation_level
+            FROM threat.threats
+            WHERE name ILIKE $1 OR description ILIKE $1
+            ORDER BY name ASC
+            LIMIT 50
+        """, search_term)
+    return [dict(r) for r in rows]
+
+@app.get("/threats/{threat_id}", tags=["Threats"])
+async def get_threat(threat_id: int):
+    """Get a single threat with associated cards."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT id, name, description, scenario, probability, damage_description,
+                   spoofing, tampering, repudiation, information_disclosure,
+                   denial_of_service, elevation_of_privilege, mitigation_level,
+                   disabled, project_id, created_at, updated_at
+            FROM threat.threats
+            WHERE id = $1
+            """,
+            threat_id
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="Threat not found")
+        
+        threat_dict = dict(row)
+        
+        card_rows = await conn.fetch(
+            """
+            SELECT c.id, c.name, c.description, c.markdown, c.order_index,
+                   c.domain, c.audience, c.maturity, c.pattern_id
+            FROM public.cards c
+            JOIN threat.threat_cards tc ON c.id = tc.card_id
+            WHERE tc.threat_id = $1
+            """,
+            threat_id
+        )
+        threat_dict['cards'] = [dict(r) for r in card_rows]
+        
+        return threat_dict
+
+@app.put("/threats/{threat_id}", tags=["Threats"])
+async def update_threat(threat_id: int, patch: ThreatUpdate):
+    """Update a threat and optionally update associated cards."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        updates = []
+        params = []
+        param_count = 1
+        
+        if patch.name is not None:
+            updates.append(f"name = ${param_count}")
+            params.append(patch.name)
+            param_count += 1
+        if patch.description is not None:
+            updates.append(f"description = ${param_count}")
+            params.append(patch.description)
+            param_count += 1
+        if patch.scenario is not None:
+            updates.append(f"scenario = ${param_count}")
+            params.append(patch.scenario)
+            param_count += 1
+        if patch.probability is not None:
+            updates.append(f"probability = ${param_count}")
+            params.append(patch.probability)
+            param_count += 1
+        if patch.damage_description is not None:
+            updates.append(f"damage_description = ${param_count}")
+            params.append(patch.damage_description)
+            param_count += 1
+        if patch.spoofing is not None:
+            updates.append(f"spoofing = ${param_count}")
+            params.append(patch.spoofing)
+            param_count += 1
+        if patch.tampering is not None:
+            updates.append(f"tampering = ${param_count}")
+            params.append(patch.tampering)
+            param_count += 1
+        if patch.repudiation is not None:
+            updates.append(f"repudiation = ${param_count}")
+            params.append(patch.repudiation)
+            param_count += 1
+        if patch.information_disclosure is not None:
+            updates.append(f"information_disclosure = ${param_count}")
+            params.append(patch.information_disclosure)
+            param_count += 1
+        if patch.denial_of_service is not None:
+            updates.append(f"denial_of_service = ${param_count}")
+            params.append(patch.denial_of_service)
+            param_count += 1
+        if patch.elevation_of_privilege is not None:
+            updates.append(f"elevation_of_privilege = ${param_count}")
+            params.append(patch.elevation_of_privilege)
+            param_count += 1
+        if patch.mitigation_level is not None:
+            updates.append(f"mitigation_level = ${param_count}")
+            params.append(patch.mitigation_level)
+            param_count += 1
+        if patch.disabled is not None:
+            updates.append(f"disabled = ${param_count}")
+            params.append(patch.disabled)
+            param_count += 1
+        
+        # Always update timestamp
+        updates.append(f"updated_at = CURRENT_TIMESTAMP")
+        params.append(threat_id)
+        
+        # Build and execute update query
+        query = f"""UPDATE threat.threats
+                   SET {', '.join(updates)}
+                   WHERE id = ${param_count}
+                   RETURNING id, name, description, scenario, probability, damage_description,
+                             spoofing, tampering, repudiation, information_disclosure,
+                             denial_of_service, elevation_of_privilege, mitigation_level,
+                             disabled, project_id, created_at, updated_at"""
+        row = await conn.fetchrow(query, *params)
+        
+        if not row:
+            raise HTTPException(status_code=404, detail="Threat not found")
+        
+        threat_dict = dict(row)
+        
+        if patch.card_ids is not None:
+            await conn.execute("DELETE FROM threat.threat_cards WHERE threat_id = $1", threat_id)
+            for card_id in patch.card_ids:
+                await conn.execute(
+                    "INSERT INTO threat.threat_cards (threat_id, card_id) VALUES ($1, $2)",
+                    threat_id, card_id
+                )
+        
+        return threat_dict
+
+@app.delete("/threats/{threat_id}", tags=["Threats"])
+async def delete_threat(threat_id: int):
+    """Delete a threat (cascade deletes threat_cards)."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        result = await conn.execute(
+            "DELETE FROM threat.threats WHERE id = $1", threat_id
+        )
+        if result == "DELETE 0":
+            raise HTTPException(status_code=404, detail="Threat not found")
+    return {"status": "ok", "deleted_id": threat_id}
+
+@app.get("/threats/{threat_id}/cards", tags=["Threats"])
+async def get_threat_cards(threat_id: int):
+    """Get all cards associated with a threat."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT c.id, c.name, c.description, c.markdown, c.order_index,
+                   c.domain, c.audience, c.maturity, c.pattern_id
+            FROM public.cards c
+            JOIN threat.threat_cards tc ON c.id = tc.card_id
+            WHERE tc.threat_id = $1
+        """, threat_id)
+    return [dict(r) for r in rows]
+
+@app.post("/threats/{threat_id}/cards/{card_id}", tags=["Threats"])
+async def add_card_to_threat(threat_id: int, card_id: int):
+    """Add a card to a threat."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        existing = await conn.fetchval(
+            "SELECT id FROM threat.threat_cards WHERE threat_id = $1 AND card_id = $2",
+            threat_id, card_id
+        )
+        if existing:
+            return {"status": "already_associated"}
+        
+        await conn.execute(
+            "INSERT INTO threat.threat_cards (threat_id, card_id) VALUES ($1, $2)",
+            threat_id, card_id
+        )
+    return {"status": "ok", "threat_id": threat_id, "card_id": card_id}
+
+@app.delete("/threats/{threat_id}/cards/{card_id}", tags=["Threats"])
+async def remove_card_from_threat(threat_id: int, card_id: int):
+    """Remove a card from a threat."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        result = await conn.execute(
+            "DELETE FROM threat.threat_cards WHERE threat_id = $1 AND card_id = $2",
+            threat_id, card_id
+        )
+    return {"status": "ok", "deleted": result != "DELETE 0"}
 
 # -------------------------------------------------------------------------
 # GET /query/{table}  (Universal table reader)
