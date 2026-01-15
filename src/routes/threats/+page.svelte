@@ -25,7 +25,6 @@
 		information_disclosure: false,
 		denial_of_service: false,
 		elevation_of_privilege: false,
-		mitigation_level: 0,
 		disabled: false,
 		project_id: 1
 	};
@@ -149,20 +148,16 @@
 			description: '',
 			scenario: '',
 			probability: 0,
-			damage_description: '',
-			spoofing: false,
-			tampering: false,
-			repudiation: false,
-			information_disclosure: false,
-			denial_of_service: false,
-			elevation_of_privilege: false,
-			mitigation_level: 0,
-			disabled: false,
+					damage_description: '',
+					spoofing: false,
+					tampering: false,
+					repudiation: false,
+					information_disclosure: false,
+					denial_of_service: false,
+					elevation_of_privilege: false,
+					disabled: false,
 			project_id: 1
 		};
-		selectedCardIds = new Set();
-		cardSearchQuery = '';
-		cardSearchResults = [];
 		addModalError = null;
 	}
 	
@@ -192,10 +187,8 @@
 					information_disclosure: newThreat.information_disclosure || false,
 					denial_of_service: newThreat.denial_of_service || false,
 					elevation_of_privilege: newThreat.elevation_of_privilege || false,
-					mitigation_level: newThreat.mitigation_level || 0,
 					disabled: newThreat.disabled || false,
 					project_id: newThreat.project_id || 1,
-					card_ids: Array.from(selectedCardIds)
 				})
 			});
 			if (!response.ok) throw new Error('Failed to create threat');
@@ -243,6 +236,22 @@
 	
 	function openScenarioEditor() {
 		showScenarioEditor = true;
+	}
+	
+	async function handleDelete(threatId: string) {
+		if (!confirm('Are you sure you want to delete this threat?')) return;
+		
+		try {
+			const response = await fetch(`${apiBase}/threats/${threatId}`, {
+				method: 'DELETE'
+			});
+			
+			if (!response.ok) throw new Error('Failed to delete threat');
+			threats = threats.filter(t => t.id !== threatId);
+			filterThreats();
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Failed to delete threat';
+		}
 	}
 
 </script>
@@ -311,6 +320,7 @@
 
 										<td class="tar">
 											<a href="/threats/{t.id}" class="button button_small" title="Edit">✎</a>
+											<button class="button button_small" onclick={() => handleDelete(t.id)} title="Delete">🗑</button>
 										</td>
 									</tr>
 								{/each}
@@ -393,16 +403,6 @@
 						<label for="add-damage-description" class="input__label">Damage Description</label>
 					</div>
 
-					<div class="input">
-						<input
-							id="add-mitigation-level"
-							type="number"
-							bind:value={newThreat.mitigation_level}
-							class="input__text"
-						/>
-						<label for="add-mitigation-level" class="input__label">Mitigation Level</label>
-					</div>
-
 					<div class="stride-checkboxes">
 						<label class="checkbox-label">
 							<input
@@ -448,66 +448,6 @@
 						</label>
 					</div>
 
-					<div class="input input_select">
-						<div class="card-search-container">
-							<input
-								id="add-card-search"
-								type="text"
-								bind:value={cardSearchQuery}
-								oninput={(e) => handleCardSearchInput(e, false)}
-								class="input__text input__text_changed"
-								placeholder="Search cards..."
-							/>
-							<label for="add-card-search" class="input__label">Cards</label>
-							{#if showCardDropdown && cardSearchResults.length > 0}
-								<div class="card-dropdown">
-									{#each cardSearchResults as card}
-										<div class="card-option" onclick={() => toggleCard(card, false)}>
-											<label class="checkbox-label" style="margin: 0;">
-												<input
-													type="checkbox"
-													checked={selectedCardIds.has(card.id as any)}
-													onchange={(e) => {
-														if (e.target.checked) {
-															selectedCardIds.add(card.id as any);
-														} else {
-															selectedCardIds.delete(card.id as any);
-														}
-														selectedCardIds = selectedCardIds;
-													}}
-												/>
-												<div class="card-name">{card.name}</div>
-											</label>
-											<div class="card-description">{card.description}</div>
-										</div>
-									{/each}
-								</div>
-							{/if}
-							{#if selectedCardIds.size > 0}
-								<div class="selected-cards">
-									{#each Array.from(selectedCardIds) as cardId}
-										{@const card = cardSearchResults.find(c => c.id === String(cardId)) || cards.find(c => c.id === String(cardId))}
-										{#if card}
-											<div class="selected-card">
-												{card.name}
-												<button 
-													type="button"
-													class="remove-card"
-													onclick={() => {
-														selectedCardIds.delete(cardId);
-														selectedCardIds = selectedCardIds;
-													}}
-												>
-													×
-												</button>
-											</div>
-										{/if}
-									{/each}
-								</div>
-							{/if}
-						</div>
-					</div>
-
 					<div class="modal-footer">
 						<button
 							type="button"
@@ -545,14 +485,6 @@
 		background: none !important;
 	}
 
-	:global(td.tar button) {
-		background: none !important;
-		border: none !important;
-	}
-
-	:global(td.tar) {
-		vertical-align: top;
-	}
 
 	:global(.modal-overlay) {
 		position: fixed;
@@ -769,6 +701,25 @@
 	:global(.threat-link:hover) {
 		text-decoration: underline;
 	}
+
+	:global(.button_small) {
+		background: none !important;
+		border: none !important;
+		padding: 4px 8px !important;
+		cursor: pointer !important;
+		font-size: 18px !important;
+		color: #666 !important;
+		vertical-align: top !important;
+		line-height: 1 !important;
+		box-shadow: none !important;
+		margin-right: 0.5rem;
+	}
+
+	:global(.button_small:hover) {
+		color: #333 !important;
+		background: none !important;
+	}
+
 
 	th.sortable {
 		cursor: pointer;

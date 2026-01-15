@@ -73,16 +73,6 @@
 		showCardDropdown = true;
 	}
 	
-	function toggleCard(card: Card) {
-		const cardId = String(card.id);
-		if (selectedCardIds.has(cardId)) {
-			selectedCardIds.delete(cardId);
-		} else {
-			selectedCardIds.add(cardId);
-		}
-		selectedCardIds = selectedCardIds;
-	}
-	
 	async function handleSave() {
 		try {
 			saveError = null;
@@ -101,18 +91,14 @@
 					information_disclosure: editThreat.information_disclosure,
 					denial_of_service: editThreat.denial_of_service,
 					elevation_of_privilege: editThreat.elevation_of_privilege,
-					mitigation_level: editThreat.mitigation_level,
 					disabled: editThreat.disabled,
 					card_ids: Array.from(selectedCardIds)
 				})
 			});
-			if (!response.ok) throw new Error('Failed to save threat');
-			const updated = await response.json();
-			threat = { ...updated, id: String(updated.id) };
-			if (threat && threat.cards) {
-				selectedCardIds = new Set(threat.cards.map(c => String(c.id)));
-			}
-			isEditing = false;
+		if (!response.ok) throw new Error('Failed to save threat');
+		const updated = await response.json();
+		// Reload page to refresh all state
+		window.location.reload();
 		} catch (e) {
 			saveError = e instanceof Error ? e.message : 'Failed to save threat';
 		}
@@ -272,14 +258,9 @@
 										<label for="edit-damage-description" class="input__label">Damage Description</label>
 									</div>
 
-									<div class="input">
-										<input
-											id="edit-mitigation-level"
-											type="number"
-											bind:value={editThreat.mitigation_level}
-											class="input__text"
-										/>
-										<label for="edit-mitigation-level" class="input__label">Mitigation Level</label>
+									<div class="form-field-readonly">
+										<label class="readonly-label">Mitigation Level</label>
+										<p class="readonly-value">{editThreat.mitigation_level || '-'}</p>
 									</div>
 									
 									<label class="checkbox-label">
@@ -341,20 +322,31 @@
 
 								<div class="form-section">
 									<h3>Related Cards</h3>
-									<div class="card-search">
-										<input
-											id="card-search"
-											type="text"
-											bind:value={cardSearchQuery}
-											oninput={(e) => searchCards(e.target.value)}
-											class="input__text input__text_changed"
-											placeholder="Search cards..."
-										/>
-										<label for="card-search" class="input__label">Search</label>
+									<div class="card-section">
+										<div class="card-search">
+											<input
+												id="card-search"
+												type="text"
+												bind:value={cardSearchQuery}
+												oninput={(e) => searchCards(e.target.value)}
+												onkeydown={(e) => {
+													if (e.key === 'Enter') {
+														e.preventDefault();
+														showCardDropdown = false;
+														cardSearchQuery = '';
+														filteredCards = [];
+													}
+												}}
+												class="input__text input__text_changed"
+												placeholder="Search cards... (Enter to confirm)"
+											/>
+											<label for="card-search" class="input__label">Search</label>
+										</div>
+										
 										{#if showCardDropdown && filteredCards.length > 0}
 											<div class="card-dropdown">
 												{#each filteredCards as card}
-													<div class="card-option" onclick={() => toggleCard(card)}>
+													<div class="card-option">
 														<label class="checkbox-label" style="margin: 0;">
 															<input
 																type="checkbox"
@@ -367,6 +359,14 @@
 																	}
 																	selectedCardIds = selectedCardIds;
 																}}
+																onkeydown={(e) => {
+																	if (e.key === 'Enter') {
+																		e.preventDefault();
+																		showCardDropdown = false;
+																		cardSearchQuery = '';
+																		filteredCards = [];
+																	}
+																}}
 															/>
 															<div class="card-name">{card.name}</div>
 														</label>
@@ -375,31 +375,31 @@
 												{/each}
 											</div>
 										{/if}
+										
+										{#if selectedCardIds.size > 0}
+											<div class="selected-cards">
+												<h4>Selected Cards ({selectedCardIds.size})</h4>
+												{#each Array.from(selectedCardIds) as cardId}
+													{@const card = allCards.find(c => c.id === String(cardId))}
+													{#if card}
+														<div class="selected-card">
+															{card.name}
+															<button 
+																type="button"
+																class="remove-card"
+																onclick={() => {
+																	selectedCardIds.delete(cardId);
+																	selectedCardIds = selectedCardIds;
+																}}
+															>
+																×
+															</button>
+														</div>
+													{/if}
+												{/each}
+											</div>
+										{/if}
 									</div>
-
-									{#if selectedCardIds.size > 0}
-										<div class="selected-cards">
-											<h4>Selected Cards ({selectedCardIds.size})</h4>
-											{#each Array.from(selectedCardIds) as cardId}
-												{@const card = allCards.find(c => c.id === String(cardId))}
-												{#if card}
-													<div class="selected-card">
-														{card.name}
-														<button 
-															type="button"
-															class="remove-card"
-															onclick={() => {
-																selectedCardIds.delete(cardId);
-																selectedCardIds = selectedCardIds;
-															}}
-														>
-															×
-														</button>
-													</div>
-												{/if}
-											{/each}
-										</div>
-									{/if}
 								</div>
 
 								<div class="form-section">
@@ -626,23 +626,23 @@
 		margin-bottom: 0;
 	}
 
+	.card-section {
+		display: flex;
+		flex-direction: column;
+		gap: 15px;
+	}
+
 	.card-search {
 		position: relative;
-		margin-bottom: 15px;
 	}
 
 	.card-dropdown {
-		position: absolute;
-		top: 100%;
-		left: 0;
-		right: 0;
+		position: static;
 		background: white;
 		border: 1px solid #ddd;
-		border-top: none;
-		border-radius: 0 0 4px 4px;
-		max-height: 150px;
+		border-radius: 4px;
+		max-height: 200px;
 		overflow-y: auto;
-		z-index: 10;
 		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 	}
 

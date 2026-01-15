@@ -1239,6 +1239,18 @@ table.table td, th .DataTables_sort_wrapper {
 .table tr:hover td {
 	background-color: #F5F5F5;
 }
+td.tar {
+	vertical-align: top;
+	white-space: nowrap;
+}
+td.tar button,
+td.tar a {
+	background: none !important;
+	border: none !important;
+}
+td.tar a {
+	text-decoration: none;
+}
 .table tr.flat_green:hover td {
 	background-color: rgba(240,255,240, 0.6);
 }
@@ -1727,6 +1739,26 @@ table tr.disabled td:not(.activation_link) {
 .input__text:disabled > input{
 	cursor: no-drop;
 	pointer-events: none;
+}
+.form-field-readonly {
+	margin-bottom: 15px;
+	display: flex;
+	flex-direction: column;
+}
+.readonly-label {
+	font-size: 12px;
+	font-weight: 600;
+	color: #666;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	margin-bottom: 6px;
+}
+.readonly-value {
+	font-size: 14px;
+	color: #333;
+	margin: 0;
+	padding: 8px 0;
+	word-break: break-word;
 }
 .button_flat_gray {
 	background: #eee;

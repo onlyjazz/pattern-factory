@@ -357,6 +357,7 @@
 
 	:global(td.tar) {
 		vertical-align: top;
+		white-space: nowrap;
 	}
 
 	:global(.modal-overlay) {

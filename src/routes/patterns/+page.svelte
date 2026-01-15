@@ -469,20 +469,12 @@
         vertical-align: top !important;
         line-height: 1 !important;
         box-shadow: none !important;
+        margin-right: 0.5rem;
     }
 
     :global(.button_small:hover) {
         color: #333 !important;
         background: none !important;
-    }
-
-    :global(td.tar button) {
-        background: none !important;
-        border: none !important;
-    }
-
-    :global(td.tar) {
-        vertical-align: top;
     }
 
     :global(.modal-overlay) {
