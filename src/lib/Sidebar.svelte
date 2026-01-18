@@ -2,7 +2,7 @@
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import { modeStore } from '$lib/modeStore';
-	import { Network, FileText, Route, ListTree, AlertTriangle, Box, Bug, Shield, TableRowsSplit } from 'lucide-svelte';
+	import { Network, FileText, Route, ListTree, AlertTriangle, Box, Bug, Shield, Circle } from 'lucide-svelte';
 
 	let currentPath = '';
 	let views: any[] = [];
@@ -87,7 +87,7 @@
 						href="/results?view={view.table_name}"
 						title={view.name}
 					>
-						<TableRowsSplit size={18} stroke-width={1.5} />
+						<Circle size={14} stroke-width={2} />
 						{view.name || view.table_name}
 					</a>
 				{/each}
