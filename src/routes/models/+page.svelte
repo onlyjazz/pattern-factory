@@ -118,15 +118,15 @@
 		}
 	}
 	
-	async function handleActivate(modelId: number) {
+	async function handleActivate(modelId: number, modelName?: string) {
 		try {
 			error = null;
 			const response = await fetch(`${apiBase}/models/${modelId}/activate`, {
 				method: 'POST'
 			});
 			if (!response.ok) throw new Error('Failed to activate model');
-			// Update mode store to reflect active model
-			modeStore.setActiveModel(modelId);
+			// Update mode store to reflect active model with name
+			modeStore.setActiveModel(modelId, modelName || null);
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to activate model';
 		}
@@ -203,7 +203,7 @@
 
 							<tbody>
 								{#each filteredModels as m (m.id)}
-									<tr class="model-row clickable" class:active-model={$modeStore.activeModel === m.id} onclick={() => handleActivate(m.id)}>
+									<tr class="model-row clickable" class:active-model={$modeStore.activeModel === m.id} onclick={() => handleActivate(m.id, m.name)}>
 										<td class="tal"><strong>{m.name}</strong> {#if $modeStore.activeModel === m.id}<span class="active-badge">✓ Active</span>{/if}</td>
 										<td class="tal">{m.version || '-'}</td>
 										<td class="tal">{m.author || '-'}</td>

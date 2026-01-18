@@ -43,7 +43,9 @@
 		{#if $modeStore.mode === 'explore'}
 			<span class="context-text">Now in Explore mode</span>
 		{:else}
-			<span class="context-text">Model</span>
+			<span class="context-text">
+				{$modeStore.activeModelName ? `Model: ${$modeStore.activeModelName}` : 'Model'}
+			</span>
 		{/if}
 	</div>
 	<div class="header-controls">
