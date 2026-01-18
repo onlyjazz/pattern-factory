@@ -87,7 +87,7 @@
 						href="/results?view={view.table_name}"
 						title={view.name}
 					>
-						<Circle size={14} stroke-width={2} />
+						<Circle size={8} stroke-width={2} />
 						{view.name || view.table_name}
 					</a>
 				{/each}
