@@ -204,7 +204,7 @@
 							<tbody>
 								{#each filteredModels as m (m.id)}
 									<tr class="model-row clickable" class:active-model={$modeStore.activeModel === m.id} onclick={() => handleActivate(m.id, m.name)}>
-										<td class="tal"><strong>{m.name}</strong> {#if $modeStore.activeModel === m.id}<span class="active-badge">✓ Active</span>{/if}</td>
+										<td class="tal"><strong>{m.name}</strong></td>
 										<td class="tal">{m.version || '-'}</td>
 										<td class="tal">{m.author || '-'}</td>
 										<td class="tal">{m.company || '-'}</td>
@@ -465,17 +465,6 @@
 
 	:global(.model-row.active-model:hover) {
 		background-color: #c8e6c9;
-	}
-
-	:global(.active-badge) {
-		display: inline-block;
-		margin-left: 0.5rem;
-		padding: 0.2rem 0.5rem;
-		background-color: #4caf50;
-		color: white;
-		border-radius: 3px;
-		font-size: 0.75rem;
-		font-weight: 600;
 	}
 
 	th.sortable {

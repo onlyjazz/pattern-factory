@@ -37,7 +37,9 @@
 			>
 				Model
 			</button>
-			{#if $modeStore.mode === 'model' && $modeStore.activeModelName}
+			{#if $modeStore.mode === 'explore'}
+				<span class="mode-context">Now in Explore mode</span>
+			{:else if $modeStore.activeModelName}
 				<span class="model-name">Model: {$modeStore.activeModelName}</span>
 			{/if}
 		</div>
@@ -183,6 +185,12 @@
 	.mode-button_active:hover {
 		color: #263238;
 		text-decoration: underline;
+	}
+
+	.mode-context {
+		font-size: 0.875rem;
+		color: white;
+		font-weight: 400;
 	}
 
 	.model-name {
