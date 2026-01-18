@@ -68,10 +68,30 @@ function createModeStore() {
 		setActiveModel(modelId: number | null, modelName: string | null = null) {
 			update((state) => ({ ...state, activeModel: modelId, activeModelName: modelName }));
 		},
-		switchMode(mode: AppMode) {
-			// Switching modes keeps the active model for potential re-selection
-			set({ mode, activeModel: null, activeModelName: null });
-		},
+	async switchMode(mode: AppMode) {
+		// When switching TO model mode, fetch active model from backend
+		if (mode === 'model') {
+			try {
+				const response = await fetch('http://localhost:8000/active-model');
+				if (response.ok) {
+					const data = await response.json();
+					if (data.model_id) {
+						// Fetch model details to get the name
+						const modelResponse = await fetch(`http://localhost:8000/models/${data.model_id}`);
+						if (modelResponse.ok) {
+							const modelData = await modelResponse.json();
+							set({ mode, activeModel: data.model_id, activeModelName: modelData.name });
+							return;
+						}
+					}
+				}
+			} catch (e) {
+				console.error('Failed to fetch active model:', e);
+			}
+		}
+		// When switching TO explore mode or if model fetch fails, clear model state
+		set({ mode, activeModel: null, activeModelName: null });
+	},
 		reset() {
 			set({ mode: 'explore', activeModel: null, activeModelName: null });
 		}

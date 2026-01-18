@@ -7,7 +7,7 @@
 	export let onChatClick = () => {};
 	
 	async function switchMode(newMode: 'explore' | 'model') {
-		modeStore.switchMode(newMode);
+		await modeStore.switchMode(newMode);
 		if (newMode === 'explore') {
 			await goto('/patterns');
 		} else {
