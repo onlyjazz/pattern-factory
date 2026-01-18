@@ -26,7 +26,7 @@
 		denial_of_service: false,
 		elevation_of_privilege: false,
 		disabled: false,
-		project_id: 1
+		model_id: 1
 	};
 	
 	let sortField: keyof Threat | null = null;
@@ -156,7 +156,7 @@
 					denial_of_service: false,
 					elevation_of_privilege: false,
 					disabled: false,
-			project_id: 1
+			model_id: 1
 		};
 		addModalError = null;
 	}
@@ -187,8 +187,8 @@
 					information_disclosure: newThreat.information_disclosure || false,
 					denial_of_service: newThreat.denial_of_service || false,
 					elevation_of_privilege: newThreat.elevation_of_privilege || false,
-					disabled: newThreat.disabled || false,
-					project_id: newThreat.project_id || 1,
+				disabled: newThreat.disabled || false,
+				model_id: newThreat.model_id || 1,
 				})
 			});
 			if (!response.ok) throw new Error('Failed to create threat');

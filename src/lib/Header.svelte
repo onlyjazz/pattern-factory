@@ -1,14 +1,50 @@
-<script>
+<script lang="ts">
 	import { page } from '$app/stores';
 	import { globalSearch } from '$lib/searchStore';
+	import { modeStore } from '$lib/modeStore';
+	import { goto } from '$app/navigation';
 	
 	export let onChatClick = () => {};
+	
+	async function switchMode(newMode: 'explore' | 'model') {
+		modeStore.switchMode(newMode);
+		if (newMode === 'explore') {
+			await goto('/patterns');
+		} else {
+			await goto('/models');
+		}
+	}
 </script>
 
 <header class="page-header">
 	<div class="header-content">
 		<div class="logo"></div>
 		<span class="heading_4">Pattern Factory</span>
+		<div class="mode-selector">
+			<button
+				class="mode-button"
+				class:mode-button_active={$modeStore.mode === 'explore'}
+				on:click={() => switchMode('explore')}
+				title="Switch to Explore mode"
+		>
+				Explore
+			</button>
+			<button
+				class="mode-button"
+				class:mode-button_active={$modeStore.mode === 'model'}
+				on:click={() => switchMode('model')}
+				title="Switch to Model mode"
+			>
+				Model
+			</button>
+		</div>
+	</div>
+	<div class="header-context">
+		{#if $modeStore.mode === 'explore'}
+			<span class="context-text">Now in Explore mode</span>
+		{:else}
+			<span class="context-text">Model</span>
+		{/if}
 	</div>
 	<div class="header-controls">
 		<button
@@ -114,5 +150,52 @@
 		border-color: rgba(255, 255, 255, 0.6);
 		background-color: white;
 		box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+	}
+
+	.mode-selector {
+		display: flex;
+		gap: 0.5rem;
+		margin-left: 1rem;
+	}
+
+	.mode-button {
+		padding: 0.4rem 0.8rem;
+		border: none;
+		border-radius: 4px;
+		background: none;
+		color: rgba(255, 255, 255, 0.8);
+		cursor: pointer;
+		font-family: 'Roboto', system-ui, -apple-system, sans-serif;
+		font-size: 0.875rem;
+		font-weight: 500;
+		transition: all 0.2s ease;
+		text-transform: capitalize;
+	}
+
+	.mode-button:hover {
+		color: rgba(255, 255, 255, 0.9);
+		background-color: rgba(255, 255, 255, 0.1);
+	}
+
+	.mode-button_active {
+		color: #263238;
+		background-color: white;
+		font-weight: 600;
+	}
+
+	.mode-button_active:hover {
+		background-color: white;
+		color: #263238;
+	}
+
+	.header-context {
+		margin-left: auto;
+		padding-right: 1rem;
+	}
+
+	.context-text {
+		font-size: 0.8em;
+		color: white;
+		font-weight: 400;
 	}
 </style>

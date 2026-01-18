@@ -593,7 +593,7 @@ class ThreatCreate(BaseModel):
     elevation_of_privilege: bool = False
     mitigation_level: int = 0
     disabled: bool = False
-    project_id: int = 1
+    model_id: int = 1
     card_ids: list[str] | None = None
 
 class ThreatUpdate(BaseModel):
@@ -614,15 +614,15 @@ class ThreatUpdate(BaseModel):
 
 @app.get("/threats", tags=["Threats"])
 async def get_threats():
-    """Get all threats across all projects."""
+    """Get all threats for the active model."""
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
             SELECT id, name, description, scenario, probability, damage_description,
                    spoofing, tampering, repudiation, information_disclosure, 
                    denial_of_service, elevation_of_privilege, mitigation_level, 
-                   disabled, project_id, created_at, updated_at
-            FROM threat.threats
+                   disabled, model_id, created_at, updated_at
+            FROM threat.vthreats
             ORDER BY created_at DESC
         """)
     return [dict(r) for r in rows]
@@ -637,12 +637,12 @@ async def create_threat(threat: ThreatCreate):
             INSERT INTO threat.threats 
             (name, description, scenario, probability, damage_description,
              spoofing, tampering, repudiation, information_disclosure,
-             denial_of_service, elevation_of_privilege, mitigation_level, disabled, project_id)
+             denial_of_service, elevation_of_privilege, mitigation_level, disabled, model_id)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             RETURNING id, name, description, scenario, probability, damage_description,
                       spoofing, tampering, repudiation, information_disclosure,
                       denial_of_service, elevation_of_privilege, mitigation_level,
-                      disabled, project_id, created_at, updated_at
+                      disabled, model_id, created_at, updated_at
             """,
             threat.name,
             threat.description,
@@ -657,7 +657,7 @@ async def create_threat(threat: ThreatCreate):
             threat.elevation_of_privilege,
             threat.mitigation_level,
             threat.disabled,
-            threat.project_id
+            threat.model_id
         )
         threat_id = row['id']
         
@@ -695,7 +695,7 @@ async def get_threat(threat_id: int):
             SELECT id, name, description, scenario, probability, damage_description,
                    spoofing, tampering, repudiation, information_disclosure,
                    denial_of_service, elevation_of_privilege, mitigation_level,
-                   disabled, project_id, created_at, updated_at
+                   disabled, model_id, created_at, updated_at
             FROM threat.threats
             WHERE id = $1
             """,
@@ -793,7 +793,7 @@ async def update_threat(threat_id: int, patch: ThreatUpdate):
                    RETURNING id, name, description, scenario, probability, damage_description,
                              spoofing, tampering, repudiation, information_disclosure,
                              denial_of_service, elevation_of_privilege, mitigation_level,
-                             disabled, project_id, created_at, updated_at"""
+                             disabled, model_id, created_at, updated_at"""
         row = await conn.fetchrow(query, *params)
         
         if not row:
@@ -865,6 +865,450 @@ async def remove_card_from_threat(threat_id: int, card_id: int):
             threat_id, card_id
         )
     return {"status": "ok", "deleted": result != "DELETE 0"}
+
+# =========================================================================
+# STUB: Current logged-in user (replace with session management)
+# =========================================================================
+CURRENT_USER_ID = "4da53331-d976-4512-a215-ed756612a8e0"
+
+# -------------------------------------------------------------------------
+# Models CRUD
+# -------------------------------------------------------------------------
+class ModelCreate(BaseModel):
+    name: str
+    version: str | None = None
+    author: str | None = None
+    company: str | None = None
+    category: str | None = None
+    keywords: str | None = None
+    description: str | None = None
+
+class ModelUpdate(BaseModel):
+    name: str | None = None
+    version: str | None = None
+    author: str | None = None
+    company: str | None = None
+    category: str | None = None
+    keywords: str | None = None
+    description: str | None = None
+
+@app.get("/models", tags=["Models"])
+async def get_models():
+    """Get all models."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT id, name, version, author, company, category, keywords, description, created_at, updated_at
+            FROM threat.models
+            ORDER BY created_at DESC
+        """)
+    return [dict(r) for r in rows]
+
+@app.post("/models", tags=["Models"])
+async def create_model(model: ModelCreate):
+    """Create a new model."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            INSERT INTO threat.models (name, version, author, company, category, keywords, description)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING id, name, version, author, company, category, keywords, description, created_at, updated_at
+            """,
+            model.name,
+            model.version,
+            model.author,
+            model.company,
+            model.category,
+            model.keywords,
+            model.description
+        )
+        return dict(row)
+
+@app.get("/models/{model_id}", tags=["Models"])
+async def get_model(model_id: int):
+    """Get a single model."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT id, name, version, author, company, category, keywords, description, created_at, updated_at FROM threat.models WHERE id = $1",
+            model_id
+        )
+    if not row:
+        raise HTTPException(status_code=404, detail="Model not found")
+    return dict(row)
+
+@app.put("/models/{model_id}", tags=["Models"])
+async def update_model(model_id: int, patch: ModelUpdate):
+    """Update a model."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            UPDATE threat.models
+            SET 
+                name = COALESCE($1, name),
+                version = COALESCE($2, version),
+                author = COALESCE($3, author),
+                company = COALESCE($4, company),
+                category = COALESCE($5, category),
+                keywords = COALESCE($6, keywords),
+                description = COALESCE($7, description)
+            WHERE id = $8
+            RETURNING id, name, version, author, company, category, keywords, description, created_at, updated_at
+            """,
+            patch.name,
+            patch.version,
+            patch.author,
+            patch.company,
+            patch.category,
+            patch.keywords,
+            patch.description,
+            model_id
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="Model not found")
+        return dict(row)
+
+@app.delete("/models/{model_id}", tags=["Models"])
+async def delete_model(model_id: int):
+    """Delete a model."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        result = await conn.execute("DELETE FROM threat.models WHERE id = $1", model_id)
+        if result == "DELETE 0":
+            raise HTTPException(status_code=404, detail="Model not found")
+    return {"status": "ok", "deleted_id": model_id}
+
+@app.post("/models/{model_id}/activate", tags=["Models"])
+async def activate_model(model_id: int):
+    """Set model as active for the current user."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        # Verify model exists
+        model_exists = await conn.fetchval(
+            "SELECT id FROM threat.models WHERE id = $1", model_id
+        )
+        if not model_exists:
+            raise HTTPException(status_code=404, detail="Model not found")
+        
+        # Get user (stub user for now)
+        user_id = CURRENT_USER_ID
+        user_exists = await conn.fetchval(
+            "SELECT id FROM public.users WHERE id = $1", user_id
+        )
+        if not user_exists:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Upsert: insert new active model or update if user already has one
+        await conn.execute(
+            """
+            INSERT INTO public.active_models (user_id, model_id) 
+            VALUES ($1, $2)
+            ON CONFLICT (user_id) DO UPDATE 
+            SET model_id = $2, updated_at = CURRENT_TIMESTAMP
+            """,
+            user_id,
+            model_id
+        )
+    return {"status": "ok", "user_id": user_id, "model_id": model_id}
+
+@app.get("/active-model", tags=["Models"])
+async def get_active_model():
+    """Get the active model for the current user."""
+    pool = get_pg_pool()
+    user_id = CURRENT_USER_ID
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT model_id FROM public.active_models WHERE user_id = $1",
+            user_id
+        )
+    if not row:
+        return {"model_id": None}
+    return {"model_id": row["model_id"]}
+
+# -------------------------------------------------------------------------
+# Assets CRUD
+# -------------------------------------------------------------------------
+class AssetCreate(BaseModel):
+    name: str
+    description: str
+    fixed_value: float = 0
+    disabled: bool = False
+    model_id: int = 1
+
+class AssetUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    fixed_value: float | None = None
+    disabled: bool | None = None
+
+@app.get("/assets", tags=["Assets"])
+async def get_assets():
+    """Get all assets for the active model."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT id, name, description, fixed_value, disabled, model_id, created_at, updated_at
+            FROM threat.vassets
+            ORDER BY created_at DESC
+        """)
+    return [dict(r) for r in rows]
+
+@app.post("/assets", tags=["Assets"])
+async def create_asset(asset: AssetCreate):
+    """Create a new asset."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            INSERT INTO threat.assets (name, description, fixed_value, disabled, model_id)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id, name, description, fixed_value, disabled, model_id, created_at, updated_at
+            """,
+            asset.name,
+            asset.description,
+            asset.fixed_value,
+            asset.disabled,
+            asset.model_id
+        )
+        return dict(row)
+
+@app.get("/assets/{asset_id}", tags=["Assets"])
+async def get_asset(asset_id: int):
+    """Get a single asset."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT id, name, description, fixed_value, disabled, model_id, created_at, updated_at FROM threat.assets WHERE id = $1",
+            asset_id
+        )
+    if not row:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    return dict(row)
+
+@app.put("/assets/{asset_id}", tags=["Assets"])
+async def update_asset(asset_id: int, patch: AssetUpdate):
+    """Update an asset."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            UPDATE threat.assets
+            SET 
+                name = COALESCE($1, name),
+                description = COALESCE($2, description),
+                fixed_value = COALESCE($3, fixed_value),
+                disabled = COALESCE($4, disabled)
+            WHERE id = $5
+            RETURNING id, name, description, fixed_value, disabled, model_id, created_at, updated_at
+            """,
+            patch.name,
+            patch.description,
+            patch.fixed_value,
+            patch.disabled,
+            asset_id
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="Asset not found")
+        return dict(row)
+
+@app.delete("/assets/{asset_id}", tags=["Assets"])
+async def delete_asset(asset_id: int):
+    """Delete an asset."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        result = await conn.execute("DELETE FROM threat.assets WHERE id = $1", asset_id)
+        if result == "DELETE 0":
+            raise HTTPException(status_code=404, detail="Asset not found")
+    return {"status": "ok", "deleted_id": asset_id}
+
+# -------------------------------------------------------------------------
+# Vulnerabilities CRUD
+# -------------------------------------------------------------------------
+class VulnerabilityCreate(BaseModel):
+    name: str
+    description: str
+    disabled: bool = False
+    model_id: int = 1
+
+class VulnerabilityUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    disabled: bool | None = None
+
+@app.get("/vulnerabilities", tags=["Vulnerabilities"])
+async def get_vulnerabilities():
+    """Get all vulnerabilities for the active model."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT id, name, description, disabled, model_id, created_at, updated_at
+            FROM threat.vvulnerabilities
+            ORDER BY created_at DESC
+        """)
+    return [dict(r) for r in rows]
+
+@app.post("/vulnerabilities", tags=["Vulnerabilities"])
+async def create_vulnerability(vulnerability: VulnerabilityCreate):
+    """Create a new vulnerability."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            INSERT INTO threat.vulnerabilities (name, description, disabled, model_id)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id, name, description, disabled, model_id, created_at, updated_at
+            """,
+            vulnerability.name,
+            vulnerability.description,
+            vulnerability.disabled,
+            vulnerability.model_id
+        )
+        return dict(row)
+
+@app.get("/vulnerabilities/{vulnerability_id}", tags=["Vulnerabilities"])
+async def get_vulnerability(vulnerability_id: int):
+    """Get a single vulnerability."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT id, name, description, disabled, model_id, created_at, updated_at FROM threat.vulnerabilities WHERE id = $1",
+            vulnerability_id
+        )
+    if not row:
+        raise HTTPException(status_code=404, detail="Vulnerability not found")
+    return dict(row)
+
+@app.put("/vulnerabilities/{vulnerability_id}", tags=["Vulnerabilities"])
+async def update_vulnerability(vulnerability_id: int, patch: VulnerabilityUpdate):
+    """Update a vulnerability."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            UPDATE threat.vulnerabilities
+            SET 
+                name = COALESCE($1, name),
+                description = COALESCE($2, description),
+                disabled = COALESCE($3, disabled)
+            WHERE id = $4
+            RETURNING id, name, description, disabled, model_id, created_at, updated_at
+            """,
+            patch.name,
+            patch.description,
+            patch.disabled,
+            vulnerability_id
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="Vulnerability not found")
+        return dict(row)
+
+@app.delete("/vulnerabilities/{vulnerability_id}", tags=["Vulnerabilities"])
+async def delete_vulnerability(vulnerability_id: int):
+    """Delete a vulnerability."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        result = await conn.execute("DELETE FROM threat.vulnerabilities WHERE id = $1", vulnerability_id)
+        if result == "DELETE 0":
+            raise HTTPException(status_code=404, detail="Vulnerability not found")
+    return {"status": "ok", "deleted_id": vulnerability_id}
+
+# -------------------------------------------------------------------------
+# Countermeasures CRUD
+# -------------------------------------------------------------------------
+class CountermeasureCreate(BaseModel):
+    name: str
+    description: str
+    fixed_implementation_cost: int = 0
+    disabled: bool = False
+    model_id: int = 1
+
+class CountermeasureUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    fixed_implementation_cost: int | None = None
+    disabled: bool | None = None
+
+@app.get("/countermeasures", tags=["Countermeasures"])
+async def get_countermeasures():
+    """Get all countermeasures for the active model."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT id, name, description, fixed_implementation_cost, disabled, model_id, created_at, updated_at
+            FROM threat.vcountermeasures
+            ORDER BY created_at DESC
+        """)
+    return [dict(r) for r in rows]
+
+@app.post("/countermeasures", tags=["Countermeasures"])
+async def create_countermeasure(countermeasure: CountermeasureCreate):
+    """Create a new countermeasure."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            INSERT INTO threat.countermeasures (name, description, fixed_implementation_cost, disabled, model_id)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id, name, description, fixed_implementation_cost, disabled, model_id, created_at, updated_at
+            """,
+            countermeasure.name,
+            countermeasure.description,
+            countermeasure.fixed_implementation_cost,
+            countermeasure.disabled,
+            countermeasure.model_id
+        )
+        return dict(row)
+
+@app.get("/countermeasures/{countermeasure_id}", tags=["Countermeasures"])
+async def get_countermeasure(countermeasure_id: int):
+    """Get a single countermeasure."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT id, name, description, fixed_implementation_cost, disabled, model_id, created_at, updated_at FROM threat.countermeasures WHERE id = $1",
+            countermeasure_id
+        )
+    if not row:
+        raise HTTPException(status_code=404, detail="Countermeasure not found")
+    return dict(row)
+
+@app.put("/countermeasures/{countermeasure_id}", tags=["Countermeasures"])
+async def update_countermeasure(countermeasure_id: int, patch: CountermeasureUpdate):
+    """Update a countermeasure."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            UPDATE threat.countermeasures
+            SET 
+                name = COALESCE($1, name),
+                description = COALESCE($2, description),
+                fixed_implementation_cost = COALESCE($3, fixed_implementation_cost),
+                disabled = COALESCE($4, disabled)
+            WHERE id = $5
+            RETURNING id, name, description, fixed_implementation_cost, disabled, model_id, created_at, updated_at
+            """,
+            patch.name,
+            patch.description,
+            patch.fixed_implementation_cost,
+            patch.disabled,
+            countermeasure_id
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="Countermeasure not found")
+        return dict(row)
+
+@app.delete("/countermeasures/{countermeasure_id}", tags=["Countermeasures"])
+async def delete_countermeasure(countermeasure_id: int):
+    """Delete a countermeasure."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        result = await conn.execute("DELETE FROM threat.countermeasures WHERE id = $1", countermeasure_id)
+        if result == "DELETE 0":
+            raise HTTPException(status_code=404, detail="Countermeasure not found")
+    return {"status": "ok", "deleted_id": countermeasure_id}
 
 # -------------------------------------------------------------------------
 # GET /query/{table}  (Universal table reader)

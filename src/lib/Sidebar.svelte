@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
+	import { modeStore } from '$lib/modeStore';
 
 	let currentPath = '';
 	let views: any[] = [];
@@ -8,12 +9,21 @@
 	let viewsError = '';
 	const apiBase = 'http://localhost:8000';
 
-	const links = [
+	const exploreLinks = [
 		{ name: "Patterns", href: "/patterns" },
 		{ name: "Cards", href: "/cards" },
-		{ name: "Threats", href: "/threats" },
 		{ name: "Paths", href: "/paths" }
 	];
+
+	const modelLinks = [
+		{ name: "Models", href: "/models" },
+		{ name: "Threats", href: "/threats" },
+		{ name: "Assets", href: "/assets" },
+		{ name: "Vulnerabilities", href: "/vulnerabilities" },
+		{ name: "Countermeasures", href: "/countermeasures" }
+	];
+
+	$: links = $modeStore.mode === 'explore' ? exploreLinks : modelLinks;
 
 	onMount(() => {
 		const unsubscribe = page.subscribe(($page) => {
@@ -148,5 +158,20 @@
 	}
 	.views-error {
 		color: #ff6b6b;
+	}
+
+	.main-nav {
+		animation: sidebarFadeIn 0.25s ease;
+	}
+
+	@keyframes sidebarFadeIn {
+		from {
+			opacity: 0;
+			transform: translateX(-8px);
+		}
+		to {
+			opacity: 1;
+			transform: translateX(0);
+		}
 	}
 </style>

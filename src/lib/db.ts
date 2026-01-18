@@ -16,7 +16,7 @@ export interface Threat {
     elevation_of_privilege: boolean;
     mitigation_level: number;
     disabled: boolean;
-    project_id: number;
+    model_id: number;
     cards?: Card[];
     created_at?: string;
     updated_at?: string;
@@ -32,6 +32,51 @@ export interface Card {
     audience?: string | null; 
     maturity?: string | null; 
     pattern_id: number;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface Asset {
+    id: ID;
+    name: string;
+    description: string;
+    fixed_value: number;
+    disabled: boolean;
+    model_id: number;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface Vulnerability {
+    id: ID;
+    name: string;
+    description: string;
+    disabled: boolean;
+    model_id: number;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface Countermeasure {
+    id: ID;
+    name: string;
+    description: string;
+    fixed_implementation_cost: number;
+    disabled: boolean;
+    model_id: number;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface Model {
+    id: number;
+    name: string;
+    version?: string | null;
+    author?: string | null;
+    company?: string | null;
+    category?: string | null;
+    keywords?: string | null;
+    description?: string | null;
     created_at?: string;
     updated_at?: string;
 }

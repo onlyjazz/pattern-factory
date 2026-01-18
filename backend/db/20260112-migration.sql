@@ -55,22 +55,22 @@ $$ language 'plpgsql';
 CREATE OR REPLACE TRIGGER update_cards_updated_at
 BEFORE UPDATE ON public.cards
 FOR EACH ROW
-EXECUTE PROCEDURE update_updated_at_column();
+EXECUTE PROCEDURE public.update_updated_at_column();
 
 CREATE OR REPLACE TRIGGER update_patterns_updated_at
 BEFORE UPDATE ON public.patterns    
 FOR EACH ROW
-EXECUTE PROCEDURE update_updated_at_column();
+EXECUTE PROCEDURE public.update_updated_at_column();
 
 CREATE OR REPLACE TRIGGER update_paths_updated_at
 BEFORE UPDATE ON public.paths
 FOR EACH ROW
-EXECUTE PROCEDURE update_updated_at_column();
+EXECUTE PROCEDURE public.update_updated_at_column();
 
 CREATE OR REPLACE TRIGGER update_threats_updated_at
 BEFORE UPDATE ON threat.threats
 FOR EACH ROW
-EXECUTE PROCEDURE update_updated_at_column();
+EXECUTE PROCEDURE public.update_updated_at_column();
 --
 DROP TABLE IF EXISTS public.projects CASCADE;
 DROP TABLE IF EXISTS threat.pattern_threat;
