@@ -191,6 +191,7 @@
 		font-size: 0.875rem;
 		color: white;
 		font-weight: 400;
+		white-space: nowrap;
 	}
 
 	.model-name {
