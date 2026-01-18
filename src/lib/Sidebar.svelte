@@ -116,19 +116,20 @@
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		color: #ffffff;
+		color: rgba(255, 255, 255, 0.8);
 		text-decoration: none;
 		transition: all 0.2s ease;
 		font-size: 0.8em;
-		font-weight: 500;
+		font-weight: 400;
 	}
 	.main-nav__item:hover {
-		color: rgba(255,255,255,0.8);
+		color: rgba(255,255,255,0.95);
 		background: rgba(255,255,255,0.08);
 	}
 	.main-nav__item_active {
 		color: #fff;
 		background: rgba(255,255,255,0.12);
+		font-weight: 500;
 	}
 	.main-nav__item i {
 		font-size: 18px;
