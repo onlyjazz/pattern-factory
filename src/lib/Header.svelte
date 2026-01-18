@@ -156,6 +156,7 @@
 		align-items: center;
 		gap: 1.5rem;
 		padding-left: 1rem;
+		margin-top: 2px;
 	}
 
 	.mode-button {
