@@ -2,6 +2,7 @@
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import { modeStore } from '$lib/modeStore';
+	import { Network, FileText, Route, ListTree, AlertTriangle, Box, Bug, Shield, BarChart3 } from 'lucide-svelte';
 
 	let currentPath = '';
 	let views: any[] = [];
@@ -10,17 +11,17 @@
 	const apiBase = 'http://localhost:8000';
 
 	const exploreLinks = [
-		{ name: "Patterns", href: "/patterns" },
-		{ name: "Cards", href: "/cards" },
-		{ name: "Paths", href: "/paths" }
+		{ name: "Patterns", href: "/patterns", icon: Network },
+		{ name: "Cards", href: "/cards", icon: FileText },
+		{ name: "Paths", href: "/paths", icon: Route }
 	];
 
 	const modelLinks = [
-		{ name: "Models", href: "/models" },
-		{ name: "Threats", href: "/threats" },
-		{ name: "Assets", href: "/assets" },
-		{ name: "Vulnerabilities", href: "/vulnerabilities" },
-		{ name: "Countermeasures", href: "/countermeasures" }
+		{ name: "Models", href: "/models", icon: ListTree },
+		{ name: "Threats", href: "/threats", icon: AlertTriangle },
+		{ name: "Assets", href: "/assets", icon: Box },
+		{ name: "Vulnerabilities", href: "/vulnerabilities", icon: Bug },
+		{ name: "Countermeasures", href: "/countermeasures", icon: Shield }
 	];
 
 	$: links = $modeStore.mode === 'explore' ? exploreLinks : modelLinks;
@@ -72,7 +73,7 @@
 				class="main-nav__item {currentPath === link.href ? 'main-nav__item_active' : ''}" 
 				href={link.href}
 			>
-				<i class="material-icons">list</i>
+				<svelte:component this={link.icon} size={18} stroke-width={1.5} />
 				{link.name}
 			</a>
 		{/each}
@@ -86,7 +87,7 @@
 						href="/results?view={view.table_name}"
 						title={view.name}
 					>
-						<i class="material-icons">table_chart</i>
+						<BarChart3 size={18} stroke-width={1.5} />
 						{view.name || view.table_name}
 					</a>
 				{/each}
@@ -131,8 +132,10 @@
 		background: rgba(255,255,255,0.12);
 		font-weight: 500;
 	}
-	.main-nav__item i {
-		font-size: 18px;
+	.main-nav__item :global(svg) {
+		width: 18px;
+		height: 18px;
+		color: inherit;
 	}
 	.views-section {
 		margin-top: 0.5rem;
