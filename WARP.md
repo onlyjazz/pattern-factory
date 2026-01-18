@@ -17,11 +17,15 @@ The application extracts patterns and antipatterns from podcast transcripts and 
 ### Backend Structure
 
 **FastAPI API** (`backend/services/api.py`):
-- RESTful endpoints for CRUD operations on patterns, episodes, guests, orgs, posts
+- RESTful endpoints for CRUD operations on patterns, episodes, guests, orgs, posts, models, threats, assets, vulnerabilities, countermeasures
 - WebSocket endpoint at `/ws` for real-time agent communication
 - Async Postgres connection pooling (asyncpg)
 - Generic table query endpoint `/query/{table}`
 - System logging via `system_log` table
+- Mode system endpoints:
+  - `POST /models/{model_id}/activate`: Set active model for current user
+  - `GET /active-model`: Retrieve active model for current user
+  - Filtered views (`vthreats`, `vvulnerabilities`, `vcountermeasures`, `vassets`) that scope queries to active model
 
 **Pitboss Supervisor** (`backend/pitboss/`):
 - Orchestrates natural-language rule execution pipeline
@@ -45,11 +49,20 @@ The application extracts patterns and antipatterns from podcast transcripts and 
 - Settings and help pages
 
 **Components** (`src/lib/`):
-- `Header.svelte`: Navigation and branding
-- `Sidebar.svelte`: Left navigation for pattern views
+- `Header.svelte`: Navigation, branding, and mode selector
+- `Sidebar.svelte`: Mode-aware left navigation (Explore or Model mode)
+- `modeStore.ts`: Svelte store for managing mode ('explore' | 'model') and activeModel state with localStorage persistence
 - `DataTable.svelte`: Reusable table component using datatables.net
 - `ResultsTables.svelte`: Multi-table results display
 - `db.ts`: Database/API client utilities
+
+**Mode System**:
+- Two distinct workflows: Explore (patterns, cards, paths) and Model (models, threats, assets, vulnerabilities, countermeasures)
+- Mode selector in header with underline active state (no background pills)
+- Active model persisted in backend `public.active_models` table and restored on mode switch
+- Context narration in header shows current mode or active model name
+- Sidebar links automatically reflect current mode
+- Active model row highlighted with pale green background in models table
 
 ### Data Model
 **Pattern Factory YAML**
@@ -61,6 +74,10 @@ The application extracts patterns and antipatterns from podcast transcripts and 
 - `pattern_*_link`: Junction tables for many-to-many relationships
 - `views_registry`: Materialized view metadata
 - `system_log`: Event logging for auditing
+- `users`: User account definitions
+- `public.active_models`: User's active model mapping (one model per user)
+- `threat.models`: Threat models for Model mode
+- `threat.threats`, `threat.assets`, `threat.vulnerabilities`, `threat.countermeasures`: Model mode entities
 
 **Derived Views** (created from rules):
 - `pattern_episodes`, `pattern_guests`, `pattern_orgs`, `pattern_posts`: Pre-joined views
@@ -252,6 +269,20 @@ Plus tool-specific fields (e.g., `sql`, `table_name`, `row_count`).
 ### Creating a New Rule
 
 Users add rules via the web UI; for static definitions, edit `RULES` section in `pattern-factory.yaml`.
+
+### Understanding the Mode System
+
+The application supports two modes:
+- **Explore Mode**: Browse and manage patterns, paths, and cards. Left sidebar shows navigation for these entities.
+- **Model Mode**: Manage threat models and their entities (threats, assets, vulnerabilities, countermeasures). Left sidebar shows navigation for these entities.
+
+Mode state is managed by `modeStore` (`src/lib/modeStore.ts`) and persisted to localStorage. The active model is stored in `public.active_models` backend table for persistence across sessions. When switching to Model mode, the frontend fetches the active model from the backend via `GET /active-model` endpoint and restores it.
+
+Key components:
+- Mode selector in header (`Explore` | `Model`) with underline on active state
+- Header context narration shows "Explore mode" or "Model: {name}"
+- Sidebar links reflect current mode
+- Active model highlighted with pale green background in models table
 
 ### Debugging Pitboss
 
