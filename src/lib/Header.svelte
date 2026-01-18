@@ -38,9 +38,9 @@
 				Model
 			</button>
 			{#if $modeStore.mode === 'explore'}
-				<span class="mode-context">Now in Explore mode</span>
+				<span class="mode-context">Explore mode</span>
 			{:else if $modeStore.activeModelName}
-				<span class="model-name">Model: {$modeStore.activeModelName}</span>
+				<span class="model-name">{$modeStore.activeModelName}</span>
 			{/if}
 		</div>
 	</div>
@@ -189,15 +189,19 @@
 
 	.mode-context {
 		font-size: 0.875rem;
-		color: white;
+		color: #263238;
 		font-weight: 400;
 		white-space: nowrap;
+		display: flex;
+		align-items: center;
 	}
 
 	.model-name {
 		font-size: 0.875rem;
-		color: white;
+		color: #263238;
 		font-weight: 400;
 		white-space: nowrap;
+		display: flex;
+		align-items: center;
 	}
 </style>
