@@ -20,29 +20,29 @@
 	<div class="header-content">
 		<div class="logo"></div>
 		<span class="heading_4">Pattern Factory</span>
-		<div class="mode-selector">
-			<button
-				class="mode-button"
-				class:mode-button_active={$modeStore.mode === 'explore'}
-				on:click={() => switchMode('explore')}
-				title="Switch to Explore mode"
-			>
-				Explore
-			</button>
-			<button
-				class="mode-button"
-				class:mode-button_active={$modeStore.mode === 'model'}
-				on:click={() => switchMode('model')}
-				title="Switch to Model mode"
-			>
-				Model
-			</button>
-			{#if $modeStore.mode === 'explore'}
-				<span class="mode-context">Explore mode</span>
-			{:else if $modeStore.activeModelName}
-				<span class="model-name">{$modeStore.activeModelName}</span>
-			{/if}
-		</div>
+	</div>
+	<div class="mode-selector">
+		<button
+			class="mode-button"
+			class:mode-button_active={$modeStore.mode === 'explore'}
+			on:click={() => switchMode('explore')}
+			title="Switch to Explore mode"
+		>
+			Explore
+		</button>
+		<button
+			class="mode-button"
+			class:mode-button_active={$modeStore.mode === 'model'}
+			on:click={() => switchMode('model')}
+			title="Switch to Model mode"
+		>
+			Model
+		</button>
+		{#if $modeStore.mode === 'explore'}
+			<span class="mode-context">Explore mode</span>
+		{:else if $modeStore.activeModelName}
+			<span class="model-name">{$modeStore.activeModelName}</span>
+		{/if}
 	</div>
 	<div class="header-controls">
 		<button
@@ -155,7 +155,7 @@
 		display: flex;
 		align-items: center;
 		gap: 1.5rem;
-		margin-left: 1rem;
+		padding-left: 1rem;
 	}
 
 	.mode-button {
@@ -193,9 +193,6 @@
 		color: #263238;
 		font-weight: 400;
 		white-space: nowrap;
-		display: flex;
-		align-items: center;
-		margin-top: -4px;
 	}
 
 	.model-name {
@@ -203,8 +200,5 @@
 		color: #263238;
 		font-weight: 400;
 		white-space: nowrap;
-		display: flex;
-		align-items: center;
-		margin-top: -4px;
 	}
 </style>
