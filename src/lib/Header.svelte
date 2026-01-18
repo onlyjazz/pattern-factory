@@ -169,7 +169,9 @@
 		font-weight: 500;
 		transition: color 0.2s ease, border-bottom 0.2s ease;
 		border-bottom: 2px solid transparent;
-		padding-bottom: 0.25rem;
+		line-height: 1;
+		display: flex;
+		align-items: center;
 	}
 
 	.mode-button:hover {
