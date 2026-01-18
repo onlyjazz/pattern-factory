@@ -194,6 +194,7 @@
 		white-space: nowrap;
 		display: flex;
 		align-items: center;
+		margin-top: -2px;
 	}
 
 	.model-name {
@@ -203,5 +204,6 @@
 		white-space: nowrap;
 		display: flex;
 		align-items: center;
+		margin-top: -2px;
 	}
 </style>
