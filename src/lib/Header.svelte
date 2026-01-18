@@ -84,7 +84,8 @@
 		align-items: center;
 		gap: 1rem;
 		padding-left: 1rem;
-		width: 213px;
+		width: auto;
+		white-space: nowrap;
 	}
 
 	.logo {
