@@ -14,7 +14,7 @@
 	let cardSearchQuery = '';
 	let filteredCards: Card[] = [];
 	let showCardDropdown = false;
-	let selectedCardIds: Set<string> = new Set();
+	let selectedCardId: string | null = null;
 	
 	const apiBase = 'http://localhost:8000';
 	
@@ -34,8 +34,8 @@
 			if (!cardsResponse.ok) throw new Error('Failed to fetch cards');
 			allCards = await cardsResponse.json();
 			
-			if (threat && threat.cards) {
-				selectedCardIds = new Set(threat.cards.map(c => String(c.id)));
+			if (threat && threat.card_id) {
+				selectedCardId = String(threat.card_id);
 			}
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Unknown error';
@@ -46,14 +46,14 @@
 	
 	function startEdit() {
 		editThreat = { ...threat };
-		selectedCardIds = new Set((threat?.cards || []).map(c => String(c.id)));
+		selectedCardId = threat?.card_id ? String(threat.card_id) : null;
 		isEditing = true;
 	}
 	
 	function cancelEdit() {
 		isEditing = false;
 		editThreat = {};
-		selectedCardIds = new Set();
+		selectedCardId = null;
 		cardSearchQuery = '';
 		filteredCards = [];
 		saveError = null;
@@ -91,10 +91,10 @@
 					information_disclosure: editThreat.information_disclosure,
 					denial_of_service: editThreat.denial_of_service,
 					elevation_of_privilege: editThreat.elevation_of_privilege,
-					disabled: editThreat.disabled,
-					card_ids: Array.from(selectedCardIds)
-				})
-			});
+				disabled: editThreat.disabled,
+				card_id: selectedCardId || null
+			})
+		});
 		if (!response.ok) throw new Error('Failed to save threat');
 		const updated = await response.json();
 		// Reload page to refresh all state
@@ -178,16 +178,12 @@
 								</div>
 							</div>
 							
-							{#if threat.cards && threat.cards.length > 0}
+							{#if threat.card}
 								<div class="detail-section">
-									<h3>Related Cards ({threat.cards.length})</h3>
-									<div class="cards-list">
-										{#each threat.cards as card}
-											<div class="card-item">
-												<div class="card-name">{card.name}</div>
-												<div class="card-description">{card.description}</div>
-											</div>
-										{/each}
+									<h3>Related Card</h3>
+									<div class="card-item">
+										<div class="card-name">{threat.card.name}</div>
+										<div class="card-description">{threat.card.description}</div>
 									</div>
 								</div>
 							{/if}

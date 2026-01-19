@@ -26,7 +26,8 @@
 		denial_of_service: false,
 		elevation_of_privilege: false,
 		disabled: false,
-		model_id: 1
+		model_id: 1,
+		card_id: null
 	};
 	
 	let sortField: keyof Threat | null = null;
@@ -35,8 +36,14 @@
 	// Card search/autocomplete
 	let cardSearchQuery = '';
 	let cardSearchResults: Card[] = [];
-	let selectedCardIds: Set<number> = new Set();
+	let selectedCardId: string | null = null;
 	let showCardDropdown = false;
+	
+	// Edit mode card selection
+	let editCardSearchQuery = '';
+	let editCardSearchResults: Card[] = [];
+	let editSelectedCardId: string | null = null;
+	let editShowCardDropdown = false;
 	
 	const apiBase = 'http://localhost:8000';
 	
@@ -124,19 +131,9 @@
 	
 	function toggleCard(card: Card, isEdit: boolean = false) {
 		if (isEdit) {
-			if (editSelectedCardIds.has(card.id as any)) {
-				editSelectedCardIds.delete(card.id as any);
-			} else {
-				editSelectedCardIds.add(card.id as any);
-			}
-			editSelectedCardIds = editSelectedCardIds;
+			editSelectedCardId = editSelectedCardId === String(card.id) ? null : String(card.id);
 		} else {
-			if (selectedCardIds.has(card.id as any)) {
-				selectedCardIds.delete(card.id as any);
-			} else {
-				selectedCardIds.add(card.id as any);
-			}
-			selectedCardIds = selectedCardIds;
+			selectedCardId = selectedCardId === String(card.id) ? null : String(card.id);
 		}
 	}
 	
@@ -148,16 +145,20 @@
 			description: '',
 			scenario: '',
 			probability: 0,
-					damage_description: '',
-					spoofing: false,
-					tampering: false,
-					repudiation: false,
-					information_disclosure: false,
-					denial_of_service: false,
-					elevation_of_privilege: false,
-					disabled: false,
-			model_id: 1
+			damage_description: '',
+			spoofing: false,
+			tampering: false,
+			repudiation: false,
+			information_disclosure: false,
+			denial_of_service: false,
+			elevation_of_privilege: false,
+			disabled: false,
+			model_id: 1,
+			card_id: null
 		};
+		selectedCardId = null;
+		cardSearchQuery = '';
+		cardSearchResults = [];
 		addModalError = null;
 	}
 	
@@ -172,28 +173,29 @@
 				addModalError = 'Please fill in all required fields';
 				return;
 			}
-			const response = await fetch(`${apiBase}/threats`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					name: newThreat.name,
-					description: newThreat.description,
-					scenario: newThreat.scenario || null,
-					probability: newThreat.probability || null,
-					damage_description: newThreat.damage_description || null,
-					spoofing: newThreat.spoofing || false,
-					tampering: newThreat.tampering || false,
-					repudiation: newThreat.repudiation || false,
-					information_disclosure: newThreat.information_disclosure || false,
-					denial_of_service: newThreat.denial_of_service || false,
-					elevation_of_privilege: newThreat.elevation_of_privilege || false,
-				disabled: newThreat.disabled || false,
-				model_id: newThreat.model_id || 1,
-				})
-			});
-			if (!response.ok) throw new Error('Failed to create threat');
-			const created = await response.json();
-			threats = [...threats, { ...created, id: String(created.id), cards: [] }];
+		const response = await fetch(`${apiBase}/threats`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				name: newThreat.name,
+				description: newThreat.description,
+				scenario: newThreat.scenario || null,
+				probability: newThreat.probability || null,
+				damage_description: newThreat.damage_description || null,
+				spoofing: newThreat.spoofing || false,
+				tampering: newThreat.tampering || false,
+				repudiation: newThreat.repudiation || false,
+				information_disclosure: newThreat.information_disclosure || false,
+				denial_of_service: newThreat.denial_of_service || false,
+				elevation_of_privilege: newThreat.elevation_of_privilege || false,
+			disabled: newThreat.disabled || false,
+			model_id: newThreat.model_id || 1,
+			card_id: selectedCardId || null
+			})
+		});
+		if (!response.ok) throw new Error('Failed to create threat');
+		const created = await response.json();
+		threats = [...threats, { ...created, id: String(created.id) }];
 			filterThreats();
 			closeAddModal();
 		} catch (e) {
@@ -220,13 +222,13 @@
 					denial_of_service: updatedThreat.denial_of_service,
 					elevation_of_privilege: updatedThreat.elevation_of_privilege,
 					mitigation_level: updatedThreat.mitigation_level,
-					disabled: updatedThreat.disabled,
-					card_ids: Array.from(editSelectedCardIds)
-				})
+				disabled: updatedThreat.disabled,
+				card_id: editSelectedCardId || null
+			})
 			});
 			if (!response.ok) throw new Error('Failed to update threat');
-			const updated = await response.json();
-			threats = threats.map(t => t.id === String(updated.id) ? { ...updated, id: String(updated.id), cards: updatedThreat.cards || [] } : t);
+		const updated = await response.json();
+		threats = threats.map(t => t.id === String(updated.id) ? { ...updated, id: String(updated.id) } : t);
 			filterThreats();
 			closeEditModal();
 		} catch (e) {
