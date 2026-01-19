@@ -342,58 +342,41 @@
 										{#if showCardDropdown && filteredCards.length > 0}
 											<div class="card-dropdown">
 												{#each filteredCards as card}
-													<div class="card-option">
-														<label class="checkbox-label" style="margin: 0;">
-															<input
-																type="checkbox"
-																checked={selectedCardIds.has(card.id as any)}
-																onchange={(e) => {
-																	if (e.target.checked) {
-																		selectedCardIds.add(card.id as any);
-																	} else {
-																		selectedCardIds.delete(card.id as any);
-																	}
-																	selectedCardIds = selectedCardIds;
-																}}
-																onkeydown={(e) => {
-																	if (e.key === 'Enter') {
-																		e.preventDefault();
-																		showCardDropdown = false;
-																		cardSearchQuery = '';
-																		filteredCards = [];
-																	}
-																}}
-															/>
-															<div class="card-name">{card.name}</div>
-														</label>
+													<div 
+														class="card-option"
+														class:selected={selectedCardId === String(card.id)}
+														onclick={() => {
+															selectedCardId = selectedCardId === String(card.id) ? null : String(card.id);
+															showCardDropdown = false;
+															cardSearchQuery = '';
+															filteredCards = [];
+														}}
+													>
+														<div class="card-name">{card.name}</div>
 														<div class="card-description">{card.description}</div>
 													</div>
 												{/each}
 											</div>
 										{/if}
 										
-										{#if selectedCardIds.size > 0}
-											<div class="selected-cards">
-												<h4>Selected Cards ({selectedCardIds.size})</h4>
-												{#each Array.from(selectedCardIds) as cardId}
-													{@const card = allCards.find(c => c.id === String(cardId))}
-													{#if card}
+										{#if selectedCardId}
+											{#each [selectedCardId] as cardId}
+												{@const card = allCards.find(c => c.id === cardId)}
+												{#if card}
+													<div class="selected-card-display">
 														<div class="selected-card">
-															{card.name}
+															<div class="card-name">{card.name}</div>
 															<button 
 																type="button"
 																class="remove-card"
-																onclick={() => {
-																	selectedCardIds.delete(cardId);
-																	selectedCardIds = selectedCardIds;
-																}}
+																onclick={() => selectedCardId = null}
 															>
 																×
 															</button>
 														</div>
-													{/if}
-												{/each}
-											</div>
+													</div>
+												{/if}
+											{/each}
 										{/if}
 									</div>
 								</div>
