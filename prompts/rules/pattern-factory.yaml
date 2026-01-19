@@ -123,11 +123,10 @@ DATA:
           - created_at
           - updated_at
 
-
     threat:
       tables:
 
-        projects:
+        models:
           - id
           - name
           - version
@@ -139,7 +138,7 @@ DATA:
  
         areas:
           - id
-          - project_id
+          - model_id
           - name
           - description
           - use_for_threats
@@ -149,7 +148,7 @@ DATA:
 
         assets:
           - id
-          - project_id
+          - model_id
           - name
           - description
           - fixed_value
@@ -161,7 +160,7 @@ DATA:
 
         threats:
           - id
-          - project_id
+          - model_id
           - name
           - description
           - probability
@@ -177,14 +176,14 @@ DATA:
 
         vulnerabilities:
           - id
-          - project_id
+          - model_id
           - name
           - description
           - disabled
 
         countermeasures:
           - id
-          - project_id
+          - model_id
           - name
           - description
           - fixed_implementation_cost
@@ -198,18 +197,19 @@ DATA:
 
         entrypoints:
           - id
-          - project_id
+          - model_id
           - name
           - description
 
         attacker_types:
           - id
+          - model_id
           - name
           - description
           - tools_available
 
-        project_threats:
-          - project_id   references threat.projects(id)
+        model_threats:
+          - model_id   references threat.models(id)
           - threat_id    references threat.threats(id)
 
         threat_cards:
@@ -220,62 +220,53 @@ DATA:
           - updated_at
 
         area_asset:
-          - project_id  
+          - model_id  
           - area_id
           - asset_id
 
         area_threat:
-          - project_id
+          - model_id
           - area_id
           - threat_id
 
         area_vulnerability:
-          - project_id
+          - model_id
           - area_id
           - vulnerability_id
 
         area_countermeasure:
-          - project_id
+          - model_id
           - area_id
           - countermeasure_id
 
         asset_threat:
-          - project_id
+          - model_id
           - asset_id
           - threat_id
           - damage
 
         vulnerability_threat:
-          - project_id
+          - model_id
           - vulnerability_id
           - threat_id
 
         countermeasure_threat:
-          - project_id
+          - model_id
           - countermeasure_id
           - threat_id
           - mitigation_level
           - included_in_mitigation
 
-        attacker_threat:
-          - project_id
-          - attacker_type_id
-          - threat_id
+        attacker_types:
+          - id
+          - name
+          - description
+          - tools_available
 
         entrypoint_threat:
-          - project_id
+          - model_id
           - entrypoint_id
           - threat_id
-
-        additional_documentation:
-          - id
-          - document_file
-          - document_title
-          - description
-
-        threat_documentation:
-          - threat_id
-          - document_id
 
         parameters:
           - id
@@ -365,10 +356,10 @@ RULES:
      show name, stage, and the number of years from date_founded to date_funded for all orgs
      
   - rule_code: WCRT
-    name: "What Cards are used by threats?"
-    description: "What cards and threats in the Laas project"
+    name: "Cards in Baseline"
+    description: "What threats are in the Baseline model"
     logic: |
-      list threat name, card name and threat probability in the 'Laas' project
+      list threat name, threat probability in the 'Baseline' model
 
 CAPO:
   - rule_code: CAPO
