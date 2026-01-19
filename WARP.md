@@ -25,6 +25,7 @@ The application extracts patterns and antipatterns from podcast transcripts and 
 - Mode system endpoints:
   - `POST /models/{model_id}/activate`: Set active model for current user
   - `GET /active-model`: Retrieve active model for current user
+  - `GET /views?mode=explore|model`: Get views filtered by mode
   - Filtered views (`vthreats`, `vvulnerabilities`, `vcountermeasures`, `vassets`) that scope queries to active model
 
 **Pitboss Supervisor** (`backend/pitboss/`):
@@ -283,6 +284,22 @@ Key components:
 - Header context narration shows "Explore mode" or "Model: {name}"
 - Sidebar links reflect current mode
 - Active model highlighted with pale green background in models table
+
+### Mode-Aware Views in Sidebar
+
+The sidebar's Views section is filtered by the current application mode. Each view in `public.views_registry` has a `mode` column (default: 'explore') that determines visibility.
+
+**Backend**: `GET /views?mode=explore|model` endpoint filters views_registry by mode.
+
+**Frontend**: Sidebar subscribes to `modeStore` and automatically fetches the appropriate views when mode changes.
+
+**Database**: `public.views_registry` table includes:
+- `mode`: TEXT default 'explore' - Controls which mode(s) show this view
+- Views with mode='explore' appear only in Explore mode
+- Views with mode='model' appear only in Model mode
+- New views default to 'explore' if mode is not specified
+
+**Usage**: When creating new views via the Pitboss rule system, set the `mode` column appropriately. For materialized views that should only appear in Model mode, update the views_registry entry after creation.
 
 ### Debugging Pitboss
 
