@@ -17,7 +17,8 @@ export interface Threat {
     mitigation_level: number;
     disabled: boolean;
     model_id: number;
-    cards?: Card[];
+    card_id?: string | null;
+    card?: Card | null;
     created_at?: string;
     updated_at?: string;
 }

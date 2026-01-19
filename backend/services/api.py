@@ -594,7 +594,7 @@ class ThreatCreate(BaseModel):
     mitigation_level: int = 0
     disabled: bool = False
     model_id: int = 1
-    card_ids: list[str] | None = None
+    card_id: str | None = None
 
 class ThreatUpdate(BaseModel):
     name: str | None = None
@@ -610,7 +610,7 @@ class ThreatUpdate(BaseModel):
     elevation_of_privilege: bool | None = None
     mitigation_level: int | None = None
     disabled: bool | None = None
-    card_ids: list[str] | None = None
+    card_id: str | None = None
 
 @app.get("/threats", tags=["Threats"])
 async def get_threats():
@@ -629,7 +629,7 @@ async def get_threats():
 
 @app.post("/threats", tags=["Threats"])
 async def create_threat(threat: ThreatCreate):
-    """Create a new threat and associate cards."""
+    """Create a new threat with optional card association."""
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
@@ -637,12 +637,12 @@ async def create_threat(threat: ThreatCreate):
             INSERT INTO threat.threats 
             (name, description, scenario, probability, damage_description,
              spoofing, tampering, repudiation, information_disclosure,
-             denial_of_service, elevation_of_privilege, mitigation_level, disabled, model_id)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+             denial_of_service, elevation_of_privilege, mitigation_level, disabled, model_id, card_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
             RETURNING id, name, description, scenario, probability, damage_description,
                       spoofing, tampering, repudiation, information_disclosure,
                       denial_of_service, elevation_of_privilege, mitigation_level,
-                      disabled, model_id, created_at, updated_at
+                      disabled, model_id, card_id, created_at, updated_at
             """,
             threat.name,
             threat.description,
@@ -657,16 +657,9 @@ async def create_threat(threat: ThreatCreate):
             threat.elevation_of_privilege,
             threat.mitigation_level,
             threat.disabled,
-            threat.model_id
+            threat.model_id,
+            threat.card_id
         )
-        threat_id = row['id']
-        
-        if threat.card_ids:
-            for card_id in threat.card_ids:
-                await conn.execute(
-                    "INSERT INTO threat.threat_cards (threat_id, card_id) VALUES ($1, $2)",
-                    threat_id, card_id
-                )
         
         return dict(row)
 
@@ -687,7 +680,7 @@ async def search_threats(q: str = Query("")):
 
 @app.get("/threats/{threat_id}", tags=["Threats"])
 async def get_threat(threat_id: int):
-    """Get a single threat with associated cards."""
+    """Get a single threat with optional card details."""
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
@@ -695,7 +688,7 @@ async def get_threat(threat_id: int):
             SELECT id, name, description, scenario, probability, damage_description,
                    spoofing, tampering, repudiation, information_disclosure,
                    denial_of_service, elevation_of_privilege, mitigation_level,
-                   disabled, model_id, created_at, updated_at
+                   disabled, model_id, card_id, created_at, updated_at
             FROM threat.threats
             WHERE id = $1
             """,
@@ -706,17 +699,18 @@ async def get_threat(threat_id: int):
         
         threat_dict = dict(row)
         
-        card_rows = await conn.fetch(
-            """
-            SELECT c.id, c.name, c.description, c.markdown, c.order_index,
-                   c.domain, c.audience, c.maturity, c.pattern_id
-            FROM public.cards c
-            JOIN threat.threat_cards tc ON c.id = tc.card_id
-            WHERE tc.threat_id = $1
-            """,
-            threat_id
-        )
-        threat_dict['cards'] = [dict(r) for r in card_rows]
+        # Fetch card details if card_id is present
+        if threat_dict.get('card_id'):
+            card_row = await conn.fetchrow(
+                """
+                SELECT id, name, description, markdown, order_index,
+                       domain, audience, maturity, pattern_id
+                FROM public.cards
+                WHERE id = $1
+                """,
+                threat_dict['card_id']
+            )
+            threat_dict['card'] = dict(card_row) if card_row else None
         
         return threat_dict
 
@@ -781,6 +775,10 @@ async def update_threat(threat_id: int, patch: ThreatUpdate):
             updates.append(f"disabled = ${param_count}")
             params.append(patch.disabled)
             param_count += 1
+        if patch.card_id is not None:
+            updates.append(f"card_id = ${param_count}")
+            params.append(patch.card_id)
+            param_count += 1
         
         # Always update timestamp
         updates.append(f"updated_at = CURRENT_TIMESTAMP")
@@ -793,7 +791,7 @@ async def update_threat(threat_id: int, patch: ThreatUpdate):
                    RETURNING id, name, description, scenario, probability, damage_description,
                              spoofing, tampering, repudiation, information_disclosure,
                              denial_of_service, elevation_of_privilege, mitigation_level,
-                             disabled, model_id, created_at, updated_at"""
+                             disabled, model_id, card_id, created_at, updated_at"""
         row = await conn.fetchrow(query, *params)
         
         if not row:
@@ -801,19 +799,11 @@ async def update_threat(threat_id: int, patch: ThreatUpdate):
         
         threat_dict = dict(row)
         
-        if patch.card_ids is not None:
-            await conn.execute("DELETE FROM threat.threat_cards WHERE threat_id = $1", threat_id)
-            for card_id in patch.card_ids:
-                await conn.execute(
-                    "INSERT INTO threat.threat_cards (threat_id, card_id) VALUES ($1, $2)",
-                    threat_id, card_id
-                )
-        
         return threat_dict
 
 @app.delete("/threats/{threat_id}", tags=["Threats"])
 async def delete_threat(threat_id: int):
-    """Delete a threat (cascade deletes threat_cards)."""
+    """Delete a threat."""
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         result = await conn.execute(
@@ -822,49 +812,6 @@ async def delete_threat(threat_id: int):
         if result == "DELETE 0":
             raise HTTPException(status_code=404, detail="Threat not found")
     return {"status": "ok", "deleted_id": threat_id}
-
-@app.get("/threats/{threat_id}/cards", tags=["Threats"])
-async def get_threat_cards(threat_id: int):
-    """Get all cards associated with a threat."""
-    pool = get_pg_pool()
-    async with pool.acquire() as conn:
-        rows = await conn.fetch("""
-            SELECT c.id, c.name, c.description, c.markdown, c.order_index,
-                   c.domain, c.audience, c.maturity, c.pattern_id
-            FROM public.cards c
-            JOIN threat.threat_cards tc ON c.id = tc.card_id
-            WHERE tc.threat_id = $1
-        """, threat_id)
-    return [dict(r) for r in rows]
-
-@app.post("/threats/{threat_id}/cards/{card_id}", tags=["Threats"])
-async def add_card_to_threat(threat_id: int, card_id: int):
-    """Add a card to a threat."""
-    pool = get_pg_pool()
-    async with pool.acquire() as conn:
-        existing = await conn.fetchval(
-            "SELECT id FROM threat.threat_cards WHERE threat_id = $1 AND card_id = $2",
-            threat_id, card_id
-        )
-        if existing:
-            return {"status": "already_associated"}
-        
-        await conn.execute(
-            "INSERT INTO threat.threat_cards (threat_id, card_id) VALUES ($1, $2)",
-            threat_id, card_id
-        )
-    return {"status": "ok", "threat_id": threat_id, "card_id": card_id}
-
-@app.delete("/threats/{threat_id}/cards/{card_id}", tags=["Threats"])
-async def remove_card_from_threat(threat_id: int, card_id: int):
-    """Remove a card from a threat."""
-    pool = get_pg_pool()
-    async with pool.acquire() as conn:
-        result = await conn.execute(
-            "DELETE FROM threat.threat_cards WHERE threat_id = $1 AND card_id = $2",
-            threat_id, card_id
-        )
-    return {"status": "ok", "deleted": result != "DELETE 0"}
 
 # =========================================================================
 # STUB: Current logged-in user (replace with session management)
