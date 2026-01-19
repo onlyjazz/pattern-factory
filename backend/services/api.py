@@ -1311,6 +1311,38 @@ async def delete_countermeasure(countermeasure_id: int):
     return {"status": "ok", "deleted_id": countermeasure_id}
 
 # -------------------------------------------------------------------------
+# GET /views  (Mode-aware view registry)
+# -------------------------------------------------------------------------
+@app.get("/views")
+async def get_views(mode: str = 'explore', limit: int = 200):
+    """
+    Get views filtered by mode.
+    
+    Parameters:
+        mode: 'explore' or 'model' (default: 'explore')
+        limit: Maximum number of views to return (default: 200)
+    
+    Returns list of views from views_registry where mode matches the requested mode.
+    """
+    if mode not in ['explore', 'model']:
+        raise HTTPException(status_code=400, detail="Invalid mode. Must be 'explore' or 'model'")
+    
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT id, name, table_name, mode, created_at, updated_at
+            FROM public.views_registry
+            WHERE mode = $1
+            ORDER BY created_at DESC
+            LIMIT $2
+            """,
+            mode,
+            limit
+        )
+    return [dict(r) for r in rows]
+
+# -------------------------------------------------------------------------
 # GET /query/{table}  (Universal table reader)
 # -------------------------------------------------------------------------
 @app.get("/query/{table}")

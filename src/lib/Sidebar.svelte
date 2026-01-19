@@ -8,6 +8,7 @@
 	let views: any[] = [];
 	let viewsLoading = false;
 	let viewsError = '';
+	let currentMode: string = 'explore';
 	const apiBase = 'http://localhost:8000';
 
 	const exploreLinks = [
@@ -31,24 +32,30 @@
 			currentPath = $page.url.pathname;
 		});
 
-		// Fetch views from views_registry
-		fetchViews();
+		// Subscribe to mode changes and fetch views
+		const unsubscribeMode = modeStore.subscribe(($mode) => {
+			currentMode = $mode.mode;
+			fetchViews(currentMode);
+		});
 
 		// Listen for refresh events from ChatInterface after a rule runs
-		const onRefresh = () => fetchViews();
+		const onRefresh = () => {
+			fetchViews(currentMode);
+		};
 		window.addEventListener('views:refresh', onRefresh);
 
 		return () => {
 			unsubscribe();
+			unsubscribeMode();
 			window.removeEventListener('views:refresh', onRefresh);
 		};
 	});
 
-	async function fetchViews() {
+	async function fetchViews(mode: string = 'explore') {
 		try {
 			viewsLoading = true;
 			viewsError = '';
-			const response = await fetch(`${apiBase}/query/views_registry`);
+			const response = await fetch(`${apiBase}/views?mode=${mode}`);
 			if (!response.ok) throw new Error('Failed to fetch views');
 			const data = await response.json();
 			views = data;
