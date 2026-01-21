@@ -55,10 +55,6 @@
 		window.location.href = `/cards/view/${card?.id}`;
 	}
 </script>
-			console.error('Failed to save story:', e);
-		}
-	}
-</script>
 
 <div id="application-content-area">
 	<div class="page-title">
