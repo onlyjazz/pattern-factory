@@ -67,7 +67,7 @@
 
 	function goToStoryEditor() {
 		if (pattern?.id) {
-			window.location.href = `/patterns/story/${pattern.id}`;
+			window.location.href = `/story/patterns/${pattern.id}`;
 		}
 	}
 </script>

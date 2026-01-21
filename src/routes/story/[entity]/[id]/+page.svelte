@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import type { Card } from '$lib/db';
 	import { marked } from 'marked';
 
-	let card: Card | null = null;
+	let entity: any = null;
 	let loading = true;
 	let error: string | null = null;
 	let saveError: string | null = null;
@@ -11,40 +10,42 @@
 
 	const apiBase = 'http://localhost:8000';
 
-	$: if ($page.params.id) {
-		loadCard($page.params.id);
+	$: if ($page.params.entity && $page.params.id) {
+		loadEntity($page.params.entity, $page.params.id);
 	}
 
-	async function loadCard(id: string) {
+	async function loadEntity(entityType: string, id: string) {
 		try {
 			loading = true;
 			error = null;
-			const response = await fetch(`${apiBase}/cards/${id}`);
-			if (!response.ok) throw new Error('Card not found');
+			const response = await fetch(`${apiBase}/${entityType}/${id}`);
+			if (!response.ok) throw new Error(`${entityType} not found`);
 			const data = await response.json();
-			card = { ...data, id: String(data.id) };
+			entity = { ...data, id: String(data.id), entityType };
 		} catch (e) {
-			error = e instanceof Error ? e.message : 'Failed to load card';
-			card = null;
+			error = e instanceof Error ? e.message : 'Failed to load entity';
+			entity = null;
 		} finally {
 			loading = false;
 		}
 	}
 
 	async function handleSave() {
-		if (!card) return;
+		if (!entity) return;
 		try {
 			isSaving = true;
 			saveError = null;
-			const response = await fetch(`${apiBase}/cards/${card.id}`, {
+			const response = await fetch(`${apiBase}/${entity.entityType}/${entity.id}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					markdown: card.markdown || null
+					story_md: entity.story_md,
+					markdown: entity.markdown
 				})
 			});
 			if (!response.ok) throw new Error('Failed to save story');
-			window.location.href = `/cards/story/${card.id}`;
+			// Navigate back to edit page
+			window.location.href = `/${entity.entityType}/${entity.id}/edit`;
 		} catch (e) {
 			saveError = e instanceof Error ? e.message : 'Failed to save story';
 			isSaving = false;
@@ -52,20 +53,21 @@
 	}
 
 	function handleCancel() {
-		window.location.href = `/cards/view/${card?.id}`;
+		// Navigate back to edit page
+		window.location.href = `/${entity?.entityType}/${entity?.id}/edit`;
 	}
 </script>
 
 <div id="application-content-area">
 	<div class="page-title">
-		<h1 class="heading heading_1">Edit Card Story</h1>
+		<h1 class="heading heading_1">Edit Story</h1>
 	</div>
 
 	{#if loading}
-		<div class="message">Loading card...</div>
+		<div class="message">Loading...</div>
 	{:else if error}
 		<div class="message message-error">Error: {error}</div>
-	{:else if card}
+	{:else if entity}
 		<div class="grid-row">
 			<div class="grid-col grid-col_24">
 				<div class="entity-card">
@@ -78,7 +80,7 @@
 							<label class="editor-label">Story (Markdown)</label>
 							<textarea
 								id="story-editor-textarea"
-								bind:value={card.markdown}
+								bind:value={entity.story_md || entity.markdown}
 								class="story-editor-textarea"
 								placeholder="Enter your story in Markdown format..."
 							></textarea>
@@ -86,7 +88,7 @@
 						<div class="story-editor-preview">
 							<label class="preview-label">Preview</label>
 							<div class="story-editor-preview-content">
-								{@html marked(card.markdown || '')}
+								{@html marked(entity.story_md || entity.markdown || '')}
 							</div>
 						</div>
 					</div>
@@ -113,7 +115,6 @@
 			</div>
 		</div>
 	{:else}
-		<div class="message">Card not found</div>
+		<div class="message">Not found</div>
 	{/if}
 </div>
-

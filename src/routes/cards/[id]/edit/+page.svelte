@@ -106,7 +106,7 @@
 
 	function goToMarkdownEditor() {
 		if (card?.id) {
-			window.location.href = `/cards/story/${card.id}`;
+			window.location.href = `/story/cards/${card.id}`;
 		}
 	}
 </script>
