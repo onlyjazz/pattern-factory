@@ -49,7 +49,9 @@
 	}
 
 	function handleCancel() {
-		window.history.back();
+		if (threat?.id) {
+			window.location.href = `/threats/${threat.id}`;
+		}
 	}
 </script>
 

@@ -49,7 +49,9 @@
 	}
 
 	function handleCancel() {
-		window.history.back();
+		if (countermeasure?.id) {
+			window.location.href = `/countermeasures/${countermeasure.id}`;
+		}
 	}
 </script>
 

@@ -49,7 +49,9 @@
 	}
 
 	function handleCancel() {
-		window.history.back();
+		if (vulnerability?.id) {
+			window.location.href = `/vulnerabilities/${vulnerability.id}`;
+		}
 	}
 </script>
 

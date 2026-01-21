@@ -49,7 +49,9 @@
 	}
 
 	function handleCancel() {
-		window.history.back();
+		if (asset?.id) {
+			window.location.href = `/assets/${asset.id}`;
+		}
 	}
 </script>
 

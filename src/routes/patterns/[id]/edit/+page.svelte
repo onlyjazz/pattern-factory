@@ -60,7 +60,9 @@
 	}
 
 	function handleCancel() {
-		window.history.back();
+		if (pattern?.id) {
+			window.location.href = `/patterns/${pattern.id}`;
+		}
 	}
 
 	function goToStoryEditor() {

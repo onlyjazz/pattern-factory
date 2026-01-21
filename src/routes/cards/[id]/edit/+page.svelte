@@ -99,7 +99,9 @@
 	}
 
 	function handleCancel() {
-		window.history.back();
+		if (card?.id) {
+			window.location.href = `/cards/view/${card.id}`;
+		}
 	}
 
 	function goToMarkdownEditor() {
