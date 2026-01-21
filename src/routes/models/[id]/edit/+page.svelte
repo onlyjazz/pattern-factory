@@ -1,19 +1,18 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { page } from '$app/stores';
 	import type { Model } from '$lib/db';
 	
 	let model: Partial<Model> = {};
 	let loading = true;
 	let error: string | null = null;
 	let saveError: string | null = null;
-	let modelId: number;
 	
 	const apiBase = 'http://localhost:8000';
 	
 	onMount(async () => {
-		// Get model ID from URL
-		const pathParts = window.location.pathname.split('/');
-		modelId = parseInt(pathParts[2], 10);
+		// Get model ID from route params
+		const modelId = $page.params.id;
 		
 		try {
 			const response = await fetch(`${apiBase}/models/${modelId}`);
@@ -33,6 +32,7 @@
 				saveError = 'Model name is required';
 				return;
 			}
+			const modelId = $page.params.id;
 			const response = await fetch(`${apiBase}/models/${modelId}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
@@ -151,13 +151,13 @@
 							</div>
 
 							<div class="input">
-								<textarea
-									id="description"
-									bind:value={model.description}
-									class="input__text"
-									class:input__text_changed={model.description && model.description.length > 0}
-									rows="6"
-								/>
+							<textarea
+								id="description"
+								bind:value={model.description}
+								class="input__text"
+								class:input__text_changed={model.description && model.description.length > 0}
+								rows="6"
+							></textarea>
 								<label for="description" class="input__label">Description</label>
 							</div>
 						</div>
