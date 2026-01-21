@@ -461,23 +461,6 @@
 
 
 <style>
-	:global(.button_small) {
-		background: none !important;
-		border: none !important;
-		padding: 4px 8px !important;
-		cursor: pointer !important;
-		font-size: 18px !important;
-		color: #666 !important;
-		vertical-align: top !important;
-		line-height: 1 !important;
-		box-shadow: none !important;
-	}
-
-	:global(.button_small:hover) {
-		color: #333 !important;
-		background: none !important;
-	}
-
 	:global(.threat-row) {
 		transition: background-color 0.2s ease;
 		cursor: pointer;
