@@ -2,18 +2,15 @@
         import { onMount } from 'svelte';
         import { globalSearch } from '$lib/searchStore';
         import type { Pattern } from "$lib/db";
-        import { marked } from 'marked';
         
         let patterns: Pattern[] = [];
         let selectedKind = '';
         let loading = true;
         let error: string | null = null;
+        let addModalError: string | null = null;
         
         let filteredPatterns: Pattern[] = [];
         let showAddModal = false;
-        let showEditModal = false;
-        let showStoryEditor = false;
-        let patternToEdit = {} as Pattern;
         let newPattern: Partial<Pattern> = { name: '', description: '', kind: 'pattern' };
         const kinds = ['', 'pattern', 'anti-pattern'];
         
@@ -72,25 +69,26 @@
         $: if ($globalSearch !== undefined) filterPatterns();
         $: if (selectedKind !== undefined) filterPatterns();
         
-        function handleEdit(pattern: Pattern) {
-                patternToEdit = { ...pattern };
-                showEditModal = true;
-        }
-        
-        function closeEditModal() {
-                showEditModal = false;
-                patternToEdit = {} as Pattern;
-        }
-        
         function closeAddModal() {
                 showAddModal = false;
                 newPattern = { name: '', description: '', kind: 'pattern' };
+                addModalError = null;
+        }
+        
+        function navigateToPattern(patternId: string | number) {
+                window.location.href = `/patterns/${patternId}`;
+        }
+        
+        function handleEditClick(e: any, patternId: string | number) {
+                e.stopPropagation();
+                window.location.href = `/patterns/${patternId}/edit`;
         }
         
         async function handleCreate() {
                 try {
+                        addModalError = null;
                         if (!newPattern.name || !newPattern.description || !newPattern.kind) {
-                                error = 'Please fill in all fields';
+                                addModalError = 'Please fill in all fields';
                                 return;
                         }
                         const response = await fetch(`${apiBase}/patterns`, {
@@ -107,40 +105,11 @@
                         patterns = [...patterns, { ...created, id: String(created.id) }];
                         filterPatterns();
                         closeAddModal();
+                        // Navigate to the new pattern's view page
+                        window.location.href = `/patterns/${created.id}`;
                 } catch (e) {
-                        error = e instanceof Error ? e.message : 'Failed to create pattern';
+                        addModalError = e instanceof Error ? e.message : 'Failed to create pattern';
                 }
-        }
-        
-        async function handleSave(updatedPattern: Pattern) {
-                try {
-                        const response = await fetch(`${apiBase}/patterns/${updatedPattern.id}`, {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                        name: updatedPattern.name,
-                                        description: updatedPattern.description,
-                                        kind: updatedPattern.kind,
-                                        story_md: updatedPattern.story_md || null,
-                                        taxonomy: updatedPattern.taxonomy || null
-                                })
-                        });
-                        if (!response.ok) throw new Error('Failed to update pattern');
-                        const updated = await response.json();
-                        patterns = patterns.map(p => p.id === String(updated.id) ? { ...updated, id: String(updated.id) } : p);
-                        filterPatterns();
-                        closeEditModal();
-                } catch (e) {
-                        error = e instanceof Error ? e.message : 'Failed to save pattern';
-                }
-        }
-        
-        function openStoryEditor() {
-                showStoryEditor = true;
-        }
-        
-        function closeStoryEditor() {
-                showStoryEditor = false;
         }
         
 </script>
@@ -202,14 +171,8 @@
 
                         <tbody>
                             {#each filteredPatterns as p (p.id)}
-                                <tr class="pattern-row" class:has-story={p.story_md}>
-                                    <td class="tal">
-                                        {#if p.story_md}
-                                            <a href="/patterns/story/{p.id}" class="pattern-link">{p.name}</a>
-                                        {:else}
-                                            {p.name}
-                                        {/if}
-                                    </td>
+                                <tr class="pattern-row" onclick={() => navigateToPattern(p.id)}>
+                                    <td class="tal">{p.name}</td>
                                     <td class="tal">{p.description}</td>
                                     <td class="tal">{p.kind}</td>
                                     <td class="tal">{p.taxonomy || '-'}</td>
@@ -217,10 +180,7 @@
                                     <td class="tar">
                                         <button
                                             class="button button_small"
-                                            onclick={(e) => {
-                                                e.stopPropagation();
-                                                handleEdit(p);
-                                            }}
+                                            onclick={(e) => handleEditClick(e, p.id)}
                                             title="Edit"
                                         >
                                             ✎
@@ -236,105 +196,6 @@
     </div>
 </div>
 </div> <!-- end application-content-area -->
-
-<!-- EDIT MODAL -->
-{#if showEditModal && Object.keys(patternToEdit).length > 0}
-    <div class="modal-overlay" onclick={closeEditModal}>
-        <div class="modal-content" role="dialog" aria-labelledby="edit-modal-title" onclick={(e) => e.stopPropagation()}>
-            <div class="modal-header">
-                <h2 id="edit-modal-title" class="heading heading_2">Edit Pattern</h2>
-                <button
-                    class="modal-close"
-                    onclick={closeEditModal}
-                    title="Close"
-                >
-                    ×
-                </button>
-            </div>
-
-            <div class="modal-body">
-                <form onsubmit={(e) => {
-                    e.preventDefault();
-                    handleSave(patternToEdit);
-                }}>
-                    <div class="input">
-                        <input
-                            id="edit-name"
-                            type="text"
-                            bind:value={patternToEdit.name}
-                            class="input__text"
-                            class:input__text_changed={patternToEdit.name?.length > 0}
-                            required
-                        />
-                        <label for="edit-name" class="input__label">Name</label>
-                    </div>
-
-                    <div class="input">
-                        <input
-                            id="edit-description"
-                            type="text"
-                            bind:value={patternToEdit.description}
-                            class="input__text"
-                            class:input__text_changed={patternToEdit.description?.length > 0}
-                            required
-                        />
-                        <label for="edit-description" class="input__label">Description</label>
-                    </div>
-
-                    <div class="input input_select">
-                        <select
-                            id="edit-kind"
-                            bind:value={patternToEdit.kind}
-                            class="input__text input__text_changed"
-                            required
-                        >
-                            <option value="pattern">Pattern</option>
-                            <option value="anti-pattern">Anti-Pattern</option>
-                        </select>
-                        <label for="edit-kind" class="input__label">Kind</label>
-                    </div>
-
-                    <div class="input input_select">
-                        <select
-                            id="edit-taxonomy"
-                            bind:value={patternToEdit.taxonomy}
-                            class="input__text"
-                            class:input__text_changed={patternToEdit.taxonomy}
-                        >
-                            <option value="">Select Taxonomy (Optional)</option>
-                            <option value="Category Anti-Pattern">Category Anti-Pattern</option>
-                            <option value="Regulatory / GTM Anti-Pattern">Regulatory / GTM Anti-Pattern</option>
-                            <option value="Founder / Financing Anti-Pattern">Founder / Financing Anti-Pattern</option>
-                            <option value="Demand Formation Anti-Pattern">Demand Formation Anti-Pattern</option>
-                            <option value="Decision & Cognitive Accelerator">Decision & Cognitive Accelerator</option>
-                        </select>
-                        <label for="edit-taxonomy" class="input__label">Taxonomy</label>
-                    </div>
-
-                    <div class="modal-footer">
-                        <button
-                            type="button"
-                            class="button button_secondary"
-                            onclick={closeEditModal}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="button"
-                            class="button button_secondary"
-                            onclick={openStoryEditor}
-                        >
-                            Edit Story
-                        </button>
-                        <button type="submit" class="button button_green">
-                            Save
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-{/if}
 
 <!-- ADD MODAL -->
 {#if showAddModal}
@@ -352,6 +213,9 @@
             </div>
 
             <div class="modal-body">
+                {#if addModalError}
+                    <div class="message message-error" style="margin-bottom: 20px;">Error: {addModalError}</div>
+                {/if}
                 <form onsubmit={(e) => {
                     e.preventDefault();
                     handleCreate();
@@ -382,19 +246,6 @@
                         <label for="add-description" class="input__label">Description</label>
                     </div>
 
-                    <div class="input input_select">
-                        <select
-                            id="add-kind"
-                            bind:value={newPattern.kind}
-                            class="input__text input__text_changed"
-                            required
-                        >
-                            <option value="pattern">Pattern</option>
-                            <option value="anti-pattern">Anti-Pattern</option>
-                        </select>
-                        <label for="add-kind" class="input__label">Kind</label>
-                    </div>
-
                     <div class="modal-footer">
                         <button
                             type="button"
@@ -404,7 +255,7 @@
                             Cancel
                         </button>
                         <button type="submit" class="button button_green">
-                            Create
+                            Save
                         </button>
                     </div>
                 </form>
@@ -413,138 +264,8 @@
     </div>
 {/if}
 
-<!-- STORY EDITOR MODAL -->
-{#if showStoryEditor && Object.keys(patternToEdit).length > 0}
-    <div class="modal-overlay" onclick={closeStoryEditor}>
-        <div class="story-editor-content" role="dialog" aria-labelledby="story-editor-title" onclick={(e) => e.stopPropagation()}>
-            <div class="modal-header">
-                <h2 id="story-editor-title" class="heading heading_2">Edit Story: {patternToEdit.name}</h2>
-                <button
-                    class="modal-close"
-                    onclick={closeStoryEditor}
-                    title="Close"
-                >
-                    ×
-                </button>
-            </div>
-
-            <div class="story-editor-body">
-                <div class="story-editor-editor">
-                    <textarea
-                        id="story-editor-textarea"
-                        bind:value={patternToEdit.story_md}
-                        class="story-editor-textarea"
-                        placeholder="Enter your story in Markdown format..."
-                    ></textarea>
-                </div>
-                <div class="story-editor-preview">
-                    <div class="preview-label">Preview</div>
-                    <div class="story-editor-preview-content">
-                        {@html marked(patternToEdit.story_md || '')}
-                    </div>
-                </div>
-            </div>
-
-            <div class="modal-footer">
-                <button
-                    type="button"
-                    class="button button_secondary"
-                    onclick={closeStoryEditor}
-                >
-                    Done
-                </button>
-            </div>
-        </div>
-    </div>
-{/if}
 
 <style>
-    :global(.button_small) {
-        background: none !important;
-        border: none !important;
-        padding: 4px 8px !important;
-        cursor: pointer !important;
-        font-size: 18px !important;
-        color: #666 !important;
-        vertical-align: top !important;
-        line-height: 1 !important;
-        box-shadow: none !important;
-        margin-right: 0.5rem;
-    }
-
-    :global(.button_small:hover) {
-        color: #333 !important;
-        background: none !important;
-    }
-
-    :global(.modal-overlay) {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-    }
-
-    :global(.modal-content) {
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        max-width: 500px;
-        width: 90%;
-        max-height: 80vh;
-        overflow-y: auto;
-    }
-
-    :global(.modal-header) {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 20px;
-        border-bottom: 1px solid #eee;
-    }
-
-    :global(.modal-close) {
-        background: none;
-        border: none;
-        font-size: 24px;
-        cursor: pointer;
-        color: #666;
-        padding: 0;
-        width: 30px;
-        height: 30px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    :global(.modal-close:hover) {
-        color: #333;
-    }
-
-    :global(.modal-body) {
-        padding: 20px;
-    }
-
-    :global(.modal-body form) {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-    }
-
-    :global(.modal-footer) {
-        display: flex;
-        gap: 10px;
-        justify-content: flex-end;
-        margin-top: 20px;
-        padding-top: 20px;
-        border-top: 1px solid #eee;
-    }
-
     .card-header {
         display: flex;
         justify-content: space-between;
@@ -577,139 +298,13 @@
         border-color: #adb5bd;
     }
 
-    :global(.story-editor-content) {
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        max-width: 1000px;
-        width: 90%;
-        max-height: 85vh;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-    }
-
-    :global(.story-editor-body) {
-        display: flex;
-        gap: 15px;
-        padding: 20px;
-        flex: 1;
-        min-height: 0;
-    }
-
-    :global(.story-editor-editor) {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        min-width: 0;
-    }
-
-    :global(.story-editor-textarea) {
-        flex: 1;
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-family: 'Monaco', 'Courier New', monospace;
-        font-size: 14px;
-        resize: none;
-        width: 100%;
-    }
-
-    :global(.story-editor-textarea:focus) {
-        outline: none;
-        border-color: #999;
-    }
-
-    :global(.story-editor-preview) {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        min-width: 0;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        background: #f9f9f9;
-    }
-
-    :global(.preview-label) {
-        padding: 8px 10px;
-        font-size: 12px;
-        font-weight: bold;
-        color: #666;
-        border-bottom: 1px solid #ddd;
-        background: #f0f0f0;
-    }
-
-    :global(.story-editor-preview-content) {
-        flex: 1;
-        overflow-y: auto;
-        padding: 10px;
-        font-size: 14px;
-        line-height: 1.5;
-    }
-
-    :global(.story-editor-preview-content h1) {
-        font-size: 24px;
-        font-weight: bold;
-        margin: 15px 0 10px 0;
-    }
-
-    :global(.story-editor-preview-content h2) {
-        font-size: 20px;
-        font-weight: bold;
-        margin: 12px 0 8px 0;
-    }
-
-    :global(.story-editor-preview-content h3) {
-        font-size: 16px;
-        font-weight: bold;
-        margin: 10px 0 6px 0;
-    }
-
-    :global(.story-editor-preview-content p) {
-        margin: 8px 0;
-    }
-
-    :global(.story-editor-preview-content ul),
-    :global(.story-editor-preview-content ol) {
-        margin: 8px 0 8px 20px;
-    }
-
-    :global(.story-editor-preview-content li) {
-        margin: 4px 0;
-    }
-
-    :global(.story-editor-preview-content code) {
-        background: #e0e0e0;
-        padding: 2px 6px;
-        border-radius: 3px;
-        font-family: 'Monaco', 'Courier New', monospace;
-        font-size: 12px;
-    }
-
-    :global(.story-editor-preview-content blockquote) {
-        border-left: 4px solid #ccc;
-        padding-left: 10px;
-        margin: 8px 0;
-        color: #666;
-        font-style: italic;
-    }
-
     :global(.pattern-row) {
         transition: background-color 0.2s ease;
-    }
-
-    :global(.pattern-row.has-story:hover) {
-        background-color: #f5f5f5;
-    }
-
-    :global(.pattern-link) {
-        color: #0066cc;
-        text-decoration: none;
         cursor: pointer;
     }
 
-    :global(.pattern-link:hover) {
-        text-decoration: underline;
+    :global(.pattern-row:hover) {
+        background-color: #f5f5f5;
     }
 
     th.sortable {
