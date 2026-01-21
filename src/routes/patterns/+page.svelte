@@ -170,9 +170,9 @@
                         </thead>
 
                         <tbody>
-                            {#each filteredPatterns as p (p.id)}
-                                <tr class="pattern-row" onclick={() => navigateToPattern(p.id)}>
-                                    <td class="tal">{p.name}</td>
+								{#each filteredPatterns as p (p.id)}
+								<tr class="pattern-row">
+									<td class="tal"><a href="/patterns/story/{p.id}" class="story-link">{p.name}</a></td>
                                     <td class="tal">{p.description}</td>
                                     <td class="tal">{p.kind}</td>
                                     <td class="tal">{p.taxonomy || '-'}</td>

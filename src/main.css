@@ -1087,6 +1087,17 @@ a.flask-link {
 	background-color: #f0fdf4;
 }
 
+/* Story link styling */
+.story-link {
+	color: #0066cc;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.story-link:hover {
+	text-decoration: underline;
+}
+
 
 /**/
 /* page */

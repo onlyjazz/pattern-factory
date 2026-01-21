@@ -15,6 +15,10 @@
 		loadCard($page.params.id);
 	}
 
+	$: if (card && !showStoryEditor) {
+		openStoryEditor();
+	}
+
 	async function loadCard(id: string) {
 		try {
 			loading = true;

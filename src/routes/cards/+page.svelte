@@ -218,8 +218,8 @@
 
 							<tbody>
 								{#each filteredCards as c (c.id)}
-									<tr class="card-row" onclick={() => navigateToCard(c.id)}>
-										<td class="tal">{c.name}</td>
+								<tr class="card-row">
+									<td class="tal"><a href="/cards/story/{c.id}" class="story-link">{c.name}</a></td>
 										<td class="tal">{c.pattern_name || '-'}</td>
 										<td class="tal">{c.order_index || '-'}</td>
 										<td class="tal">{c.domain || '-'}</td>

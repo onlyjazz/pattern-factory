@@ -160,16 +160,14 @@
 							>
 								Cancel
 							</button>
-							{#if pattern.story_md}
-								<button
-									type="button"
-									class="button button_secondary"
-									onclick={goToStoryEditor}
-									disabled={isSaving}
-								>
-									Edit Story
-								</button>
-							{/if}
+							<button
+								type="button"
+								class="button button_secondary"
+								onclick={goToStoryEditor}
+								disabled={isSaving}
+							>
+								Edit Story
+							</button>
 							<button type="submit" class="button button_green" disabled={isSaving}>
 								{isSaving ? 'Saving...' : 'Save'}
 							</button>
