@@ -33,7 +33,7 @@
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					markdown: card.markdown || null
+					story: card.story || null
 				})
 			});
 			if (!response.ok) throw new Error('Failed to save card');
@@ -89,7 +89,7 @@
 								</button>
 							</div>
 							<textarea
-								bind:value={card.markdown}
+								bind:value={card.story}
 								class="editor-textarea"
 								placeholder="Enter markdown content for this card..."
 							></textarea>
@@ -100,7 +100,7 @@
 								<span class="pane-title">Preview</span>
 							</div>
 							<div class="preview-content">
-								{@html marked(card.markdown || '')}
+								{@html marked(card.story || '')}
 							</div>
 						</div>
 					</div>

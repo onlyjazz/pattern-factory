@@ -23,7 +23,7 @@
 			if (!response.ok) throw new Error('Pattern not found');
 			const data = await response.json();
 			entity = { ...data, id: String(data.id) };
-			storyContent = entity.story_md || '';
+		storyContent = entity.story || '';
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load pattern';
 			entity = null;
@@ -41,7 +41,7 @@
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					story_md: storyContent
+					story: storyContent
 				})
 			});
 			if (!response.ok) throw new Error('Failed to save story');

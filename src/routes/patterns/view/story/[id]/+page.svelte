@@ -43,7 +43,7 @@
 			<div class="grid-col grid-col_24">
 				<div class="entity-card">
 					<div class="story-view-content">
-						{@html marked(entity.story_md || '')}
+					{@html marked(entity.story || '')}
 					</div>
 				</div>
 			</div>

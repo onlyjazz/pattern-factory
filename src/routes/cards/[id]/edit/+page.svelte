@@ -82,7 +82,7 @@
 					name: card.name,
 					description: card.description,
 					pattern_id: selectedPatternId,
-					markdown: card.markdown || null,
+					story: card.story || null,
 					order_index: card.order_index || 0,
 					domain: card.domain || null,
 					audience: card.audience || null,
@@ -243,16 +243,14 @@
 							>
 								Cancel
 							</button>
-							{#if card.markdown && card.markdown !== '#Pattern card'}
-								<button
-									type="button"
-									class="button button_secondary"
-									onclick={goToMarkdownEditor}
-									disabled={isSaving}
-								>
-									Edit Story
-								</button>
-							{/if}
+							<button
+								type="button"
+								class="button button_secondary"
+								onclick={goToStoryEditor}
+								disabled={isSaving}
+							>
+								Edit Story
+							</button>
 							<button type="submit" class="button button_green" disabled={isSaving}>
 								{isSaving ? 'Saving...' : 'Save'}
 							</button>

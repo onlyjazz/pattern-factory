@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import marked from 'marked';
+	import { marked } from 'marked';
 
 	interface Card {
 		id: string;
@@ -15,19 +15,21 @@
 	let saving = false;
 	let saveError: string | null = null;
 
+	const apiBase = 'http://localhost:8000';
+
 	export let data: any;
 
 	onMount(async () => {
 		try {
 			const id = data.id;
-			const response = await fetch(`/api/cards/${id}`);
+			const response = await fetch(`${apiBase}/cards/${id}`);
 
 			if (!response.ok) {
 				throw new Error(`Failed to load card: ${response.statusText}`);
 			}
 
 			card = await response.json();
-			storyContent = card.description || '';
+			storyContent = card.story || '';
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Unknown error';
 		} finally {
@@ -47,13 +49,13 @@
 		saveError = null;
 
 		try {
-			const response = await fetch(`/api/cards/${card.id}`, {
-				method: 'PATCH',
+			const response = await fetch(`${apiBase}/cards/${card.id}`, {
+				method: 'PUT',
 				headers: {
 					'Content-Type': 'application/json'
 				},
 				body: JSON.stringify({
-					description: storyContent
+					story: storyContent
 				})
 			});
 

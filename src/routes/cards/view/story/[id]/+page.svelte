@@ -1,23 +1,25 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import marked from 'marked';
+	import { marked } from 'marked';
 
-	interface Card {
-		id: string;
-		name: string;
-		description: string;
-	}
+		interface Card {
+			id: string;
+			name: string;
+			story: string;
+		}
 
 	let card: Card | null = null;
 	let loading = true;
 	let error: string | null = null;
+
+	const apiBase = 'http://localhost:8000';
 
 	export let data: any;
 
 	onMount(async () => {
 		try {
 			const id = data.id;
-			const response = await fetch(`/api/cards/${id}`);
+			const response = await fetch(`${apiBase}/cards/${id}`);
 
 			if (!response.ok) {
 				throw new Error(`Failed to load card: ${response.statusText}`);
@@ -46,7 +48,7 @@
 		<div class="story-view-content">
 			<h1>{card.name}</h1>
 			<div class="story-text">
-				{@html getRenderedMarkdown(card.description)}
+				{@html getRenderedMarkdown(card.story || '')}
 			</div>
 		</div>
 	{:else}

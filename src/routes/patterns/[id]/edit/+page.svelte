@@ -46,7 +46,7 @@
 					name: pattern.name,
 					description: pattern.description,
 					kind: pattern.kind,
-					story_md: pattern.story_md || null,
+					story: pattern.story || null,
 					taxonomy: pattern.taxonomy || null
 				})
 			});
