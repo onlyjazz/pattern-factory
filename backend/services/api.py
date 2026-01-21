@@ -143,7 +143,7 @@ async def get_patterns():
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
-            SELECT id, name, description, kind, story_md, taxonomy, created_at, updated_at
+            SELECT id, name, description, kind, story, taxonomy, created_at, updated_at
             FROM patterns
             ORDER BY created_at DESC
         """)
@@ -157,7 +157,7 @@ class PatternCreate(BaseModel):
     name: str
     description: str
     kind: str
-    story_md: str | None = None
+    story: str | None = None
     taxonomy: str | None = None
 
 # -------------------------------------------------------------------------
@@ -184,7 +184,7 @@ async def get_pattern(pattern_id: int):
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
             """
-            SELECT id, name, description, kind, story_md, taxonomy, created_at, updated_at
+            SELECT id, name, description, kind, story, taxonomy, created_at, updated_at
             FROM patterns
             WHERE id = $1
             """,
@@ -200,14 +200,14 @@ async def create_pattern(pattern: PatternCreate):
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
             """
-            INSERT INTO patterns (name, description, kind, story_md, taxonomy)
+            INSERT INTO patterns (name, description, kind, story, taxonomy)
             VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, name, description, kind, story_md, taxonomy, created_at, updated_at
+            RETURNING id, name, description, kind, story, taxonomy, created_at, updated_at
             """,
             pattern.name,
             pattern.description,
             pattern.kind,
-            pattern.story_md,
+            pattern.story,
             pattern.taxonomy
         )
         return dict(row)
@@ -216,7 +216,7 @@ class PatternUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
     kind: str | None = None
-    story_md: str | None = None
+    story: str | None = None
     taxonomy: str | None = None
 
 @app.put("/patterns/{pattern_id}", tags=["Patterns"])
@@ -230,16 +230,16 @@ async def update_pattern(pattern_id: int, patch: PatternUpdate):
                 name = COALESCE($1, name),
                 description = COALESCE($2, description),
                 kind = COALESCE($3, kind),
-                story_md = COALESCE($4, story_md),
+                story = COALESCE($4, story),
                 taxonomy = COALESCE($5, taxonomy),
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = $6
-            RETURNING id, name, description, kind, story_md, taxonomy, created_at, updated_at
+            RETURNING id, name, description, kind, story, taxonomy, created_at, updated_at
             """,
             patch.name,
             patch.description,
             patch.kind,
-            patch.story_md,
+            patch.story,
             patch.taxonomy,
             pattern_id
         )
@@ -266,7 +266,7 @@ class CardCreate(BaseModel):
     name: str
     description: str
     pattern_id: int
-    markdown: str | None = None
+    story: str | None = None
     order_index: int | None = 0
     domain: str | None = None
     audience: str | None = None
@@ -276,7 +276,7 @@ class CardUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
     pattern_id: int | None = None
-    markdown: str | None = None
+    story: str | None = None
     order_index: int | None = None
     domain: str | None = None
     audience: str | None = None
@@ -289,7 +289,7 @@ async def get_cards():
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
             SELECT 
-                c.id, c.name, c.description, c.markdown, c.order_index, 
+                c.id, c.name, c.description, c.story, c.order_index, 
                 c.domain, c.audience, c.maturity, c.pattern_id, 
                 c.created_at, c.updated_at,
                 p.name as pattern_name
@@ -313,14 +313,14 @@ async def create_card(card: CardCreate):
         
         row = await conn.fetchrow(
             """
-            INSERT INTO cards (name, description, pattern_id, markdown, order_index, domain, audience, maturity)
+            INSERT INTO cards (name, description, pattern_id, story, order_index, domain, audience, maturity)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            RETURNING id, name, description, markdown, order_index, domain, audience, maturity, pattern_id, created_at, updated_at
+            RETURNING id, name, description, story, order_index, domain, audience, maturity, pattern_id, created_at, updated_at
             """,
             card.name,
             card.description,
             card.pattern_id,
-            card.markdown,
+            card.story,
             card.order_index,
             card.domain,
             card.audience,
@@ -335,7 +335,7 @@ async def get_card(card_id: str):
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
             """
-            SELECT id, name, description, markdown, order_index, domain, audience, maturity, pattern_id, created_at, updated_at
+            SELECT id, name, description, story, order_index, domain, audience, maturity, pattern_id, created_at, updated_at
             FROM cards
             WHERE id = $1
             """,
@@ -365,19 +365,19 @@ async def update_card(card_id: str, patch: CardUpdate):
                 name = COALESCE($1, name),
                 description = COALESCE($2, description),
                 pattern_id = COALESCE($3, pattern_id),
-                markdown = COALESCE($4, markdown),
+                story = COALESCE($4, story),
                 order_index = COALESCE($5, order_index),
                 domain = COALESCE($6, domain),
                 audience = COALESCE($7, audience),
                 maturity = COALESCE($8, maturity),
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = $9
-            RETURNING id, name, description, markdown, order_index, domain, audience, maturity, pattern_id, created_at, updated_at
+            RETURNING id, name, description, story, order_index, domain, audience, maturity, pattern_id, created_at, updated_at
             """,
             patch.name,
             patch.description,
             patch.pattern_id,
-            patch.markdown,
+            patch.story,
             patch.order_index,
             patch.domain,
             patch.audience,
@@ -406,7 +406,7 @@ async def get_pattern_cards(pattern_id: int):
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
-            SELECT id, name, description, markdown, order_index, domain, audience, maturity, pattern_id, created_at, updated_at
+            SELECT id, name, description, story, order_index, domain, audience, maturity, pattern_id, created_at, updated_at
             FROM cards
             WHERE pattern_id = $1
             ORDER BY order_index ASC, created_at DESC
