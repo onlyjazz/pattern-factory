@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { Threat, Card } from '$lib/db';
-	import { marked } from 'marked';
 	
 	let threatId: string;
 	let threat: Threat | null = null;
@@ -82,7 +81,6 @@
 				body: JSON.stringify({
 					name: editThreat.name,
 					description: editThreat.description,
-					scenario: editThreat.scenario || null,
 					probability: editThreat.probability || null,
 					damage_description: editThreat.damage_description || null,
 					spoofing: editThreat.spoofing,
@@ -108,7 +106,6 @@
 
 <div id="application-content-area">
 	<div class="page-title">
-		<a href="/threats" class="back-link">← Back to Threats</a>
 		<h1 class="heading heading_1">{threat?.name || 'Loading...'}</h1>
 	</div>
 
@@ -184,15 +181,6 @@
 									<div class="card-item">
 										<div class="card-name">{threat.card.name}</div>
 										<div class="card-description">{threat.card.description}</div>
-									</div>
-								</div>
-							{/if}
-							
-							{#if threat.scenario}
-								<div class="detail-section">
-									<h3>Scenario</h3>
-									<div class="scenario-content">
-										{@html marked(threat.scenario)}
 									</div>
 								</div>
 							{/if}
@@ -381,24 +369,6 @@
 									</div>
 								</div>
 
-								<div class="form-section">
-									<h3>Scenario (Markdown)</h3>
-									<div class="scenario-editor">
-										<textarea
-											id="scenario-textarea"
-											bind:value={editThreat.scenario}
-											class="scenario-textarea"
-											placeholder="Enter scenario in Markdown format..."
-										></textarea>
-										<div class="scenario-preview">
-											<div class="preview-label">Preview</div>
-											<div class="scenario-preview-content">
-												{@html marked(editThreat.scenario || '')}
-											</div>
-										</div>
-									</div>
-								</div>
-
 								<div class="form-actions">
 									<button
 										type="button"
@@ -425,18 +395,6 @@
 </div>
 
 <style>
-	.back-link {
-		display: inline-block;
-		margin-bottom: 1rem;
-		color: #0066cc;
-		text-decoration: none;
-		font-size: 14px;
-	}
-
-	.back-link:hover {
-		text-decoration: underline;
-	}
-
 	.threat-detail-card {
 		padding: 30px;
 	}

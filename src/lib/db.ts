@@ -5,7 +5,6 @@ export interface Threat {
     id: ID;
     name: string;
     description: string;
-    scenario?: string | null;
     probability?: number | null;
     damage_description?: string | null;
     spoofing: boolean;

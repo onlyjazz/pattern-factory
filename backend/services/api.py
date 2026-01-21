@@ -582,7 +582,6 @@ async def delete_path(path_id: int):
 class ThreatCreate(BaseModel):
     name: str
     description: str
-    scenario: str | None = None
     probability: int | None = None
     damage_description: str | None = None
     spoofing: bool = False
@@ -599,7 +598,6 @@ class ThreatCreate(BaseModel):
 class ThreatUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
-    scenario: str | None = None
     probability: int | None = None
     damage_description: str | None = None
     spoofing: bool | None = None
@@ -618,7 +616,7 @@ async def get_threats():
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
-            SELECT id, name, description, scenario, probability, damage_description,
+            SELECT id, name, description, probability, damage_description,
                    spoofing, tampering, repudiation, information_disclosure, 
                    denial_of_service, elevation_of_privilege, mitigation_level, 
                    disabled, model_id, created_at, updated_at
@@ -635,18 +633,17 @@ async def create_threat(threat: ThreatCreate):
         row = await conn.fetchrow(
             """
             INSERT INTO threat.threats 
-            (name, description, scenario, probability, damage_description,
+            (name, description, probability, damage_description,
              spoofing, tampering, repudiation, information_disclosure,
              denial_of_service, elevation_of_privilege, mitigation_level, disabled, model_id, card_id)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-            RETURNING id, name, description, scenario, probability, damage_description,
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            RETURNING id, name, description, probability, damage_description,
                       spoofing, tampering, repudiation, information_disclosure,
                       denial_of_service, elevation_of_privilege, mitigation_level,
                       disabled, model_id, card_id, created_at, updated_at
             """,
             threat.name,
             threat.description,
-            threat.scenario,
             threat.probability,
             threat.damage_description,
             threat.spoofing,
@@ -685,7 +682,7 @@ async def get_threat(threat_id: int):
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
             """
-            SELECT id, name, description, scenario, probability, damage_description,
+            SELECT id, name, description, probability, damage_description,
                    spoofing, tampering, repudiation, information_disclosure,
                    denial_of_service, elevation_of_privilege, mitigation_level,
                    disabled, model_id, card_id, created_at, updated_at
@@ -730,10 +727,6 @@ async def update_threat(threat_id: int, patch: ThreatUpdate):
         if patch.description is not None:
             updates.append(f"description = ${param_count}")
             params.append(patch.description)
-            param_count += 1
-        if patch.scenario is not None:
-            updates.append(f"scenario = ${param_count}")
-            params.append(patch.scenario)
             param_count += 1
         if patch.probability is not None:
             updates.append(f"probability = ${param_count}")
@@ -788,7 +781,7 @@ async def update_threat(threat_id: int, patch: ThreatUpdate):
         query = f"""UPDATE threat.threats
                    SET {', '.join(updates)}
                    WHERE id = ${param_count}
-                   RETURNING id, name, description, scenario, probability, damage_description,
+                   RETURNING id, name, description, probability, damage_description,
                              spoofing, tampering, repudiation, information_disclosure,
                              denial_of_service, elevation_of_privilege, mitigation_level,
                              disabled, model_id, card_id, created_at, updated_at"""

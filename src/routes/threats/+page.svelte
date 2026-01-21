@@ -2,7 +2,6 @@
 	import { onMount } from 'svelte';
 	import { globalSearch } from '$lib/searchStore';
 	import type { Threat, Card } from '$lib/db';
-	import { marked } from 'marked';
 	
 	let threats: Threat[] = [];
 	let cards: Card[] = [];
@@ -16,7 +15,6 @@
 	let newThreat: Partial<Threat> = { 
 		name: '', 
 		description: '',
-		scenario: '',
 		probability: 0,
 		damage_description: '',
 		spoofing: false,
@@ -143,7 +141,6 @@
 		newThreat = { 
 			name: '', 
 			description: '',
-			scenario: '',
 			probability: 0,
 			damage_description: '',
 			spoofing: false,
@@ -162,9 +159,6 @@
 		addModalError = null;
 	}
 	
-	function closeScenarioEditor() {
-		showScenarioEditor = false;
-	}
 	
 	async function handleCreate() {
 		try {
@@ -179,7 +173,6 @@
 			body: JSON.stringify({
 				name: newThreat.name,
 				description: newThreat.description,
-				scenario: newThreat.scenario || null,
 				probability: newThreat.probability || null,
 				damage_description: newThreat.damage_description || null,
 				spoofing: newThreat.spoofing || false,
@@ -206,14 +199,13 @@
 	async function handleSave(updatedThreat: Threat) {
 		try {
 			editModalError = null;
-			const response = await fetch(`${apiBase}/threats/${updatedThreat.id}`, {
-				method: 'PUT',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					name: updatedThreat.name,
-					description: updatedThreat.description,
-					scenario: updatedThreat.scenario || null,
-					probability: updatedThreat.probability || null,
+		const response = await fetch(`${apiBase}/threats/${updatedThreat.id}`, {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				name: updatedThreat.name,
+				description: updatedThreat.description,
+				probability: updatedThreat.probability || null,
 					damage_description: updatedThreat.damage_description || null,
 					spoofing: updatedThreat.spoofing,
 					tampering: updatedThreat.tampering,
@@ -236,9 +228,6 @@
 		}
 	}
 	
-	function openScenarioEditor() {
-		showScenarioEditor = true;
-	}
 	
 	async function handleDelete(threatId: string) {
 		if (!confirm('Are you sure you want to delete this threat?')) return;
@@ -307,14 +296,8 @@
 
 							<tbody>
 								{#each filteredThreats as t (t.id)}
-									<tr class="threat-row" class:has-scenario={t.scenario && t.scenario !== ''}>
-										<td class="tal">
-											{#if t.scenario && t.scenario !== ''}
-												<a href="/threats/{t.id}" class="threat-link">{t.name}</a>
-											{:else}
-												{t.name}
-											{/if}
-										</td>
+								<tr class="threat-row">
+									<td class="tal">{t.name}</td>
 										<td class="tal">{t.description}</td>
 										<td class="tal">{t.probability || '-'}</td>
 										<td class="tal">{t.mitigation_level || '-'}</td>
@@ -686,11 +669,7 @@
 		font-style: italic;
 	}
 
-	:global(.threat-row) {
-		transition: background-color 0.2s ease;
-	}
-
-	:global(.threat-row.has-scenario:hover) {
+	:global(.threat-row:hover) {
 		background-color: #f5f5f5;
 	}
 
