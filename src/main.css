@@ -857,6 +857,19 @@ a.flask-link {
 	font-size: 18px;
 	line-height: 18px;
 }
+.button_small {
+	font-size: 18px;
+	line-height: 32px;
+	padding: 0 8px;
+	min-width: 32px;
+	background: none;
+	border: none;
+	color: #03A9F4;
+	cursor: pointer;
+}
+.button_small:hover {
+	color: #039BE5;
+}
 .button_flat {
 	background: #FAFAFA;
 	color: #03A9F4;

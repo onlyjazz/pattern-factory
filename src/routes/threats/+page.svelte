@@ -296,18 +296,26 @@
 
 							<tbody>
 								{#each filteredThreats as t (t.id)}
-								<tr class="threat-row">
+								<tr class="threat-row" onclick={() => window.location.href = `/threats/${t.id}`}>
 									<td class="tal">{t.name}</td>
-										<td class="tal">{t.description}</td>
-										<td class="tal">{t.probability || '-'}</td>
-										<td class="tal">{t.mitigation_level || '-'}</td>
-										<td class="tal">{t.disabled ? 'Yes' : 'No'}</td>
+									<td class="tal">{t.description}</td>
+									<td class="tal">{t.probability || '-'}</td>
+									<td class="tal">{t.mitigation_level || '-'}</td>
+									<td class="tal">{t.disabled ? 'Yes' : 'No'}</td>
 
-										<td class="tar">
-											<a href="/threats/{t.id}" class="button button_small" title="Edit">✎</a>
-											<button class="button button_small" onclick={() => handleDelete(t.id)} title="Delete">🗑</button>
-										</td>
-									</tr>
+									<td class="tar">
+										<button
+											class="button button_small"
+											onclick={(e) => {
+												e.stopPropagation();
+												window.location.href = `/threats/${t.id}/edit`;
+											}}
+											title="Edit"
+										>
+											✎
+										</button>
+									</td>
+								</tr>
 								{/each}
 							</tbody>
 						</table>
@@ -470,6 +478,14 @@
 		background: none !important;
 	}
 
+	:global(.threat-row) {
+		transition: background-color 0.2s ease;
+		cursor: pointer;
+	}
+
+	:global(.threat-row:hover) {
+		background-color: #f5f5f5;
+	}
 
 	:global(.modal-overlay) {
 		position: fixed;
