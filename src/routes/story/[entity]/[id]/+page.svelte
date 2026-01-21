@@ -3,6 +3,7 @@
 	import { marked } from 'marked';
 
 	let entity: any = null;
+	let storyContent = '';
 	let loading = true;
 	let error: string | null = null;
 	let saveError: string | null = null;
@@ -22,6 +23,7 @@
 			if (!response.ok) throw new Error(`${entityType} not found`);
 			const data = await response.json();
 			entity = { ...data, id: String(data.id), entityType };
+			storyContent = entity.story_md || entity.markdown || '';
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load entity';
 			entity = null;
@@ -38,10 +40,10 @@
 			const response = await fetch(`${apiBase}/${entity.entityType}/${entity.id}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					story_md: entity.story_md,
-					markdown: entity.markdown
-				})
+					body: JSON.stringify({
+						story_md: entity.story_md !== undefined ? storyContent : undefined,
+						markdown: entity.markdown !== undefined ? storyContent : undefined
+					})
 			});
 			if (!response.ok) throw new Error('Failed to save story');
 			// Navigate back to edit page
@@ -80,7 +82,7 @@
 							<label class="editor-label">Story (Markdown)</label>
 							<textarea
 								id="story-editor-textarea"
-								bind:value={entity.story_md || entity.markdown}
+								bind:value={storyContent}
 								class="story-editor-textarea"
 								placeholder="Enter your story in Markdown format..."
 							></textarea>
@@ -88,7 +90,7 @@
 						<div class="story-editor-preview">
 							<label class="preview-label">Preview</label>
 							<div class="story-editor-preview-content">
-								{@html marked(entity.story_md || entity.markdown || '')}
+								{@html marked(storyContent)}
 							</div>
 						</div>
 					</div>
