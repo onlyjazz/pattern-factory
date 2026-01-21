@@ -104,9 +104,9 @@
 		}
 	}
 
-	function goToMarkdownEditor() {
+	function goToStoryEditor() {
 		if (card?.id) {
-			window.location.href = `/story/cards/${card.id}`;
+			window.location.href = `/cards/edit/story/${card.id}`;
 		}
 	}
 </script>

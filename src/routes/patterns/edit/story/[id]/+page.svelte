@@ -11,21 +11,21 @@
 
 	const apiBase = 'http://localhost:8000';
 
-	$: if ($page.params.entity && $page.params.id) {
-		loadEntity($page.params.entity, $page.params.id);
+	$: if ($page.params.id) {
+		loadEntity($page.params.id);
 	}
 
-	async function loadEntity(entityType: string, id: string) {
+	async function loadEntity(id: string) {
 		try {
 			loading = true;
 			error = null;
-			const response = await fetch(`${apiBase}/${entityType}/${id}`);
-			if (!response.ok) throw new Error(`${entityType} not found`);
+			const response = await fetch(`${apiBase}/patterns/${id}`);
+			if (!response.ok) throw new Error('Pattern not found');
 			const data = await response.json();
-			entity = { ...data, id: String(data.id), entityType };
-			storyContent = entity.story_md || entity.markdown || '';
+			entity = { ...data, id: String(data.id) };
+			storyContent = entity.story_md || '';
 		} catch (e) {
-			error = e instanceof Error ? e.message : 'Failed to load entity';
+			error = e instanceof Error ? e.message : 'Failed to load pattern';
 			entity = null;
 		} finally {
 			loading = false;
@@ -37,17 +37,16 @@
 		try {
 			isSaving = true;
 			saveError = null;
-			const response = await fetch(`${apiBase}/${entity.entityType}/${entity.id}`, {
+			const response = await fetch(`${apiBase}/patterns/${entity.id}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						story_md: entity.story_md !== undefined ? storyContent : undefined,
-						markdown: entity.markdown !== undefined ? storyContent : undefined
-					})
+				body: JSON.stringify({
+					story_md: storyContent
+				})
 			});
 			if (!response.ok) throw new Error('Failed to save story');
 			// Navigate back to edit page
-			window.location.href = `/${entity.entityType}/${entity.id}/edit`;
+			window.location.href = `/patterns/${entity.id}/edit`;
 		} catch (e) {
 			saveError = e instanceof Error ? e.message : 'Failed to save story';
 			isSaving = false;
@@ -56,13 +55,13 @@
 
 	function handleCancel() {
 		// Navigate back to edit page
-		window.location.href = `/${entity?.entityType}/${entity?.id}/edit`;
+		window.location.href = `/patterns/${entity?.id}/edit`;
 	}
 </script>
 
 <div id="application-content-area">
 	<div class="page-title">
-		<h1 class="heading heading_1">Edit Story</h1>
+		<h1 class="heading heading_1">Edit Pattern Story</h1>
 	</div>
 
 	{#if loading}

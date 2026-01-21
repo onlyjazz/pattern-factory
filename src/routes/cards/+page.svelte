@@ -219,7 +219,7 @@
 							<tbody>
 								{#each filteredCards as c (c.id)}
 								<tr class="card-row">
-									<td class="tal"><a href="/story/cards/{c.id}" class="story-link">{c.name}</a></td>
+									<td class="tal"><a href="/cards/view/story/{c.id}" class="story-link">{c.name}</a></td>
 										<td class="tal">{c.pattern_name || '-'}</td>
 										<td class="tal">{c.order_index || '-'}</td>
 										<td class="tal">{c.domain || '-'}</td>

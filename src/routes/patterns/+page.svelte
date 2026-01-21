@@ -172,7 +172,7 @@
                         <tbody>
 								{#each filteredPatterns as p (p.id)}
 								<tr class="pattern-row">
-									<td class="tal"><a href="/story/patterns/{p.id}" class="story-link">{p.name}</a></td>
+									<td class="tal"><a href="/patterns/view/story/{p.id}" class="story-link">{p.name}</a></td>
                                     <td class="tal">{p.description}</td>
                                     <td class="tal">{p.kind}</td>
                                     <td class="tal">{p.taxonomy || '-'}</td>
