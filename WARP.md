@@ -314,6 +314,59 @@ The sidebar's Views section is filtered by the current application mode. Each vi
 2. Document schema in `pattern-factory.yaml` DATA section
 3. Restart FastAPI to reload schema
 
+## UI/Form Design Guidelines
+
+All forms and entity pages must follow a single, consistent UI pattern across the application. This ensures a unified user experience and reduces maintenance burden.
+
+### Index Pages
+- Display entities in a list/table of rows
+- "Add [Entity]" button positioned on the right side
+- Each row has a pencil icon (or pencil + trash if deletion enabled)
+- Row click (not icon) → navigate to view/id to see entity details
+- Pencil icon click → navigate to edit/id for editing
+
+### Add Entity Modal Popup
+- Modal popup (not a full page)
+- Fields: name and description ONLY (no other fields)
+- Button labels: Cancel, Save (not "Create")
+- Users add additional details in the Edit entity form
+- Example: Add Pattern modal shows only name + description
+
+### View Entity Page
+- Reached by clicking a row on index page (navigate to view/id)
+- Page header: "[Entity Type]" (e.g., "Threats") styled as `heading heading-1`
+- Entity name (e.g., "Unauthorized Remote Control") displayed inside card styled as `heading heading-3`
+- Green EDIT button on right side → moves to edit mode
+- No breadcrumb links or return buttons (use sidebar for navigation)
+
+### Edit Entity Page
+- Regular form page (not modal popup)
+- Reached from pencil icon or EDIT button on view page
+- Navigate to edit/id
+- Form buttons positioned bottom right:
+  - **For entities WITH Markdown stories** (Patterns, Cards): Cancel, Edit Story, Save
+  - **For entities WITHOUT stories** (Threats, Assets, etc.): Cancel, Save
+- No breadcrumb links or return buttons
+
+### Styling Rules
+- Use ONLY standard main.css classes
+- No inline styles or page-scoped CSS in form components
+- No custom component-specific styles
+- Heading classes: `heading heading-1` for page titles, `heading heading-3` for entity names in cards
+- Button classes: `big-blue-button` for EDIT and Save buttons
+- Follow existing main.css for all spacing, typography, colors
+
+### Select Boxes (Autocomplete)
+- Display matching entries BELOW the select box as user types
+- Autocomplete fires dynamically on input
+- Example: Selecting cards in threat form shows matching cards below the input
+
+### Implementation Checklist
+- Convert all modal patterns/cards forms to regular form pages
+- Ensure all entity types (threats, assets, vulnerabilities, countermeasures, models) follow same pattern
+- Button positioning: always bottom right for form controls
+- Row interaction: row click = view, icon click = edit
+
 ## Technology Stack Details
 
 - **Svelte 5**: Latest reactive framework with runes

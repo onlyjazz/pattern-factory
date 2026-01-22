@@ -335,9 +335,14 @@ async def get_card(card_id: str):
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
             """
-            SELECT id, name, description, story, order_index, domain, audience, maturity, pattern_id, created_at, updated_at
-            FROM cards
-            WHERE id = $1
+            SELECT 
+                c.id, c.name, c.description, c.story, c.order_index, 
+                c.domain, c.audience, c.maturity, c.pattern_id, 
+                c.created_at, c.updated_at,
+                p.name as pattern_name
+            FROM cards c
+            LEFT JOIN patterns p ON c.pattern_id = p.id
+            WHERE c.id = $1
             """,
             card_id
         )

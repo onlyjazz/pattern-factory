@@ -32,6 +32,7 @@ export interface Card {
     audience?: string | null; 
     maturity?: string | null; 
     pattern_id: number;
+    pattern_name?: string | null;
     created_at?: string;
     updated_at?: string;
 }
