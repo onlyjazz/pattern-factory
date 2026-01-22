@@ -62,13 +62,13 @@
 							<div class="detail-row full">
 								<div class="detail-field">
 									<label>Associated Card</label>
-									<h3 class="heading heading_3">
+									<h4 style="margin: 8px 0 0 0; font-size: 15px; font-weight: 500; color: #333;">
 										{threat.card.name}
 										<a href="/cards/view/story/{threat.card.id}" target="_blank" rel="noopener noreferrer" title="View card details" style="font-size: 9px; color: #0066cc; text-decoration: none; vertical-align: super; margin-left: 2px;">
 											↗
 										</a>
-									</h3>
-									<p>{threat.card.description}</p>
+									</h4>
+									<p style="margin-top: 8px;">{threat.card.description}</p>
 								</div>
 							</div>
 						{/if}

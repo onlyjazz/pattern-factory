@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import CheckboxField from '$lib/CheckboxField.svelte';
+	import CardCombobox from '$lib/CardCombobox.svelte';
 	import type { Threat } from '$lib/db';
 
 	let threat: any = null;
@@ -9,6 +10,8 @@
 	let error: string | null = null;
 	let saveError: string | null = null;
 	let isSaving = false;
+	let selectedCardId: string | null = null;
+	let selectedCardName: string = '';
 
 	const apiBase = 'http://localhost:8000';
 
@@ -19,6 +22,10 @@
 			if (!response.ok) throw new Error('Failed to fetch threat');
 			const data = await response.json();
 			threat = { ...data, id: String(data.id) };
+			if (threat.card) {
+				selectedCardId = threat.card.id;
+				selectedCardName = threat.card.name;
+			}
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Unknown error';
 		} finally {
@@ -43,7 +50,8 @@
 				information_disclosure: threat.information_disclosure || false,
 				denial_of_service: threat.denial_of_service || false,
 				elevation_of_privilege: threat.elevation_of_privilege || false,
-				disabled: threat.disabled || false
+				disabled: threat.disabled || false,
+				card_id: selectedCardId || null
 			})
 		});
 			if (!response.ok) throw new Error('Failed to save threat');
@@ -108,18 +116,14 @@
 								/>
 								<label for="threat-description" class="input__label">Description</label>
 							</div>
-							{#if threat.card}
-								<div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #f0f0f0;">
-									<h3 class="heading heading_3">
-										{threat.card.name}
-										<a href="/cards/view/story/{threat.card.id}" target="_blank" rel="noopener noreferrer" title="View card details" style="font-size: 9px; color: #0066cc; text-decoration: none; vertical-align: super; margin-left: 2px;">
-											↗
-										</a>
-									</h3>
-									<p style="margin-top: 8px; color: #666;">{threat.card.description}</p>
-								</div>
-							{/if}
+						<div class="card-selector-wrapper">
+							<h3>Associated Card</h3>
+							<CardCombobox
+								bind:selectedCardId
+								bind:selectedCardName
+							/>
 						</div>
+					</div>
 
 						<div class="form-section">
 							<h3>STRIDE Classifications</h3>
@@ -183,8 +187,17 @@
 				</div>
 			</div>
 		</div>
-	{:else}
+{:else}
 		<div class="message">Threat not found</div>
-	{/if}
+{/if}
 </div>
 
+<style>
+	.card-selector-wrapper {
+		margin-top: 24px;
+	}
+
+	.card-selector-wrapper h3 {
+		margin: 0 0 12px 0;
+	}
+</style>
