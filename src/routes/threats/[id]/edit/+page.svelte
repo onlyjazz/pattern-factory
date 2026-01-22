@@ -2,7 +2,8 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import CheckboxField from '$lib/CheckboxField.svelte';
-	import CardCombobox from '$lib/CardCombobox.svelte';
+	import SingleSelect from '$lib/SingleSelect.svelte';
+	import type { SelectItem } from '$lib/SingleSelect.svelte';
 	import type { Threat } from '$lib/db';
 
 	let threat: any = null;
@@ -12,8 +13,23 @@
 	let isSaving = false;
 	let selectedCardId: string | null = null;
 	let selectedCardName: string = '';
+	let cardItems: SelectItem[] = [];
+	let cardsLoading = false;
 
 	const apiBase = 'http://localhost:8000';
+
+	async function loadCards() {
+		try {
+			cardsLoading = true;
+			const response = await fetch(`${apiBase}/cards`);
+			if (!response.ok) throw new Error('Failed to fetch cards');
+			cardItems = await response.json();
+		} catch (e) {
+			console.error('Failed to load cards:', e);
+		} finally {
+			cardsLoading = false;
+		}
+	}
 
 	onMount(async () => {
 		try {
@@ -31,6 +47,7 @@
 		} finally {
 			loading = false;
 		}
+		await loadCards();
 	});
 
 	async function handleSave() {
@@ -118,9 +135,12 @@
 							</div>
 						<div class="card-selector-wrapper">
 							<h3>Associated Card</h3>
-							<CardCombobox
-								bind:selectedCardId
-								bind:selectedCardName
+							<SingleSelect
+								items={cardItems}
+								bind:selectedId={selectedCardId}
+								bind:selectedName={selectedCardName}
+								placeholder="Search cards..."
+								loading={cardsLoading}
 							/>
 						</div>
 					</div>
