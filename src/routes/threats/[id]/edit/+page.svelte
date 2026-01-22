@@ -186,7 +186,7 @@
 								id="threat-disabled"
 								bind:checked={threat.disabled}
 								label="Disable the threat"
-								description="When clicking this checkbox, you disable the threat from the model"
+								description="When clicking this checkbox, you will exclude the threat from the model"
 							/>
 						</div>
 
