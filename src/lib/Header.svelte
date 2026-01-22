@@ -19,7 +19,7 @@
 <header class="page-header">
 	<div class="header-content">
 		<div class="logo"></div>
-		<span class="heading_4">Pattern Factory</span>
+		<span class="brand-name">Pattern Factory</span>
 	</div>
 	<div class="mode-selector">
 		<button
@@ -39,9 +39,9 @@
 			Model
 		</button>
 		{#if $modeStore.mode === 'explore'}
-			<span class="mode-context">Explore mode</span>
+			<span class="mode-context mode-context_active">Explore mode</span>
 		{:else if $modeStore.activeModelName}
-			<span class="model-name">{$modeStore.activeModelName}</span>
+			<span class="model-name model-name_active">{$modeStore.activeModelName}</span>
 		{/if}
 	</div>
 	<div class="header-controls">
@@ -77,6 +77,12 @@
 		display: flex;
 		align-items: center;
 		box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+	}
+
+	.brand-name {
+		font-size: 14px;
+		font-weight: 400;
+		color: white;
 	}
 
 	.header-content {
@@ -156,7 +162,7 @@
 		align-items: center;
 		gap: 1.5rem;
 		padding-left: 1rem;
-		margin-top: 4px;
+		margin-top: 0px;
 	}
 
 	.mode-button {
@@ -166,42 +172,46 @@
 		color: rgba(255, 255, 255, 0.8);
 		cursor: pointer;
 		font-family: 'Roboto', system-ui, -apple-system, sans-serif;
-		font-size: 0.875rem;
-		font-weight: 500;
-		transition: color 0.2s ease, border-bottom 0.2s ease;
-		border-bottom: 2px solid transparent;
+		font-size: 14px;
+		font-weight: 400;
+		transition: color 0.2s ease;
 		line-height: 1;
 		display: flex;
 		align-items: center;
 	}
 
 	.mode-button:hover {
-		color: rgba(255, 255, 255, 0.95);
-		text-decoration: underline;
+		color: white;
 	}
 
 	.mode-button_active {
 		color: #263238;
-		font-weight: 600;
-		border-bottom-color: #263238;
+		font-weight: 400;
 	}
 
 	.mode-button_active:hover {
-		color: #263238;
-		text-decoration: underline;
+		color: white;
 	}
 
 	.mode-context {
-		font-size: 0.875rem;
-		color: #263238;
+		font-size: 14px;
+		color: white;
 		font-weight: 400;
 		white-space: nowrap;
 	}
 
-	.model-name {
-		font-size: 0.875rem;
+	.mode-context_active {
 		color: #263238;
+	}
+
+	.model-name {
+		font-size: 14px;
+		color: white;
 		font-weight: 400;
 		white-space: nowrap;
+	}
+
+	.model-name_active {
+		color: #263238;
 	}
 </style>
