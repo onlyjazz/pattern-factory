@@ -138,7 +138,7 @@ import { Network, FileText, Route, ListTree, AlertTriangle, Box, Bug, Shield, Li
 	.main-nav__item_active {
 		color: #fff;
 		background: rgba(255,255,255,0.12);
-		font-weight: 500;
+		font-weight: 400;
 	}
 	.main-nav__item :global(svg) {
 		width: 18px;
