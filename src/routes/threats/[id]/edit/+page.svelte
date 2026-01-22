@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
+	import CheckboxField from '$lib/CheckboxField.svelte';
 	import type { Threat } from '$lib/db';
 
 	let threat: any = null;
@@ -126,13 +127,12 @@
 						</div>
 
 						<div class="form-section">
-							<div style="display: flex; align-items: flex-start;">
-								<input type="checkbox" id="threat-disabled" bind:checked={threat.disabled} class="checkbox-input" />
-								<div class="checkbox-label">
-									<label for="threat-disabled" class="checkbox-label-text">Disable the threat</label>
-									<span class="checkbox-label-description">When clicking this checkbox, you disable the threat from the model</span>
-								</div>
-							</div>
+							<CheckboxField
+								id="threat-disabled"
+								bind:checked={threat.disabled}
+								label="Disable the threat"
+								description="When clicking this checkbox, you disable the threat from the model"
+							/>
 						</div>
 
 						<div class="form-footer">
