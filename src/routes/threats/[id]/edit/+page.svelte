@@ -37,7 +37,12 @@
 			body: JSON.stringify({
 				name: threat.name,
 				description: threat.description,
-				stride_category: threat.stride_category || null,
+				spoofing: threat.spoofing || false,
+				tampering: threat.tampering || false,
+				repudiation: threat.repudiation || false,
+				information_disclosure: threat.information_disclosure || false,
+				denial_of_service: threat.denial_of_service || false,
+				elevation_of_privilege: threat.elevation_of_privilege || false,
 				disabled: threat.disabled || false
 			})
 		});
@@ -106,23 +111,38 @@
 						</div>
 
 						<div class="form-section">
-							<h3>Classification</h3>
-							<div class="input input_select">
-								<select
-									id="threat-stride"
-									bind:value={threat.stride_category}
-									class="input__text"
-									class:input__text_changed={threat.stride_category}
-								>
-									<option value="">Select STRIDE Category (Optional)</option>
-									<option value="Spoofing">Spoofing</option>
-									<option value="Tampering">Tampering</option>
-									<option value="Repudiation">Repudiation</option>
-									<option value="Information Disclosure">Information Disclosure</option>
-									<option value="Denial of Service">Denial of Service</option>
-									<option value="Elevation of Privilege">Elevation of Privilege</option>
-								</select>
-								<label for="threat-stride" class="input__label">STRIDE Category</label>
+							<h3>STRIDE Classifications</h3>
+							<div class="stride-grid">
+								<CheckboxField
+									id="threat-spoofing"
+									bind:checked={threat.spoofing}
+									label="Spoofing"
+								/>
+								<CheckboxField
+									id="threat-tampering"
+									bind:checked={threat.tampering}
+									label="Tampering"
+								/>
+								<CheckboxField
+									id="threat-repudiation"
+									bind:checked={threat.repudiation}
+									label="Repudiation"
+								/>
+								<CheckboxField
+									id="threat-information-disclosure"
+									bind:checked={threat.information_disclosure}
+									label="Information Disclosure"
+								/>
+								<CheckboxField
+									id="threat-denial-of-service"
+									bind:checked={threat.denial_of_service}
+									label="Denial of Service"
+								/>
+								<CheckboxField
+									id="threat-elevation-of-privilege"
+									bind:checked={threat.elevation_of_privilege}
+									label="Elevation of Privilege"
+								/>
 							</div>
 						</div>
 

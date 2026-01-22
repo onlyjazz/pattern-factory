@@ -2078,6 +2078,12 @@ button[type='submit'].disabled {
 	font-weight: normal;
 }
 
+.stride-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 20px 40px;
+}
+
 .indicator .loading {
 	color: #4CAF50;
 	animation: opacity-changer 2s ease-in-out infinite;
