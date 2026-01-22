@@ -30,15 +30,16 @@
 		try {
 			isSaving = true;
 			saveError = null;
-			const response = await fetch(`${apiBase}/threats/${threat.id}`, {
-				method: 'PUT',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					name: threat.name,
-					description: threat.description,
-					stride_category: threat.stride_category || null
-				})
-			});
+		const response = await fetch(`${apiBase}/threats/${threat.id}`, {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				name: threat.name,
+				description: threat.description,
+				stride_category: threat.stride_category || null,
+				disabled: threat.disabled || false
+			})
+		});
 			if (!response.ok) throw new Error('Failed to save threat');
 			// Navigate back to view page
 			window.location.href = `/threats/${threat.id}`;
@@ -124,6 +125,16 @@
 							</div>
 						</div>
 
+						<div class="form-section">
+							<div style="display: flex; align-items: flex-start;">
+								<input type="checkbox" id="threat-disabled" bind:checked={threat.disabled} class="checkbox-input" />
+								<div class="checkbox-label">
+									<label for="threat-disabled" class="checkbox-label-text">Disable the threat</label>
+									<span class="checkbox-label-description">When clicking this checkbox, you disable the threat from the model</span>
+								</div>
+							</div>
+						</div>
+
 						<div class="form-footer">
 							<button
 								type="button"
@@ -145,3 +156,4 @@
 		<div class="message">Threat not found</div>
 	{/if}
 </div>
+
