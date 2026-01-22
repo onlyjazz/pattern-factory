@@ -705,7 +705,7 @@ async def get_threat(threat_id: int):
         if threat_dict.get('card_id'):
             card_row = await conn.fetchrow(
                 """
-                SELECT id, name, description, markdown, order_index,
+                SELECT id, name, description, story, order_index,
                        domain, audience, maturity, pattern_id
                 FROM public.cards
                 WHERE id = $1
