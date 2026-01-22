@@ -58,6 +58,20 @@
 								<p>{threat.description}</p>
 							</div>
 						</div>
+						{#if threat.card}
+							<div class="detail-row full">
+								<div class="detail-field">
+									<label>Associated Card</label>
+									<h3 class="heading heading_3">
+										{threat.card.name}
+										<a href="/cards/view/story/{threat.card.id}" target="_blank" rel="noopener noreferrer" title="View card details" style="font-size: 9px; color: #0066cc; text-decoration: none; vertical-align: super; margin-left: 2px;">
+											↗
+										</a>
+									</h3>
+									<p>{threat.card.description}</p>
+								</div>
+							</div>
+						{/if}
 					</div>
 
 					<div class="detail-section">

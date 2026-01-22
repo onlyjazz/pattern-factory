@@ -108,6 +108,17 @@
 								/>
 								<label for="threat-description" class="input__label">Description</label>
 							</div>
+							{#if threat.card}
+								<div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #f0f0f0;">
+									<h3 class="heading heading_3">
+										{threat.card.name}
+										<a href="/cards/view/story/{threat.card.id}" target="_blank" rel="noopener noreferrer" title="View card details" style="font-size: 9px; color: #0066cc; text-decoration: none; vertical-align: super; margin-left: 2px;">
+											↗
+										</a>
+									</h3>
+									<p style="margin-top: 8px; color: #666;">{threat.card.description}</p>
+								</div>
+							{/if}
 						</div>
 
 						<div class="form-section">

@@ -361,6 +361,13 @@ All forms and entity pages must follow a single, consistent UI pattern across th
 - Autocomplete fires dynamically on input
 - Example: Selecting cards in threat form shows matching cards below the input
 
+### External Link Icons
+- When displaying links to related entities (e.g., card names linking to card details), use a small superscript arrow (↗) positioned inline at the top right of the text
+- Use `vertical-align: super` to position the arrow, NOT absolute positioning
+- Arrow styling: `font-size: 9px; color: #0066cc; text-decoration: none; vertical-align: super; margin-left: 2px;`
+- The link should open in a new tab: `target="_blank" rel="noopener noreferrer"`
+- Include title attribute for accessibility: `title="View details"`
+
 ### Implementation Checklist
 - Convert all modal patterns/cards forms to regular form pages
 - Ensure all entity types (threats, assets, vulnerabilities, countermeasures, models) follow same pattern
