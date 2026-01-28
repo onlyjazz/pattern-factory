@@ -20,7 +20,7 @@ import { Network, FileText, Route, ListTree, AlertTriangle, Box, Bug, Shield, Li
 	const modelLinks = [
 		{ name: "Models", href: "/models", icon: ListTree },
 		{ name: "Cards", href: "/cards", icon: FileText },
-		{ name: "Threats", href: "/threats", icon: AlertTriangle },
+		{ name: "Risks", href: "/threats", icon: AlertTriangle },
 		{ name: "Assets", href: "/assets", icon: Box },
 		{ name: "Vulnerabilities", href: "/vulnerabilities", icon: Bug },
 		{ name: "Countermeasures", href: "/countermeasures", icon: Shield }

@@ -251,9 +251,9 @@
 <div id="application-content-area">
 	<div class="page-title">
 		<button class="button button_green" onclick={() => (showAddModal = true)}>
-			Add Threat
+			Add Risk
 		</button>
-		<h1 class="heading heading_1">Threats</h1>
+		<h1 class="heading heading_1">Risks</h1>
 	</div>
 
 	<div class="grid-row">
@@ -261,15 +261,15 @@
 		<div class="grid-col grid-col_24">
 			<div class="studies card">
 				<div class="card-header">
-					<div class="heading heading_3">Threat Library</div>
+					<div class="heading heading_3">Risks Library</div>
 				</div>
 
 				{#if loading}
-					<div class="message">Loading threats...</div>
+					<div class="message">Loading risks...</div>
 				{:else if error}
 					<div class="message message-error">Error: {error}</div>
 				{:else if filteredThreats.length === 0}
-					<div class="message">No threats found</div>
+					<div class="message">No risks found</div>
 				{:else}
 					<div class="table">
 						<table>
@@ -331,7 +331,7 @@
 	<div class="modal-overlay" onclick={closeAddModal}>
 		<div class="modal-content" role="dialog" aria-labelledby="add-modal-title" onclick={(e) => e.stopPropagation()}>
 			<div class="modal-header">
-				<h2 id="add-modal-title" class="heading heading_2">Add Threat</h2>
+				<h2 id="add-modal-title" class="heading heading_2">Add Risk</h2>
 				<button
 					class="modal-close"
 					onclick={closeAddModal}

@@ -32,7 +32,7 @@
 
 <div id="application-content-area">
 	<div class="page-title">
-		<h1 class="heading heading_1">Threats</h1>
+		<h1 class="heading heading_1">Risks</h1>
 	</div>
 
 	{#if loading}

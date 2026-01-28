@@ -89,11 +89,11 @@
 
 <div id="application-content-area">
 	<div class="page-title">
-		<h1 class="heading heading_1">Edit Threat</h1>
+		<h1 class="heading heading_1">Edit Risk</h1>
 	</div>
 
 	{#if loading}
-		<div class="message">Loading threat...</div>
+		<div class="message">Loading risk...</div>
 	{:else if error}
 		<div class="message message-error">Error: {error}</div>
 	{:else if threat}
@@ -185,8 +185,8 @@
 							<CheckboxField
 								id="threat-disabled"
 								bind:checked={threat.disabled}
-								label="Disable the threat"
-								description="When clicking this checkbox, you will exclude the threat from the model"
+								label="Disable the risk"
+								description="When clicking this checkbox, you will exclude the risk from the model"
 							/>
 						</div>
 
