@@ -99,6 +99,24 @@
 					</div>
 
 					<div class="detail-section">
+						<h3>Metadata</h3>
+						<div class="detail-row">
+							<div class="detail-field">
+								<label>Domain</label>
+								<p>{threat.domain || '-'}</p>
+							</div>
+							<div class="detail-field">
+								<label>Tag</label>
+								<p>{threat.tag || '-'}</p>
+							</div>
+							<div class="detail-field">
+								<label>Version</label>
+								<p>{threat.version || '-'}</p>
+							</div>
+						</div>
+					</div>
+
+					<div class="detail-section">
 						<h3>STRIDE Classification</h3>
 						<div class="detail-row">
 							<div class="detail-field">

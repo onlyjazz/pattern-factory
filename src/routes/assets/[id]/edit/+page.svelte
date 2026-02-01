@@ -36,7 +36,8 @@
 					name: asset.name,
 					description: asset.description || null,
 					asset_type: asset.asset_type || null,
-					owner: asset.owner || null
+					owner: asset.owner || null,
+					tag: asset.tag || null
 				})
 			});
 			if (!response.ok) throw new Error('Failed to save asset');
@@ -124,6 +125,17 @@
 									class:input__text_changed={asset.owner?.length > 0}
 								/>
 								<label for="asset-owner" class="input__label">Owner</label>
+							</div>
+
+							<div class="input">
+								<input
+									id="asset-tag"
+									type="text"
+									bind:value={asset.tag}
+									class="input__text"
+									class:input__text_changed={asset.tag?.length > 0}
+								/>
+								<label for="asset-tag" class="input__label">Tag</label>
 							</div>
 						</div>
 

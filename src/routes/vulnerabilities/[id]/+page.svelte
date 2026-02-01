@@ -76,6 +76,12 @@
 								</div>
 							</div>
 						{/if}
+						<div class="detail-row">
+							<div class="detail-field">
+								<label>Version</label>
+								<p>{vulnerability.version || '-'}</p>
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>

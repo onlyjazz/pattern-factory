@@ -61,6 +61,8 @@
 			body: JSON.stringify({
 				name: threat.name,
 				description: threat.description,
+				domain: threat.domain || null,
+				tag: threat.tag || null,
 				spoofing: threat.spoofing || false,
 				tampering: threat.tampering || false,
 				repudiation: threat.repudiation || false,
@@ -133,6 +135,30 @@
 								/>
 								<label for="threat-description" class="input__label">Description</label>
 							</div>
+
+							<div class="input">
+								<input
+									id="threat-domain"
+									type="text"
+									bind:value={threat.domain}
+									class="input__text"
+									class:input__text_changed={threat.domain?.length > 0}
+								/>
+								<label for="threat-domain" class="input__label">Domain</label>
+							</div>
+
+							<div class="input">
+								<input
+									id="threat-tag"
+									type="text"
+									bind:value={threat.tag}
+									class="input__text"
+									class:input__text_changed={threat.tag?.length > 0}
+								/>
+								<label for="threat-tag" class="input__label">Tag</label>
+							</div>
+						</div>
+
 						<div class="card-selector-wrapper">
 							<h3>Associated Card</h3>
 							<SingleSelect
@@ -143,55 +169,54 @@
 								loading={cardsLoading}
 							/>
 						</div>
-					</div>
 
-						<div class="form-section">
-							<h3>STRIDE Classifications</h3>
-							<div class="stride-grid">
-								<CheckboxField
-									id="threat-spoofing"
-									bind:checked={threat.spoofing}
-									label="Spoofing"
-								/>
-								<CheckboxField
-									id="threat-tampering"
-									bind:checked={threat.tampering}
-									label="Tampering"
-								/>
-								<CheckboxField
-									id="threat-repudiation"
-									bind:checked={threat.repudiation}
-									label="Repudiation"
-								/>
-								<CheckboxField
-									id="threat-information-disclosure"
-									bind:checked={threat.information_disclosure}
-									label="Information Disclosure"
-								/>
-								<CheckboxField
-									id="threat-denial-of-service"
-									bind:checked={threat.denial_of_service}
-									label="Denial of Service"
-								/>
-								<CheckboxField
-									id="threat-elevation-of-privilege"
-									bind:checked={threat.elevation_of_privilege}
-									label="Elevation of Privilege"
-								/>
-							</div>
-						</div>
-
-						<div class="form-section">
+					<div class="form-section">
+						<h3>STRIDE Classifications</h3>
+						<div class="stride-grid">
 							<CheckboxField
-								id="threat-disabled"
-								bind:checked={threat.disabled}
-								label="Disable the risk"
-								description="When clicking this checkbox, you will exclude the risk from the model"
+								id="threat-spoofing"
+								bind:checked={threat.spoofing}
+								label="Spoofing"
+							/>
+							<CheckboxField
+								id="threat-tampering"
+								bind:checked={threat.tampering}
+								label="Tampering"
+							/>
+							<CheckboxField
+								id="threat-repudiation"
+								bind:checked={threat.repudiation}
+								label="Repudiation"
+							/>
+							<CheckboxField
+								id="threat-information-disclosure"
+								bind:checked={threat.information_disclosure}
+								label="Information Disclosure"
+							/>
+							<CheckboxField
+								id="threat-denial-of-service"
+								bind:checked={threat.denial_of_service}
+								label="Denial of Service"
+							/>
+							<CheckboxField
+								id="threat-elevation-of-privilege"
+								bind:checked={threat.elevation_of_privilege}
+								label="Elevation of Privilege"
 							/>
 						</div>
+					</div>
 
-						<div class="form-footer">
-							<button
+					<div class="form-section">
+						<CheckboxField
+							id="threat-disabled"
+							bind:checked={threat.disabled}
+							label="Disable the risk"
+							description="When clicking this checkbox, you will exclude the risk from the model"
+						/>
+					</div>
+
+					<div class="form-footer">
+						<button
 								type="button"
 								class="button button_secondary"
 								onclick={handleCancel}

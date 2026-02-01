@@ -587,6 +587,8 @@ async def delete_path(path_id: int):
 class ThreatCreate(BaseModel):
     name: str
     description: str
+    domain: str | None = None
+    tag: str | None = None
     probability: int | None = None
     damage_description: str | None = None
     spoofing: bool = False
@@ -603,6 +605,8 @@ class ThreatCreate(BaseModel):
 class ThreatUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
+    domain: str | None = None
+    tag: str | None = None
     probability: int | None = None
     damage_description: str | None = None
     spoofing: bool | None = None
@@ -621,7 +625,7 @@ async def get_threats():
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
-            SELECT id, name, description, probability, damage_description,
+            SELECT id, name, description, domain, tag, version, probability, damage_description,
                    spoofing, tampering, repudiation, information_disclosure, 
                    denial_of_service, elevation_of_privilege, mitigation_level, 
                    disabled, model_id, created_at, updated_at
@@ -638,17 +642,19 @@ async def create_threat(threat: ThreatCreate):
         row = await conn.fetchrow(
             """
             INSERT INTO threat.threats 
-            (name, description, probability, damage_description,
+            (name, description, domain, tag, probability, damage_description,
              spoofing, tampering, repudiation, information_disclosure,
              denial_of_service, elevation_of_privilege, mitigation_level, disabled, model_id, card_id)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-            RETURNING id, name, description, probability, damage_description,
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+            RETURNING id, name, description, domain, tag, version, probability, damage_description,
                       spoofing, tampering, repudiation, information_disclosure,
                       denial_of_service, elevation_of_privilege, mitigation_level,
                       disabled, model_id, card_id, created_at, updated_at
             """,
             threat.name,
             threat.description,
+            threat.domain,
+            threat.tag,
             threat.probability,
             threat.damage_description,
             threat.spoofing,
@@ -687,7 +693,7 @@ async def get_threat(threat_id: int):
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
             """
-            SELECT id, name, description, probability, damage_description,
+            SELECT id, name, description, domain, tag, version, probability, damage_description,
                    spoofing, tampering, repudiation, information_disclosure,
                    denial_of_service, elevation_of_privilege, mitigation_level,
                    disabled, model_id, card_id, created_at, updated_at
@@ -732,6 +738,14 @@ async def update_threat(threat_id: int, patch: ThreatUpdate):
         if patch.description is not None:
             updates.append(f"description = ${param_count}")
             params.append(patch.description)
+            param_count += 1
+        if patch.domain is not None:
+            updates.append(f"domain = ${param_count}")
+            params.append(patch.domain)
+            param_count += 1
+        if patch.tag is not None:
+            updates.append(f"tag = ${param_count}")
+            params.append(patch.tag)
             param_count += 1
         if patch.probability is not None:
             updates.append(f"probability = ${param_count}")
@@ -786,7 +800,7 @@ async def update_threat(threat_id: int, patch: ThreatUpdate):
         query = f"""UPDATE threat.threats
                    SET {', '.join(updates)}
                    WHERE id = ${param_count}
-                   RETURNING id, name, description, probability, damage_description,
+                   RETURNING id, name, description, domain, tag, version, probability, damage_description,
                              spoofing, tampering, repudiation, information_disclosure,
                              denial_of_service, elevation_of_privilege, mitigation_level,
                              disabled, model_id, card_id, created_at, updated_at"""
@@ -978,6 +992,7 @@ async def get_active_model():
 class AssetCreate(BaseModel):
     name: str
     description: str
+    tag: str | None = None
     fixed_value: float = 0
     disabled: bool = False
     model_id: int = 1
@@ -985,6 +1000,7 @@ class AssetCreate(BaseModel):
 class AssetUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
+    tag: str | None = None
     fixed_value: float | None = None
     disabled: bool | None = None
 
@@ -994,7 +1010,7 @@ async def get_assets():
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
-            SELECT id, name, description, fixed_value, disabled, model_id, created_at, updated_at
+            SELECT id, name, description, tag, version, fixed_value, disabled, model_id, created_at, updated_at
             FROM threat.vassets
             ORDER BY created_at DESC
         """)
@@ -1007,12 +1023,13 @@ async def create_asset(asset: AssetCreate):
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
             """
-            INSERT INTO threat.assets (name, description, fixed_value, disabled, model_id)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, name, description, fixed_value, disabled, model_id, created_at, updated_at
+            INSERT INTO threat.assets (name, description, tag, fixed_value, disabled, model_id)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id, name, description, tag, version, fixed_value, disabled, model_id, created_at, updated_at
             """,
             asset.name,
             asset.description,
+            asset.tag,
             asset.fixed_value,
             asset.disabled,
             asset.model_id
@@ -1025,7 +1042,7 @@ async def get_asset(asset_id: int):
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
-            "SELECT id, name, description, fixed_value, disabled, model_id, created_at, updated_at FROM threat.assets WHERE id = $1",
+            "SELECT id, name, description, tag, version, fixed_value, disabled, model_id, created_at, updated_at FROM threat.assets WHERE id = $1",
             asset_id
         )
     if not row:
@@ -1043,13 +1060,15 @@ async def update_asset(asset_id: int, patch: AssetUpdate):
             SET 
                 name = COALESCE($1, name),
                 description = COALESCE($2, description),
-                fixed_value = COALESCE($3, fixed_value),
-                disabled = COALESCE($4, disabled)
-            WHERE id = $5
-            RETURNING id, name, description, fixed_value, disabled, model_id, created_at, updated_at
+                tag = COALESCE($3, tag),
+                fixed_value = COALESCE($4, fixed_value),
+                disabled = COALESCE($5, disabled)
+            WHERE id = $6
+            RETURNING id, name, description, tag, version, fixed_value, disabled, model_id, created_at, updated_at
             """,
             patch.name,
             patch.description,
+            patch.tag,
             patch.fixed_value,
             patch.disabled,
             asset_id
@@ -1088,7 +1107,7 @@ async def get_vulnerabilities():
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
-            SELECT id, name, description, disabled, model_id, created_at, updated_at
+            SELECT id, name, description, version, disabled, model_id, created_at, updated_at
             FROM threat.vvulnerabilities
             ORDER BY created_at DESC
         """)
@@ -1103,7 +1122,7 @@ async def create_vulnerability(vulnerability: VulnerabilityCreate):
             """
             INSERT INTO threat.vulnerabilities (name, description, disabled, model_id)
             VALUES ($1, $2, $3, $4)
-            RETURNING id, name, description, disabled, model_id, created_at, updated_at
+            RETURNING id, name, description, version, disabled, model_id, created_at, updated_at
             """,
             vulnerability.name,
             vulnerability.description,
@@ -1118,7 +1137,7 @@ async def get_vulnerability(vulnerability_id: int):
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
-            "SELECT id, name, description, disabled, model_id, created_at, updated_at FROM threat.vulnerabilities WHERE id = $1",
+            "SELECT id, name, description, version, disabled, model_id, created_at, updated_at FROM threat.vulnerabilities WHERE id = $1",
             vulnerability_id
         )
     if not row:
@@ -1138,7 +1157,7 @@ async def update_vulnerability(vulnerability_id: int, patch: VulnerabilityUpdate
                 description = COALESCE($2, description),
                 disabled = COALESCE($3, disabled)
             WHERE id = $4
-            RETURNING id, name, description, disabled, model_id, created_at, updated_at
+            RETURNING id, name, description, version, disabled, model_id, created_at, updated_at
             """,
             patch.name,
             patch.description,
@@ -1181,7 +1200,7 @@ async def get_countermeasures():
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
-            SELECT id, name, description, fixed_implementation_cost, disabled, model_id, created_at, updated_at
+            SELECT id, name, description, version, fixed_implementation_cost, disabled, model_id, created_at, updated_at
             FROM threat.vcountermeasures
             ORDER BY created_at DESC
         """)
@@ -1196,7 +1215,7 @@ async def create_countermeasure(countermeasure: CountermeasureCreate):
             """
             INSERT INTO threat.countermeasures (name, description, fixed_implementation_cost, disabled, model_id)
             VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, name, description, fixed_implementation_cost, disabled, model_id, created_at, updated_at
+            RETURNING id, name, description, version, fixed_implementation_cost, disabled, model_id, created_at, updated_at
             """,
             countermeasure.name,
             countermeasure.description,
@@ -1212,7 +1231,7 @@ async def get_countermeasure(countermeasure_id: int):
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
-            "SELECT id, name, description, fixed_implementation_cost, disabled, model_id, created_at, updated_at FROM threat.countermeasures WHERE id = $1",
+            "SELECT id, name, description, version, fixed_implementation_cost, disabled, model_id, created_at, updated_at FROM threat.countermeasures WHERE id = $1",
             countermeasure_id
         )
     if not row:
@@ -1233,7 +1252,7 @@ async def update_countermeasure(countermeasure_id: int, patch: CountermeasureUpd
                 fixed_implementation_cost = COALESCE($3, fixed_implementation_cost),
                 disabled = COALESCE($4, disabled)
             WHERE id = $5
-            RETURNING id, name, description, fixed_implementation_cost, disabled, model_id, created_at, updated_at
+            RETURNING id, name, description, version, fixed_implementation_cost, disabled, model_id, created_at, updated_at
             """,
             patch.name,
             patch.description,

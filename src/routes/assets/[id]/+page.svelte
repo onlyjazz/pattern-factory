@@ -76,6 +76,16 @@
 								</div>
 							</div>
 						{/if}
+						<div class="detail-row">
+							<div class="detail-field">
+								<label>Tag</label>
+								<p>{asset.tag || '-'}</p>
+							</div>
+							<div class="detail-field">
+								<label>Version</label>
+								<p>{asset.version || '-'}</p>
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>
