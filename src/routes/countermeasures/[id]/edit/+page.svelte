@@ -83,7 +83,15 @@
 						handleSave();
 					}}>
 						<div style="margin-bottom: 1.5rem; color: #666;">
+							<strong>Tag:</strong> C{countermeasure.id}
+						</div>
+
+						<div style="margin-bottom: 1.5rem; color: #666;">
 							<strong>Version:</strong> {countermeasure.version || 1}
+						</div>
+
+						<div style="margin-bottom: 1.5rem; color: #666;">
+							<strong>Yearly Cost (Computed):</strong> {countermeasure.yearly_cost || 0}
 						</div>
 
 						<div class="form-section">

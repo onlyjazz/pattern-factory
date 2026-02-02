@@ -54,6 +54,12 @@
 						<h3>Basic Information</h3>
 						<div class="detail-row">
 							<div class="detail-field">
+								<label>Tag</label>
+								<p>{threat.tag || '-'}</p>
+							</div>
+						</div>
+						<div class="detail-row">
+							<div class="detail-field">
 								<label>Description</label>
 								<p>{threat.description}</p>
 							</div>
@@ -104,10 +110,6 @@
 							<div class="detail-field">
 								<label>Domain</label>
 								<p>{threat.domain || '-'}</p>
-							</div>
-							<div class="detail-field">
-								<label>Tag</label>
-								<p>{threat.tag || '-'}</p>
 							</div>
 							<div class="detail-field">
 								<label>Version</label>

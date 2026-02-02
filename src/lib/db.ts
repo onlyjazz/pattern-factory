@@ -41,7 +41,14 @@ export interface Asset {
     id: ID;
     name: string;
     description: string;
+    tag: string | null;
+    version: string | null;
     fixed_value: number;
+    fixed_value_period: number;
+    recurring_value: number;
+    include_fixed_value: boolean;
+    include_recurring_value: boolean;
+    yearly_value: number;
     disabled: boolean;
     model_id: number;
     created_at?: string;

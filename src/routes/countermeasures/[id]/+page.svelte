@@ -50,6 +50,12 @@
 					<div class="detail-section">
 						<div class="detail-row">
 							<div class="detail-field">
+								<label>Tag</label>
+								<p>C{countermeasure.id}</p>
+							</div>
+						</div>
+						<div class="detail-row">
+							<div class="detail-field">
 								<label>Name</label>
 								<p>{countermeasure.name}</p>
 							</div>

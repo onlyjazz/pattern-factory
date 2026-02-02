@@ -76,6 +76,10 @@
 						e.preventDefault();
 						handleSave();
 					}}>
+						<div style="margin-bottom: 1.5rem; color: #666;">
+							<strong>Tag:</strong> V{vulnerability.id}
+						</div>
+
 						<div class="form-section">
 							<h3>Basic Information</h3>
 							<div class="input">

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
+	import CheckboxField from '$lib/CheckboxField.svelte';
 
 	let asset: any = null;
 	let loading = true;
@@ -33,11 +34,12 @@
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					name: asset.name,
-					description: asset.description || null,
-					asset_type: asset.asset_type || null,
-					owner: asset.owner || null,
-					tag: asset.tag || null
+					tag: asset.tag || null,
+					fixed_value: asset.fixed_value || 0,
+					fixed_value_period: asset.fixed_value_period || 12,
+					recurring_value: asset.recurring_value || 0,
+					include_fixed_value: asset.include_fixed_value || true,
+					include_recurring_value: asset.include_recurring_value || true
 				})
 			});
 			if (!response.ok) throw new Error('Failed to save asset');
@@ -77,8 +79,27 @@
 						e.preventDefault();
 						handleSave();
 					}}>
+						<div style="margin-bottom: 1.5rem; color: #666;">
+							<strong>Version:</strong> {asset.version || 1}
+						</div>
+
+						<div style="margin-bottom: 1.5rem; color: #666;">
+							<strong>Yearly Value (Computed):</strong> {asset.yearly_value || 0}
+						</div>
+
 						<div class="form-section">
 							<h3>Basic Information</h3>
+							<div class="input">
+								<input
+									id="asset-tag"
+									type="text"
+									bind:value={asset.tag}
+									class="input__text"
+									class:input__text_changed={asset.tag?.length > 0}
+								/>
+								<label for="asset-tag" class="input__label">Tag</label>
+							</div>
+
 							<div class="input">
 								<input
 									id="asset-name"
@@ -104,38 +125,62 @@
 						</div>
 
 						<div class="form-section">
-							<h3>Details</h3>
+							<h3>Financial Configuration</h3>
 							<div class="input">
 								<input
-									id="asset-type"
-									type="text"
-									bind:value={asset.asset_type}
+									id="fixed-value"
+									type="number"
+									bind:value={asset.fixed_value}
 									class="input__text"
-									class:input__text_changed={asset.asset_type?.length > 0}
+									class:input__text_changed={asset.fixed_value}
+									min="0"
 								/>
-								<label for="asset-type" class="input__label">Type</label>
+								<label for="fixed-value" class="input__label">Fixed Value ($)</label>
 							</div>
 
 							<div class="input">
 								<input
-									id="asset-owner"
-									type="text"
-									bind:value={asset.owner}
+									id="fixed-value-period"
+									type="number"
+									bind:value={asset.fixed_value_period}
 									class="input__text"
-									class:input__text_changed={asset.owner?.length > 0}
+									class:input__text_changed={asset.fixed_value_period}
+									min="1"
 								/>
-								<label for="asset-owner" class="input__label">Owner</label>
+								<label for="fixed-value-period" class="input__label">Fixed Value Period (months)</label>
 							</div>
 
 							<div class="input">
 								<input
-									id="asset-tag"
-									type="text"
-									bind:value={asset.tag}
+									id="recurring-value"
+									type="number"
+									bind:value={asset.recurring_value}
 									class="input__text"
-									class:input__text_changed={asset.tag?.length > 0}
+									class:input__text_changed={asset.recurring_value}
+									min="0"
 								/>
-								<label for="asset-tag" class="input__label">Tag</label>
+								<label for="recurring-value" class="input__label">Recurring Value ($/year)</label>
+							</div>
+						</div>
+
+						<div class="form-section">
+							<h3>Include Options</h3>
+							<div style="margin-bottom: 1.5rem;">
+								<CheckboxField
+									id="include-fixed-value"
+									bind:checked={asset.include_fixed_value}
+									label="Include fixed value"
+									description="When checked the yearly value will include the fixed value"
+								/>
+							</div>
+
+							<div style="margin-bottom: 0;">
+								<CheckboxField
+									id="include-recurring-value"
+									bind:checked={asset.include_recurring_value}
+									label="Include recurring value"
+									description="When checked the yearly value will include the recurring value"
+								/>
 							</div>
 						</div>
 

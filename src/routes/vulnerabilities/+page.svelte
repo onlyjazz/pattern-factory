@@ -17,7 +17,7 @@
 		model_id: 1
 	};
 	
-	let sortField: keyof Vulnerability | null = null;
+	let sortField: keyof Vulnerability | string | null = 'tag';
 	let sortDirection: 'asc' | 'desc' = 'asc';
 	
 	const apiBase = 'http://localhost:8000';
@@ -48,8 +48,17 @@
 	function sortVulnerabilities() {
 		if (!sortField) return;
 		filteredVulnerabilities = [...filteredVulnerabilities].sort((a, b) => {
-			const aVal = a[sortField] || '';
-			const bVal = b[sortField] || '';
+			let aVal = a[sortField] || '';
+			let bVal = b[sortField] || '';
+			
+			// For 'tag' field, sort by numeric id
+			if (sortField === 'tag') {
+				const aNum = parseInt(String(a.id), 10);
+				const bNum = parseInt(String(b.id), 10);
+				const comparison = aNum - bNum;
+				return sortDirection === 'asc' ? comparison : -comparison;
+			}
+			
 			const comparison = String(aVal).localeCompare(String(bVal));
 			return sortDirection === 'asc' ? comparison : -comparison;
 		});
@@ -152,6 +161,9 @@
 						<table>
 							<thead>
 								<tr>
+									<th class="tal sortable" class:sorted-asc={sortField === 'tag' && sortDirection === 'asc'} class:sorted-desc={sortField === 'tag' && sortDirection === 'desc'} onclick={() => toggleSort('tag')}>
+										Tag
+									</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'name' && sortDirection === 'asc'} class:sorted-desc={sortField === 'name' && sortDirection === 'desc'} onclick={() => toggleSort('name')}>
 										Name
 									</th>
@@ -168,6 +180,7 @@
 							<tbody>
 								{#each filteredVulnerabilities as v (v.id)}
 									<tr class="vulnerability-row">
+										<td class="tal">V{v.id}</td>
 										<td class="tal">{v.name}</td>
 										<td class="tal">{v.description}</td>
 										<td class="tal">{v.disabled ? 'Yes' : 'No'}</td>

@@ -28,7 +28,7 @@
 		card_id: null
 	};
 	
-	let sortField: keyof Threat | null = null;
+	let sortField: keyof Threat | null = 'tag';
 	let sortDirection: 'asc' | 'desc' = 'asc';
 	
 	// Card search/autocomplete
@@ -261,7 +261,7 @@
 		<div class="grid-col grid-col_24">
 			<div class="studies card">
 				<div class="card-header">
-					<div class="heading heading_3">Risks Library</div>
+			<div class="heading heading_3">Model risks</div>
 				</div>
 
 				{#if loading}
@@ -275,6 +275,9 @@
 						<table>
 							<thead>
 								<tr>
+									<th class="tal sortable" class:sorted-asc={sortField === 'tag' && sortDirection === 'asc'} class:sorted-desc={sortField === 'tag' && sortDirection === 'desc'} onclick={() => toggleSort('tag')}>
+										Tag
+									</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'name' && sortDirection === 'asc'} class:sorted-desc={sortField === 'name' && sortDirection === 'desc'} onclick={() => toggleSort('name')}>
 										Name
 									</th>
@@ -297,6 +300,7 @@
 							<tbody>
 								{#each filteredThreats as t (t.id)}
 								<tr class="threat-row" onclick={() => window.location.href = `/threats/${t.id}`}>
+									<td class="tal">{t.tag || '-'}</td>
 									<td class="tal">{t.name}</td>
 									<td class="tal">{t.description}</td>
 									<td class="tal">{t.probability || '-'}</td>

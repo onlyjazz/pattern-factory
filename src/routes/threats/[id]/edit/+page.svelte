@@ -114,6 +114,17 @@
 							<h3>Basic Information</h3>
 							<div class="input">
 								<input
+									id="threat-tag"
+									type="text"
+									bind:value={threat.tag}
+									class="input__text"
+									class:input__text_changed={threat.tag?.length > 0}
+								/>
+								<label for="threat-tag" class="input__label">Tag</label>
+							</div>
+
+							<div class="input">
+								<input
 									id="threat-name"
 									type="text"
 									bind:value={threat.name}
@@ -145,17 +156,6 @@
 									class:input__text_changed={threat.domain?.length > 0}
 								/>
 								<label for="threat-domain" class="input__label">Domain</label>
-							</div>
-
-							<div class="input">
-								<input
-									id="threat-tag"
-									type="text"
-									bind:value={threat.tag}
-									class="input__text"
-									class:input__text_changed={threat.tag?.length > 0}
-								/>
-								<label for="threat-tag" class="input__label">Tag</label>
 							</div>
 						</div>
 

@@ -993,7 +993,12 @@ class AssetCreate(BaseModel):
     name: str
     description: str
     tag: str | None = None
+    version: str | None = None
     fixed_value: float = 0
+    fixed_value_period: int = 12
+    recurring_value: float = 0
+    include_fixed_value: bool = True
+    include_recurring_value: bool = True
     disabled: bool = False
     model_id: int = 1
 
@@ -1001,7 +1006,12 @@ class AssetUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
     tag: str | None = None
+    version: str | None = None
     fixed_value: float | None = None
+    fixed_value_period: int | None = None
+    recurring_value: float | None = None
+    include_fixed_value: bool | None = None
+    include_recurring_value: bool | None = None
     disabled: bool | None = None
 
 @app.get("/assets", tags=["Assets"])
@@ -1010,8 +1020,9 @@ async def get_assets():
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
-            SELECT id, name, description, tag, version, fixed_value, disabled, model_id, created_at, updated_at
-            FROM threat.vassets
+            SELECT id, name, description, tag, version, fixed_value, fixed_value_period, recurring_value, 
+                   include_fixed_value, include_recurring_value, yearly_value, disabled, model_id, created_at, updated_at
+            FROM threat.assets
             ORDER BY created_at DESC
         """)
     return [dict(r) for r in rows]
@@ -1023,14 +1034,21 @@ async def create_asset(asset: AssetCreate):
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
             """
-            INSERT INTO threat.assets (name, description, tag, fixed_value, disabled, model_id)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING id, name, description, tag, version, fixed_value, disabled, model_id, created_at, updated_at
+            INSERT INTO threat.assets (name, description, tag, version, fixed_value, fixed_value_period, 
+                                     recurring_value, include_fixed_value, include_recurring_value, disabled, model_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            RETURNING id, name, description, tag, version, fixed_value, fixed_value_period, recurring_value,
+                     include_fixed_value, include_recurring_value, yearly_value, disabled, model_id, created_at, updated_at
             """,
             asset.name,
             asset.description,
             asset.tag,
+            asset.version,
             asset.fixed_value,
+            asset.fixed_value_period,
+            asset.recurring_value,
+            asset.include_fixed_value,
+            asset.include_recurring_value,
             asset.disabled,
             asset.model_id
         )
@@ -1042,7 +1060,7 @@ async def get_asset(asset_id: int):
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
-            "SELECT id, name, description, tag, version, fixed_value, disabled, model_id, created_at, updated_at FROM threat.assets WHERE id = $1",
+            "SELECT id, name, description, tag, version, fixed_value, fixed_value_period, recurring_value, include_fixed_value, include_recurring_value, yearly_value, disabled, model_id, created_at, updated_at FROM threat.assets WHERE id = $1",
             asset_id
         )
     if not row:
@@ -1061,15 +1079,26 @@ async def update_asset(asset_id: int, patch: AssetUpdate):
                 name = COALESCE($1, name),
                 description = COALESCE($2, description),
                 tag = COALESCE($3, tag),
-                fixed_value = COALESCE($4, fixed_value),
-                disabled = COALESCE($5, disabled)
-            WHERE id = $6
-            RETURNING id, name, description, tag, version, fixed_value, disabled, model_id, created_at, updated_at
+                version = COALESCE($4, version),
+                fixed_value = COALESCE($5, fixed_value),
+                fixed_value_period = COALESCE($6, fixed_value_period),
+                recurring_value = COALESCE($7, recurring_value),
+                include_fixed_value = COALESCE($8, include_fixed_value),
+                include_recurring_value = COALESCE($9, include_recurring_value),
+                disabled = COALESCE($10, disabled)
+            WHERE id = $11
+            RETURNING id, name, description, tag, version, fixed_value, fixed_value_period, recurring_value,
+                     include_fixed_value, include_recurring_value, yearly_value, disabled, model_id, created_at, updated_at
             """,
             patch.name,
             patch.description,
             patch.tag,
+            patch.version,
             patch.fixed_value,
+            patch.fixed_value_period,
+            patch.recurring_value,
+            patch.include_fixed_value,
+            patch.include_recurring_value,
             patch.disabled,
             asset_id
         )

@@ -14,21 +14,25 @@ alter table public.active_models add column if not exists updated_at timestamp w
 
 --
 -- Create views that show threats, vulnerabilities, and countermeasures for the active model and the admin user
+DROP VIEW IF EXISTS threat.vthreats;
 CREATE or REPLACE view threat.vthreats as
 SELECT t.* from threat.threats t
     JOIN public.active_models am ON t.model_id = am.model_id
     WHERE am.user_id = ((SELECT id FROM public.users WHERE email = 'admin@opencro.com'));
 --
+DROP VIEW IF EXISTS threat.vvulnerabilities;
 CREATE or REPLACE view threat.vvulnerabilities as
 SELECT v.* from threat.vulnerabilities v
     JOIN public.active_models am ON v.model_id = am.model_id
     WHERE am.user_id = ((SELECT id FROM public.users WHERE email = 'admin@opencro.com'));
 --
+DROP VIEW IF EXISTS threat.vcountermeasures;
 CREATE or REPLACE view threat.vcountermeasures as
 SELECT c.* from threat.countermeasures c
     JOIN public.active_models am ON c.model_id = am.model_id
     WHERE am.user_id = ((SELECT id FROM public.users WHERE email = 'admin@opencro.com'));
 --
+DROP VIEW IF EXISTS threat.vassets;
 CREATE or REPLACE view threat.vassets as
 SELECT a.* from threat.assets a
     JOIN public.active_models am ON a.model_id = am.model_id

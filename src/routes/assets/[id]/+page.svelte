@@ -60,22 +60,6 @@
 								<p>{asset.description || '-'}</p>
 							</div>
 						</div>
-						{#if asset.asset_type}
-							<div class="detail-row">
-								<div class="detail-field">
-									<label>Type</label>
-									<p>{asset.asset_type}</p>
-								</div>
-							</div>
-						{/if}
-						{#if asset.owner}
-							<div class="detail-row">
-								<div class="detail-field">
-									<label>Owner</label>
-									<p>{asset.owner}</p>
-								</div>
-							</div>
-						{/if}
 						<div class="detail-row">
 							<div class="detail-field">
 								<label>Tag</label>
@@ -84,6 +68,38 @@
 							<div class="detail-field">
 								<label>Version</label>
 								<p>{asset.version || '-'}</p>
+							</div>
+						</div>
+						<div class="detail-row">
+							<div class="detail-field">
+								<label>Yearly Value (Computed)</label>
+								<p>{asset.yearly_value || 0}</p>
+							</div>
+						</div>
+						<div class="detail-row">
+							<div class="detail-field">
+								<label>Fixed Value</label>
+								<p>{asset.fixed_value || 0}</p>
+							</div>
+							<div class="detail-field">
+								<label>Fixed Value Period (months)</label>
+								<p>{asset.fixed_value_period || 12}</p>
+							</div>
+						</div>
+						<div class="detail-row">
+							<div class="detail-field">
+								<label>Recurring Value</label>
+								<p>{asset.recurring_value || 0}</p>
+							</div>
+						</div>
+						<div class="detail-row">
+							<div class="detail-field">
+								<label>Include Fixed Value</label>
+								<p>{asset.include_fixed_value ? 'Yes' : 'No'}</p>
+							</div>
+							<div class="detail-field">
+								<label>Include Recurring Value</label>
+								<p>{asset.include_recurring_value ? 'Yes' : 'No'}</p>
 							</div>
 						</div>
 					</div>

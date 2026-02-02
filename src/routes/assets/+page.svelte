@@ -12,13 +12,10 @@
 	let showAddModal = false;
 	let newAsset: Partial<Asset> = { 
 		name: '', 
-		description: '',
-		fixed_value: 0,
-		disabled: false,
-		model_id: 1
+		description: ''
 	};
 	
-	let sortField: keyof Asset | null = null;
+	let sortField: keyof Asset | null = 'tag';
 	let sortDirection: 'asc' | 'desc' = 'asc';
 	
 	const apiBase = 'http://localhost:8000';
@@ -73,10 +70,7 @@
 		showAddModal = false;
 		newAsset = { 
 			name: '', 
-			description: '',
-			fixed_value: 0,
-			disabled: false,
-			model_id: 1
+			description: ''
 		};
 		addModalError = null;
 	}
@@ -141,7 +135,7 @@
 		<div class="grid-col grid-col_24">
 			<div class="studies card">
 				<div class="card-header">
-					<div class="heading heading_3">Asset Library</div>
+					<div class="heading heading_3">Model assets</div>
 				</div>
 
 				{#if loading}
@@ -154,37 +148,41 @@
 					<div class="table">
 						<table>
 							<thead>
-								<tr>
-									<th class="tal sortable" class:sorted-asc={sortField === 'name' && sortDirection === 'asc'} class:sorted-desc={sortField === 'name' && sortDirection === 'desc'} onclick={() => toggleSort('name')}>
-										Name
-									</th>
-									<th class="tal sortable" class:sorted-asc={sortField === 'description' && sortDirection === 'asc'} class:sorted-desc={sortField === 'description' && sortDirection === 'desc'} onclick={() => toggleSort('description')}>
-										Description
-									</th>
-									<th class="tal sortable" class:sorted-asc={sortField === 'fixed_value' && sortDirection === 'asc'} class:sorted-desc={sortField === 'fixed_value' && sortDirection === 'desc'} onclick={() => toggleSort('fixed_value')}>
-										Fixed Value
-									</th>
-									<th class="tal sortable" class:sorted-asc={sortField === 'disabled' && sortDirection === 'asc'} class:sorted-desc={sortField === 'disabled' && sortDirection === 'desc'} onclick={() => toggleSort('disabled')}>
-										Disabled
-									</th>
-									<th class="tar">Actions</th>
-								</tr>
+						<tr>
+							<th class="tal sortable" class:sorted-asc={sortField === 'tag' && sortDirection === 'asc'} class:sorted-desc={sortField === 'tag' && sortDirection === 'desc'} onclick={() => toggleSort('tag')}>
+								Tag
+							</th>
+							<th class="tal sortable" class:sorted-asc={sortField === 'name' && sortDirection === 'asc'} class:sorted-desc={sortField === 'name' && sortDirection === 'desc'} onclick={() => toggleSort('name')}>
+								Name
+							</th>
+							<th class="tal sortable" class:sorted-asc={sortField === 'description' && sortDirection === 'asc'} class:sorted-desc={sortField === 'description' && sortDirection === 'desc'} onclick={() => toggleSort('description')}>
+								Description
+							</th>
+							<th class="tal sortable" class:sorted-asc={sortField === 'yearly_value' && sortDirection === 'asc'} class:sorted-desc={sortField === 'yearly_value' && sortDirection === 'desc'} onclick={() => toggleSort('yearly_value')}>
+								Yearly Value
+							</th>
+							<th class="tal sortable" class:sorted-asc={sortField === 'disabled' && sortDirection === 'asc'} class:sorted-desc={sortField === 'disabled' && sortDirection === 'desc'} onclick={() => toggleSort('disabled')}>
+								Disabled
+							</th>
+							<th class="tar">Actions</th>
+						</tr>
 							</thead>
 
 							<tbody>
-								{#each filteredAssets as a (a.id)}
-									<tr class="asset-row">
-										<td class="tal">{a.name}</td>
-										<td class="tal">{a.description}</td>
-										<td class="tal">{a.fixed_value || '-'}</td>
-										<td class="tal">{a.disabled ? 'Yes' : 'No'}</td>
+						{#each filteredAssets as a (a.id)}
+							<tr class="asset-row">
+								<td class="tal">{a.tag || '-'}</td>
+								<td class="tal">{a.name}</td>
+								<td class="tal">{a.description}</td>
+								<td class="tal">{a.yearly_value || 0}</td>
+								<td class="tal">{a.disabled ? 'Yes' : 'No'}</td>
 
-										<td class="tar">
-											<a href="/assets/{a.id}" class="button button_small" title="Edit">✎</a>
-											<button class="button button_small" onclick={() => handleDelete(a.id)} title="Delete">🗑</button>
-										</td>
-									</tr>
-								{/each}
+								<td class="tar">
+									<a href="/assets/{a.id}" class="button button_small" title="View">✎</a>
+									<button class="button button_small" onclick={() => handleDelete(a.id)} title="Delete">🗑</button>
+								</td>
+							</tr>
+						{/each}
 							</tbody>
 						</table>
 					</div>
@@ -241,16 +239,6 @@
 							required
 						/>
 						<label for="add-description" class="input__label">Description</label>
-					</div>
-
-					<div class="input">
-						<input
-							id="add-fixed-value"
-							type="number"
-							bind:value={newAsset.fixed_value}
-							class="input__text"
-						/>
-						<label for="add-fixed-value" class="input__label">Fixed Value</label>
 					</div>
 
 					<div class="modal-footer">

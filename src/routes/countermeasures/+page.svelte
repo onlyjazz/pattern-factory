@@ -23,7 +23,7 @@
 		model_id: 1
 	};
 	
-	let sortField: keyof Countermeasure | null = null;
+let sortField: keyof Countermeasure | string | null = 'tag';
 	let sortDirection: 'asc' | 'desc' = 'asc';
 	
 	const apiBase = 'http://localhost:8000';
@@ -54,8 +54,17 @@
 	function sortCountermeasures() {
 		if (!sortField) return;
 		filteredCountermeasures = [...filteredCountermeasures].sort((a, b) => {
-			const aVal = a[sortField] || '';
-			const bVal = b[sortField] || '';
+			let aVal = a[sortField] || '';
+			let bVal = b[sortField] || '';
+			
+			// For 'tag' field, sort by numeric id
+			if (sortField === 'tag') {
+				const aNum = parseInt(String(a.id), 10);
+				const bNum = parseInt(String(b.id), 10);
+				const comparison = aNum - bNum;
+				return sortDirection === 'asc' ? comparison : -comparison;
+			}
+			
 			const comparison = String(aVal).localeCompare(String(bVal));
 			return sortDirection === 'asc' ? comparison : -comparison;
 		});
@@ -170,6 +179,9 @@
 						<table>
 							<thead>
 								<tr>
+									<th class="tal sortable" class:sorted-asc={sortField === 'tag' && sortDirection === 'asc'} class:sorted-desc={sortField === 'tag' && sortDirection === 'desc'} onclick={() => toggleSort('tag')}>
+										Tag
+									</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'name' && sortDirection === 'asc'} class:sorted-desc={sortField === 'name' && sortDirection === 'desc'} onclick={() => toggleSort('name')}>
 										Name
 									</th>
@@ -195,6 +207,7 @@
 							<tbody>
 								{#each filteredCountermeasures as c (c.id)}
 									<tr class="countermeasure-row">
+										<td class="tal">C{c.id}</td>
 										<td class="tal">{c.name}</td>
 										<td class="tal">{c.description}</td>
 										<td class="tal">${c.yearly_cost || 0}</td>

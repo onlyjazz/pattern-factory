@@ -50,6 +50,12 @@
 					<div class="detail-section">
 						<div class="detail-row">
 							<div class="detail-field">
+								<label>Tag</label>
+								<p>V{vulnerability.id}</p>
+							</div>
+						</div>
+						<div class="detail-row">
+							<div class="detail-field">
 								<label>Name</label>
 								<p>{vulnerability.name}</p>
 							</div>
