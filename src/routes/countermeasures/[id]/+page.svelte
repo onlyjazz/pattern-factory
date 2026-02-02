@@ -60,31 +60,67 @@
 								<p>{countermeasure.description || '-'}</p>
 							</div>
 						</div>
-						{#if countermeasure.implementation_level}
-							<div class="detail-row">
-								<div class="detail-field">
-									<label>Implementation Level</label>
-									<p>{countermeasure.implementation_level}</p>
-								</div>
-							</div>
-						{/if}
-						{#if countermeasure.cost}
-							<div class="detail-row">
-								<div class="detail-field">
-									<label>Cost</label>
-									<p>{countermeasure.cost}</p>
-								</div>
-							</div>
-						{/if}
+						
+						<!-- Yearly Cost (computed field) -->
 						<div class="detail-row">
 							<div class="detail-field">
-								<label>Version</label>
-								<p>{countermeasure.version || '-'}</p>
+								<label>Yearly Cost</label>
+								<p>${countermeasure.yearly_cost || 0}</p>
 							</div>
 						</div>
-					</div>
-				</div>
-			</div>
+						
+						<!-- Cost Fields -->
+						<div class="detail-row">
+							<div class="detail-field">
+								<label>Fixed Implementation Cost</label>
+								<p>${countermeasure.fixed_implementation_cost || 0}</p>
+							</div>
+							<div class="detail-field">
+								<label>Fixed Cost Period (months)</label>
+								<p>{countermeasure.fixed_cost_period || 12}</p>
+							</div>
+						</div>
+						<div class="detail-row">
+							<div class="detail-field">
+								<label>Recurring Implementation Cost</label>
+								<p>${countermeasure.recurring_implementation_cost || 0}</p>
+							</div>
+						</div>
+						
+						<!-- Inclusion Flags -->
+						<div class="detail-row">
+							<div class="detail-field">
+								<label>Include Fixed Cost</label>
+								<p>{countermeasure.include_fixed_cost ? 'Yes' : 'No'}</p>
+							</div>
+							<div class="detail-field">
+								<label>Include Recurring Cost</label>
+								<p>{countermeasure.include_recurring_cost ? 'Yes' : 'No'}</p>
+							</div>
+						</div>
+						
+						<!-- Status Fields -->
+						<div class="detail-row">
+							<div class="detail-field">
+								<label>Implemented</label>
+								<p>{countermeasure.implemented ? 'Yes' : 'No'}</p>
+							</div>
+											<div class="detail-field">
+												<label>Disabled</label>
+												<p>{countermeasure.disabled ? 'Yes' : 'No'}</p>
+											</div>
+										</div>
+										
+										<!-- Version (metadata) -->
+										<div class="detail-row">
+											<div class="detail-field">
+												<label>Version</label>
+												<p>{countermeasure.version || 1}</p>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
 		</div>
 	{:else}
 		<div class="message">Countermeasure not found</div>

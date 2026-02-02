@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
+	import CheckboxField from '$lib/CheckboxField.svelte';
 
 	let countermeasure: any = null;
 	let loading = true;
@@ -35,8 +36,13 @@
 				body: JSON.stringify({
 					name: countermeasure.name,
 					description: countermeasure.description || null,
-					implementation_level: countermeasure.implementation_level || null,
-					cost: countermeasure.cost || null
+					fixed_implementation_cost: countermeasure.fixed_implementation_cost || 0,
+					fixed_cost_period: countermeasure.fixed_cost_period || 12,
+					recurring_implementation_cost: countermeasure.recurring_implementation_cost || 0,
+					include_fixed_cost: countermeasure.include_fixed_cost || true,
+					include_recurring_cost: countermeasure.include_recurring_cost || true,
+					implemented: countermeasure.implemented || false,
+					disabled: countermeasure.disabled || false
 				})
 			});
 			if (!response.ok) throw new Error('Failed to save countermeasure');
@@ -76,6 +82,10 @@
 						e.preventDefault();
 						handleSave();
 					}}>
+						<div style="margin-bottom: 1.5rem; color: #666;">
+							<strong>Version:</strong> {countermeasure.version || 1}
+						</div>
+
 						<div class="form-section">
 							<h3>Basic Information</h3>
 							<div class="input">
@@ -103,27 +113,83 @@
 						</div>
 
 						<div class="form-section">
-							<h3>Details</h3>
+							<h3>Cost Configuration</h3>
 							<div class="input">
 								<input
-									id="countermeasure-implementation"
-									type="text"
-									bind:value={countermeasure.implementation_level}
+									id="fixed-implementation-cost"
+									type="number"
+									bind:value={countermeasure.fixed_implementation_cost}
 									class="input__text"
-									class:input__text_changed={countermeasure.implementation_level?.length > 0}
+									class:input__text_changed={countermeasure.fixed_implementation_cost}
+									min="0"
 								/>
-								<label for="countermeasure-implementation" class="input__label">Implementation Level</label>
+								<label for="fixed-implementation-cost" class="input__label">Fixed Implementation Cost ($)</label>
 							</div>
 
 							<div class="input">
 								<input
-									id="countermeasure-cost"
-									type="text"
-									bind:value={countermeasure.cost}
+									id="fixed-cost-period"
+									type="number"
+									bind:value={countermeasure.fixed_cost_period}
 									class="input__text"
-									class:input__text_changed={countermeasure.cost?.length > 0}
+									class:input__text_changed={countermeasure.fixed_cost_period}
+									min="1"
 								/>
-								<label for="countermeasure-cost" class="input__label">Cost</label>
+								<label for="fixed-cost-period" class="input__label">Fixed Cost Period (months)</label>
+							</div>
+
+							<div class="input">
+								<input
+									id="recurring-implementation-cost"
+									type="number"
+									bind:value={countermeasure.recurring_implementation_cost}
+									class="input__text"
+									class:input__text_changed={countermeasure.recurring_implementation_cost}
+									min="0"
+								/>
+								<label for="recurring-implementation-cost" class="input__label">Recurring Implementation Cost ($/year)</label>
+							</div>
+						</div>
+
+						<div class="form-section">
+							<h3>Cost Options</h3>
+							<div style="margin-bottom: 1.5rem;">
+								<CheckboxField
+									id="include-fixed-cost"
+									bind:checked={countermeasure.include_fixed_cost}
+									label="Include fixed cost"
+									description="When checked the risk assessment will include the fixed cost"
+								/>
+							</div>
+
+							<div style="margin-bottom: 0;">
+								<CheckboxField
+									id="include-recurring-cost"
+									bind:checked={countermeasure.include_recurring_cost}
+									label="Include recurring cost"
+									description="When checked the risk assessment will include the recurring cost on a yearly basis"
+								/>
+							</div>
+						</div>
+
+						<div class="form-section">
+							<h3>Status</h3>
+							<div style="margin-bottom: 1.5rem;">
+								<CheckboxField
+									id="implemented"
+									bind:checked={countermeasure.implemented}
+									label="Implemented"
+									description="Check if you've already implemented this countermeasure"
+								/>
+							</div>
+
+							<div style="margin-bottom: 0;">
+								<CheckboxField
+									id="disabled"
+									bind:checked={countermeasure.disabled}
+									label="Exclude"
+									description="When clicking this checkbox, you will exclude the countermeasure from the risk mitigation set"
+								/>
 							</div>
 						</div>
 

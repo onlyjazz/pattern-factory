@@ -14,6 +14,11 @@
 		name: '', 
 		description: '',
 		fixed_implementation_cost: 0,
+		fixed_cost_period: 12,
+		recurring_implementation_cost: 0,
+		include_fixed_cost: true,
+		include_recurring_cost: true,
+		implemented: false,
 		disabled: false,
 		model_id: 1
 	};
@@ -75,6 +80,11 @@
 			name: '', 
 			description: '',
 			fixed_implementation_cost: 0,
+			fixed_cost_period: 12,
+			recurring_implementation_cost: 0,
+			include_fixed_cost: true,
+			include_recurring_cost: true,
+			implemented: false,
 			disabled: false,
 			model_id: 1
 		};
@@ -95,6 +105,11 @@
 					name: newCountermeasure.name,
 					description: newCountermeasure.description,
 					fixed_implementation_cost: newCountermeasure.fixed_implementation_cost || 0,
+					fixed_cost_period: newCountermeasure.fixed_cost_period || 12,
+					recurring_implementation_cost: newCountermeasure.recurring_implementation_cost || 0,
+					include_fixed_cost: newCountermeasure.include_fixed_cost !== undefined ? newCountermeasure.include_fixed_cost : true,
+					include_recurring_cost: newCountermeasure.include_recurring_cost !== undefined ? newCountermeasure.include_recurring_cost : true,
+					implemented: newCountermeasure.implemented || false,
 					disabled: newCountermeasure.disabled || false,
 					model_id: newCountermeasure.model_id || 1,
 				})
@@ -161,11 +176,17 @@
 									<th class="tal sortable" class:sorted-asc={sortField === 'description' && sortDirection === 'asc'} class:sorted-desc={sortField === 'description' && sortDirection === 'desc'} onclick={() => toggleSort('description')}>
 										Description
 									</th>
-									<th class="tal sortable" class:sorted-asc={sortField === 'fixed_implementation_cost' && sortDirection === 'asc'} class:sorted-desc={sortField === 'fixed_implementation_cost' && sortDirection === 'desc'} onclick={() => toggleSort('fixed_implementation_cost')}>
-										Fixed Implementation Cost
+									<th class="tal sortable" class:sorted-asc={sortField === 'yearly_cost' && sortDirection === 'asc'} class:sorted-desc={sortField === 'yearly_cost' && sortDirection === 'desc'} onclick={() => toggleSort('yearly_cost')}>
+										Yearly Cost
+									</th>
+									<th class="tal sortable" class:sorted-asc={sortField === 'implemented' && sortDirection === 'asc'} class:sorted-desc={sortField === 'implemented' && sortDirection === 'desc'} onclick={() => toggleSort('implemented')}>
+										Implemented
 									</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'disabled' && sortDirection === 'asc'} class:sorted-desc={sortField === 'disabled' && sortDirection === 'desc'} onclick={() => toggleSort('disabled')}>
 										Disabled
+									</th>
+									<th class="tal sortable" class:sorted-asc={sortField === 'version' && sortDirection === 'asc'} class:sorted-desc={sortField === 'version' && sortDirection === 'desc'} onclick={() => toggleSort('version')}>
+										Version
 									</th>
 									<th class="tar">Actions</th>
 								</tr>
@@ -176,8 +197,10 @@
 									<tr class="countermeasure-row">
 										<td class="tal">{c.name}</td>
 										<td class="tal">{c.description}</td>
-										<td class="tal">{c.fixed_implementation_cost || '-'}</td>
+										<td class="tal">${c.yearly_cost || 0}</td>
+										<td class="tal">{c.implemented ? 'Yes' : 'No'}</td>
 										<td class="tal">{c.disabled ? 'Yes' : 'No'}</td>
+										<td class="tal">{c.version || 1}</td>
 
 										<td class="tar">
 											<a href="/countermeasures/{c.id}" class="button button_small" title="Edit">✎</a>

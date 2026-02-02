@@ -1185,6 +1185,11 @@ class CountermeasureCreate(BaseModel):
     name: str
     description: str
     fixed_implementation_cost: int = 0
+    fixed_cost_period: int = 12
+    recurring_implementation_cost: int = 0
+    include_fixed_cost: bool = True
+    include_recurring_cost: bool = True
+    implemented: bool = False
     disabled: bool = False
     model_id: int = 1
 
@@ -1192,6 +1197,11 @@ class CountermeasureUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
     fixed_implementation_cost: int | None = None
+    fixed_cost_period: int | None = None
+    recurring_implementation_cost: int | None = None
+    include_fixed_cost: bool | None = None
+    include_recurring_cost: bool | None = None
+    implemented: bool | None = None
     disabled: bool | None = None
 
 @app.get("/countermeasures", tags=["Countermeasures"])
@@ -1200,7 +1210,7 @@ async def get_countermeasures():
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
-            SELECT id, name, description, version, fixed_implementation_cost, disabled, model_id, created_at, updated_at
+            SELECT id, name, description, version, yearly_cost, fixed_implementation_cost, fixed_cost_period, recurring_implementation_cost, include_fixed_cost, include_recurring_cost, implemented, disabled, model_id, created_at, updated_at
             FROM threat.vcountermeasures
             ORDER BY created_at DESC
         """)
@@ -1213,13 +1223,18 @@ async def create_countermeasure(countermeasure: CountermeasureCreate):
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
             """
-            INSERT INTO threat.countermeasures (name, description, fixed_implementation_cost, disabled, model_id)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, name, description, version, fixed_implementation_cost, disabled, model_id, created_at, updated_at
+            INSERT INTO threat.countermeasures (name, description, fixed_implementation_cost, fixed_cost_period, recurring_implementation_cost, include_fixed_cost, include_recurring_cost, implemented, disabled, model_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            RETURNING id, name, description, version, yearly_cost, fixed_implementation_cost, fixed_cost_period, recurring_implementation_cost, include_fixed_cost, include_recurring_cost, implemented, disabled, model_id, created_at, updated_at
             """,
             countermeasure.name,
             countermeasure.description,
             countermeasure.fixed_implementation_cost,
+            countermeasure.fixed_cost_period,
+            countermeasure.recurring_implementation_cost,
+            countermeasure.include_fixed_cost,
+            countermeasure.include_recurring_cost,
+            countermeasure.implemented,
             countermeasure.disabled,
             countermeasure.model_id
         )
@@ -1231,7 +1246,7 @@ async def get_countermeasure(countermeasure_id: int):
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
-            "SELECT id, name, description, version, fixed_implementation_cost, disabled, model_id, created_at, updated_at FROM threat.countermeasures WHERE id = $1",
+            "SELECT id, name, description, version, yearly_cost, fixed_implementation_cost, fixed_cost_period, recurring_implementation_cost, include_fixed_cost, include_recurring_cost, implemented, disabled, model_id, created_at, updated_at FROM threat.countermeasures WHERE id = $1",
             countermeasure_id
         )
     if not row:
@@ -1250,13 +1265,23 @@ async def update_countermeasure(countermeasure_id: int, patch: CountermeasureUpd
                 name = COALESCE($1, name),
                 description = COALESCE($2, description),
                 fixed_implementation_cost = COALESCE($3, fixed_implementation_cost),
-                disabled = COALESCE($4, disabled)
-            WHERE id = $5
-            RETURNING id, name, description, version, fixed_implementation_cost, disabled, model_id, created_at, updated_at
+                fixed_cost_period = COALESCE($4, fixed_cost_period),
+                recurring_implementation_cost = COALESCE($5, recurring_implementation_cost),
+                include_fixed_cost = COALESCE($6, include_fixed_cost),
+                include_recurring_cost = COALESCE($7, include_recurring_cost),
+                implemented = COALESCE($8, implemented),
+                disabled = COALESCE($9, disabled)
+            WHERE id = $10
+            RETURNING id, name, description, version, yearly_cost, fixed_implementation_cost, fixed_cost_period, recurring_implementation_cost, include_fixed_cost, include_recurring_cost, implemented, disabled, model_id, created_at, updated_at
             """,
             patch.name,
             patch.description,
             patch.fixed_implementation_cost,
+            patch.fixed_cost_period,
+            patch.recurring_implementation_cost,
+            patch.include_fixed_cost,
+            patch.include_recurring_cost,
+            patch.implemented,
             patch.disabled,
             countermeasure_id
         )

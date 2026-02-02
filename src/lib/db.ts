@@ -62,7 +62,13 @@ export interface Countermeasure {
     id: ID;
     name: string;
     description: string;
+    yearly_cost: number;
     fixed_implementation_cost: number;
+    fixed_cost_period: number;
+    recurring_implementation_cost: number;
+    include_fixed_cost: boolean;
+    include_recurring_cost: boolean;
+    implemented: boolean;
     disabled: boolean;
     model_id: number;
     created_at?: string;
