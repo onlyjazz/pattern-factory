@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
+	import VulnerabilityDetail from '$lib/VulnerabilityDetail.svelte';
 
 	let vulnerability: any = null;
 	let loading = true;
@@ -24,7 +25,7 @@
 		}
 	});
 
-	async function handleSave() {
+	async function handleSave(e: Event) {
 		if (!vulnerability) return;
 		try {
 			isSaving = true;
@@ -35,12 +36,10 @@
 				body: JSON.stringify({
 					name: vulnerability.name,
 					description: vulnerability.description || null,
-					severity: vulnerability.severity || null,
-					cwe_id: vulnerability.cwe_id || null
+					disabled: vulnerability.disabled || false
 				})
 			});
 			if (!response.ok) throw new Error('Failed to save vulnerability');
-			// Navigate back to view page
 			window.location.href = `/vulnerabilities/${vulnerability.id}`;
 		} catch (e) {
 			saveError = e instanceof Error ? e.message : 'Failed to save vulnerability';
@@ -55,100 +54,13 @@
 	}
 </script>
 
-<div id="application-content-area">
-	<div class="page-title">
-		<h1 class="heading heading_1">Edit Vulnerability</h1>
-	</div>
-
-	{#if loading}
-		<div class="message">Loading vulnerability...</div>
-	{:else if error}
-		<div class="message message-error">Error: {error}</div>
-	{:else if vulnerability}
-		<div class="grid-row">
-			<div class="grid-col grid-col_24">
-				<div class="entity-card">
-					{#if saveError}
-						<div class="message message-error" style="margin-bottom: 20px;">Error: {saveError}</div>
-					{/if}
-
-					<form onsubmit={(e) => {
-						e.preventDefault();
-						handleSave();
-					}}>
-						<div style="margin-bottom: 1.5rem; color: #666;">
-							<strong>Tag:</strong> V{vulnerability.id}
-						</div>
-
-						<div class="form-section">
-							<h3>Basic Information</h3>
-							<div class="input">
-								<input
-									id="vulnerability-name"
-									type="text"
-									bind:value={vulnerability.name}
-									class="input__text"
-									class:input__text_changed={vulnerability.name?.length > 0}
-									required
-								/>
-								<label for="vulnerability-name" class="input__label">Name</label>
-							</div>
-
-							<div class="input">
-								<input
-									id="vulnerability-description"
-									type="text"
-									bind:value={vulnerability.description}
-									class="input__text"
-									class:input__text_changed={vulnerability.description?.length > 0}
-								/>
-								<label for="vulnerability-description" class="input__label">Description</label>
-							</div>
-						</div>
-
-						<div class="form-section">
-							<h3>Details</h3>
-							<div class="input">
-								<input
-									id="vulnerability-severity"
-									type="text"
-									bind:value={vulnerability.severity}
-									class="input__text"
-									class:input__text_changed={vulnerability.severity?.length > 0}
-								/>
-								<label for="vulnerability-severity" class="input__label">Severity</label>
-							</div>
-
-							<div class="input">
-								<input
-									id="vulnerability-cwe"
-									type="text"
-									bind:value={vulnerability.cwe_id}
-									class="input__text"
-									class:input__text_changed={vulnerability.cwe_id?.length > 0}
-								/>
-								<label for="vulnerability-cwe" class="input__label">CWE ID</label>
-							</div>
-						</div>
-
-						<div class="form-footer">
-							<button
-								type="button"
-								class="button button_secondary"
-								onclick={handleCancel}
-								disabled={isSaving}
-							>
-								Cancel
-							</button>
-							<button type="submit" class="button button_green" disabled={isSaving}>
-								{isSaving ? 'Saving...' : 'Save'}
-							</button>
-						</div>
-					</form>
-				</div>
-			</div>
-		</div>
-	{:else}
-		<div class="message">Vulnerability not found</div>
-	{/if}
-</div>
+<VulnerabilityDetail
+	{vulnerability}
+	{loading}
+	{error}
+	{saveError}
+	{isSaving}
+	isEditing={true}
+	onCancel={handleCancel}
+		onSave={handleSave}
+/>

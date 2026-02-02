@@ -179,15 +179,23 @@
 
 							<tbody>
 								{#each filteredVulnerabilities as v (v.id)}
-									<tr class="vulnerability-row">
+									<tr class="vulnerability-row" onclick={() => window.location.href = `/vulnerabilities/${v.id}`}>
 										<td class="tal">V{v.id}</td>
 										<td class="tal">{v.name}</td>
 										<td class="tal">{v.description}</td>
 										<td class="tal">{v.disabled ? 'Yes' : 'No'}</td>
 
 										<td class="tar">
-											<a href="/vulnerabilities/{v.id}" class="button button_small" title="Edit">✎</a>
-											<button class="button button_small" onclick={() => handleDelete(v.id)} title="Delete">🗑</button>
+											<button
+												class="button button_small"
+												onclick={(e) => {
+													e.stopPropagation();
+													window.location.href = `/vulnerabilities/${v.id}/edit`;
+												}}
+												title="Edit"
+											>
+												✎
+											</button>
 										</td>
 									</tr>
 								{/each}

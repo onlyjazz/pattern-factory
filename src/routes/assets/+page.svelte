@@ -170,7 +170,7 @@
 
 							<tbody>
 						{#each filteredAssets as a (a.id)}
-							<tr class="asset-row">
+							<tr class="asset-row" onclick={() => window.location.href = `/assets/${a.id}`}>
 								<td class="tal">{a.tag || '-'}</td>
 								<td class="tal">{a.name}</td>
 								<td class="tal">{a.description}</td>
@@ -178,8 +178,16 @@
 								<td class="tal">{a.disabled ? 'Yes' : 'No'}</td>
 
 								<td class="tar">
-									<a href="/assets/{a.id}" class="button button_small" title="View">✎</a>
-									<button class="button button_small" onclick={() => handleDelete(a.id)} title="Delete">🗑</button>
+									<button
+										class="button button_small"
+										onclick={(e) => {
+											e.stopPropagation();
+											window.location.href = `/assets/${a.id}/edit`;
+										}}
+										title="Edit"
+									>
+										✎
+									</button>
 								</td>
 							</tr>
 						{/each}

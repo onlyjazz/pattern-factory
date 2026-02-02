@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
+	import AssetDetail from '$lib/AssetDetail.svelte';
 
 	let asset: any = null;
 	let loading = true;
@@ -29,84 +30,10 @@
 	}
 </script>
 
-<div id="application-content-area">
-	{#if loading}
-		<div class="message">Loading asset...</div>
-	{:else if error}
-		<div class="message message-error">Error: {error}</div>
-	{:else if asset}
-		<div class="entity-view-header">
-			<div>
-				<h1 class="heading heading_1">{asset.name}</h1>
-			</div>
-			<button class="button button_green" onclick={handleEdit}>
-				EDIT
-			</button>
-		</div>
-
-		<div class="grid-row">
-			<div class="grid-col grid-col_24">
-				<div class="entity-card">
-					<div class="detail-section">
-						<div class="detail-row">
-							<div class="detail-field">
-								<label>Name</label>
-								<p>{asset.name}</p>
-							</div>
-						</div>
-						<div class="detail-row">
-							<div class="detail-field full">
-								<label>Description</label>
-								<p>{asset.description || '-'}</p>
-							</div>
-						</div>
-						<div class="detail-row">
-							<div class="detail-field">
-								<label>Tag</label>
-								<p>{asset.tag || '-'}</p>
-							</div>
-							<div class="detail-field">
-								<label>Version</label>
-								<p>{asset.version || '-'}</p>
-							</div>
-						</div>
-						<div class="detail-row">
-							<div class="detail-field">
-								<label>Yearly Value (Computed)</label>
-								<p>{asset.yearly_value || 0}</p>
-							</div>
-						</div>
-						<div class="detail-row">
-							<div class="detail-field">
-								<label>Fixed Value</label>
-								<p>{asset.fixed_value || 0}</p>
-							</div>
-							<div class="detail-field">
-								<label>Fixed Value Period (months)</label>
-								<p>{asset.fixed_value_period || 12}</p>
-							</div>
-						</div>
-						<div class="detail-row">
-							<div class="detail-field">
-								<label>Recurring Value</label>
-								<p>{asset.recurring_value || 0}</p>
-							</div>
-						</div>
-						<div class="detail-row">
-							<div class="detail-field">
-								<label>Include Fixed Value</label>
-								<p>{asset.include_fixed_value ? 'Yes' : 'No'}</p>
-							</div>
-							<div class="detail-field">
-								<label>Include Recurring Value</label>
-								<p>{asset.include_recurring_value ? 'Yes' : 'No'}</p>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	{:else}
-		<div class="message">Asset not found</div>
-	{/if}
-</div>
+<AssetDetail
+	{asset}
+	{loading}
+	{error}
+	isEditing={false}
+	onEdit={handleEdit}
+/>

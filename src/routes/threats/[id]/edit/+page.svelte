@@ -1,10 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
-	import CheckboxField from '$lib/CheckboxField.svelte';
-	import SingleSelect from '$lib/SingleSelect.svelte';
+	import ThreatDetail from '$lib/ThreatDetail.svelte';
 	import type { SelectItem } from '$lib/SingleSelect.svelte';
-	import type { Threat } from '$lib/db';
 
 	let threat: any = null;
 	let loading = true;
@@ -50,31 +48,31 @@
 		await loadCards();
 	});
 
-	async function handleSave() {
+	async function handleSave(e: Event) {
 		if (!threat) return;
 		try {
 			isSaving = true;
 			saveError = null;
-		const response = await fetch(`${apiBase}/threats/${threat.id}`, {
-			method: 'PUT',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				name: threat.name,
-				description: threat.description,
-				domain: threat.domain || null,
-				tag: threat.tag || null,
-				spoofing: threat.spoofing || false,
-				tampering: threat.tampering || false,
-				repudiation: threat.repudiation || false,
-				information_disclosure: threat.information_disclosure || false,
-				denial_of_service: threat.denial_of_service || false,
-				elevation_of_privilege: threat.elevation_of_privilege || false,
-				disabled: threat.disabled || false,
-				card_id: selectedCardId || null
-			})
-		});
+			const response = await fetch(`${apiBase}/threats/${threat.id}`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					name: threat.name,
+					description: threat.description,
+					domain: threat.domain || null,
+					tag: threat.tag || null,
+					damage_description: threat.damage_description || null,
+					spoofing: threat.spoofing || false,
+					tampering: threat.tampering || false,
+					repudiation: threat.repudiation || false,
+					information_disclosure: threat.information_disclosure || false,
+					denial_of_service: threat.denial_of_service || false,
+					elevation_of_privilege: threat.elevation_of_privilege || false,
+					disabled: threat.disabled || false,
+					card_id: selectedCardId || null
+				})
+			});
 			if (!response.ok) throw new Error('Failed to save threat');
-			// Navigate back to view page
 			window.location.href = `/threats/${threat.id}`;
 		} catch (e) {
 			saveError = e instanceof Error ? e.message : 'Failed to save threat';
@@ -89,153 +87,20 @@
 	}
 </script>
 
-<div id="application-content-area">
-	<div class="page-title">
-		<h1 class="heading heading_1">Edit Risk</h1>
-	</div>
-
-	{#if loading}
-		<div class="message">Loading risk...</div>
-	{:else if error}
-		<div class="message message-error">Error: {error}</div>
-	{:else if threat}
-		<div class="grid-row">
-			<div class="grid-col grid-col_24">
-				<div class="entity-card">
-					{#if saveError}
-						<div class="message message-error" style="margin-bottom: 20px;">Error: {saveError}</div>
-					{/if}
-
-					<form onsubmit={(e) => {
-						e.preventDefault();
-						handleSave();
-					}}>
-						<div class="form-section">
-							<h3>Basic Information</h3>
-							<div class="input">
-								<input
-									id="threat-tag"
-									type="text"
-									bind:value={threat.tag}
-									class="input__text"
-									class:input__text_changed={threat.tag?.length > 0}
-								/>
-								<label for="threat-tag" class="input__label">Tag</label>
-							</div>
-
-							<div class="input">
-								<input
-									id="threat-name"
-									type="text"
-									bind:value={threat.name}
-									class="input__text"
-									class:input__text_changed={threat.name?.length > 0}
-									required
-								/>
-								<label for="threat-name" class="input__label">Name</label>
-							</div>
-
-							<div class="input">
-								<input
-									id="threat-description"
-									type="text"
-									bind:value={threat.description}
-									class="input__text"
-									class:input__text_changed={threat.description?.length > 0}
-									required
-								/>
-								<label for="threat-description" class="input__label">Description</label>
-							</div>
-
-							<div class="input">
-								<input
-									id="threat-domain"
-									type="text"
-									bind:value={threat.domain}
-									class="input__text"
-									class:input__text_changed={threat.domain?.length > 0}
-								/>
-								<label for="threat-domain" class="input__label">Domain</label>
-							</div>
-						</div>
-
-						<div class="card-selector-wrapper">
-							<h3>Associated Card</h3>
-							<SingleSelect
-								items={cardItems}
-								bind:selectedId={selectedCardId}
-								bind:selectedName={selectedCardName}
-								placeholder="Search cards..."
-								loading={cardsLoading}
-							/>
-						</div>
-
-					<div class="form-section">
-						<h3>STRIDE Classifications</h3>
-						<div class="stride-grid">
-							<CheckboxField
-								id="threat-spoofing"
-								bind:checked={threat.spoofing}
-								label="Spoofing"
-							/>
-							<CheckboxField
-								id="threat-tampering"
-								bind:checked={threat.tampering}
-								label="Tampering"
-							/>
-							<CheckboxField
-								id="threat-repudiation"
-								bind:checked={threat.repudiation}
-								label="Repudiation"
-							/>
-							<CheckboxField
-								id="threat-information-disclosure"
-								bind:checked={threat.information_disclosure}
-								label="Information Disclosure"
-							/>
-							<CheckboxField
-								id="threat-denial-of-service"
-								bind:checked={threat.denial_of_service}
-								label="Denial of Service"
-							/>
-							<CheckboxField
-								id="threat-elevation-of-privilege"
-								bind:checked={threat.elevation_of_privilege}
-								label="Elevation of Privilege"
-							/>
-						</div>
-					</div>
-
-					<div class="form-section">
-						<CheckboxField
-							id="threat-disabled"
-							bind:checked={threat.disabled}
-							label="Disable the risk"
-							description="When clicking this checkbox, you will exclude the risk from the model"
-						/>
-					</div>
-
-					<div class="form-footer">
-						<button
-								type="button"
-								class="button button_secondary"
-								onclick={handleCancel}
-								disabled={isSaving}
-							>
-								Cancel
-							</button>
-							<button type="submit" class="button button_green" disabled={isSaving}>
-								{isSaving ? 'Saving...' : 'Save'}
-							</button>
-						</div>
-					</form>
-				</div>
-			</div>
-		</div>
-{:else}
-		<div class="message">Threat not found</div>
-{/if}
-</div>
+<ThreatDetail
+	{threat}
+	{loading}
+	{error}
+	{saveError}
+	{isSaving}
+	isEditing={true}
+	{cardItems}
+	{cardsLoading}
+	{selectedCardId}
+	{selectedCardName}
+	onCancel={handleCancel}
+	onSave={handleSave}
+/>
 
 <style>
 	.card-selector-wrapper {

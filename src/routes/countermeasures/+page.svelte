@@ -206,7 +206,7 @@ let sortField: keyof Countermeasure | string | null = 'tag';
 
 							<tbody>
 								{#each filteredCountermeasures as c (c.id)}
-									<tr class="countermeasure-row">
+									<tr class="countermeasure-row" onclick={() => window.location.href = `/countermeasures/${c.id}`}>
 										<td class="tal">C{c.id}</td>
 										<td class="tal">{c.name}</td>
 										<td class="tal">{c.description}</td>
@@ -216,8 +216,16 @@ let sortField: keyof Countermeasure | string | null = 'tag';
 										<td class="tal">{c.version || 1}</td>
 
 										<td class="tar">
-											<a href="/countermeasures/{c.id}" class="button button_small" title="Edit">✎</a>
-											<button class="button button_small" onclick={() => handleDelete(c.id)} title="Delete">🗑</button>
+											<button
+												class="button button_small"
+												onclick={(e) => {
+													e.stopPropagation();
+													window.location.href = `/countermeasures/${c.id}/edit`;
+												}}
+												title="Edit"
+											>
+												✎
+											</button>
 										</td>
 									</tr>
 								{/each}
