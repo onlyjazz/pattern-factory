@@ -182,7 +182,7 @@
 								<td class="tal">{a.tag || '-'}</td>
 								<td class="tal">{a.name}</td>
 								<td class="tal">{a.description}</td>
-								<td class="tal">{a.yearly_value || 0}</td>
+									<td class="tal">{(a.yearly_value || 0).toLocaleString()}</td>
 								<td class="tal">{a.disabled ? 'Yes' : 'No'}</td>
 
 								<td class="tar">
