@@ -79,7 +79,7 @@
 				<h3>Cost Configuration</h3>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Fixed Implementation Cost ($)</label>
+						<label>Fixed Implementation Cost</label>
 						<div class="input">
 							<input
 								id="fixed-implementation-cost"
@@ -107,7 +107,7 @@
 				</div>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Recurring Implementation Cost ($/year)</label>
+						<label>Recurring Implementation Cost</label>
 						<div class="input">
 							<input
 								id="recurring-implementation-cost"
@@ -198,8 +198,14 @@
 				<h3>Cost Configuration</h3>
 				<div class="detail-row">
 					<div class="detail-field">
+						<label>Yearly Cost (Computed)</label>
+						<p>{(countermeasure.yearly_cost || 0).toLocaleString()}</p>
+					</div>
+				</div>
+				<div class="detail-row">
+					<div class="detail-field">
 						<label>Fixed Implementation Cost</label>
-						<p>${countermeasure.fixed_implementation_cost || 0}</p>
+						<p>{(countermeasure.fixed_implementation_cost || 0).toLocaleString()}</p>
 					</div>
 					<div class="detail-field">
 						<label>Fixed Cost Period (months)</label>
@@ -209,7 +215,7 @@
 				<div class="detail-row">
 					<div class="detail-field">
 						<label>Recurring Implementation Cost</label>
-						<p>${countermeasure.recurring_implementation_cost || 0}</p>
+						<p>{(countermeasure.recurring_implementation_cost || 0).toLocaleString()}</p>
 					</div>
 				</div>
 			</div>

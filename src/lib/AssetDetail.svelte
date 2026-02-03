@@ -80,7 +80,7 @@
 				<div class="detail-row">
 					<div class="detail-field">
 						<label>Yearly Value (Computed)</label>
-						<p>{asset.yearly_value || 0}</p>
+						<p>{(asset.yearly_value || 0).toLocaleString()}</p>
 					</div>
 				</div>
 			</div>
@@ -89,7 +89,7 @@
 				<h3>Financial Configuration</h3>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Fixed Value ($)</label>
+						<label>Fixed Value</label>
 						<div class="input">
 							<input
 								id="fixed-value"
@@ -117,7 +117,7 @@
 				</div>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Recurring Value ($/year)</label>
+						<label>Recurring Value</label>
 						<div class="input">
 							<input
 								id="recurring-value"
@@ -180,7 +180,7 @@
 				<div class="detail-row">
 					<div class="detail-field">
 						<label>Yearly Value (Computed)</label>
-						<p>{asset.yearly_value || 0}</p>
+						<p>{(asset.yearly_value || 0).toLocaleString()}</p>
 					</div>
 				</div>
 			</div>
@@ -190,7 +190,7 @@
 				<div class="detail-row">
 					<div class="detail-field">
 						<label>Fixed Value</label>
-						<p>{asset.fixed_value || 0}</p>
+						<p>{(asset.fixed_value || 0).toLocaleString()}</p>
 					</div>
 					<div class="detail-field">
 						<label>Fixed Value Period (months)</label>
@@ -200,7 +200,7 @@
 				<div class="detail-row">
 					<div class="detail-field">
 						<label>Recurring Value</label>
-						<p>{asset.recurring_value || 0}</p>
+						<p>{(asset.recurring_value || 0).toLocaleString()}</p>
 					</div>
 				</div>
 			</div>
