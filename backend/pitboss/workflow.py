@@ -119,7 +119,42 @@ class WorkflowEngine:
             ),
         }
         
-        logger.info(f"✅ Loaded {len(self.workflows)} workflows (RULE, CONTENT)")
+        # GENERATE Flow (Risk Model Extraction from Card Markdown)
+        generate_workflow = {
+            "model.Capo": WorkflowNode(
+                agent_name="model.Capo",
+                branch_yes="model.verifyRequest",
+                branch_no="sendMessageToChat",
+                description="Initial validation of generate request"
+            ),
+            "model.verifyRequest": WorkflowNode(
+                agent_name="model.verifyRequest",
+                branch_yes="model.requestToExtractRiskModel",
+                branch_no="sendMessageToChat",
+                description="Validate generate request semantics"
+            ),
+            "model.requestToExtractRiskModel": WorkflowNode(
+                agent_name="model.requestToExtractRiskModel",
+                branch_yes="model.verifyUpsertRiskModel",
+                branch_no="sendMessageToChat",
+                description="Extract threats, vulnerabilities, countermeasures from card markdown"
+            ),
+            "model.verifyUpsertRiskModel": WorkflowNode(
+                agent_name="model.verifyUpsertRiskModel",
+                branch_yes="tool.executeSQL",
+                branch_no="sendMessageToChat",
+                description="Verify risk model payload consistency and safety"
+            ),
+            "tool.executeSQL": WorkflowNode(
+                agent_name="tool.executeSQL",
+                branch_yes="sendMessageToChat",
+                branch_no="sendMessageToChat",
+                description="Execute the upsert_risk_model procedure"
+            ),
+        }
+        self.workflows["GENERATE"] = generate_workflow
+        
+        logger.info(f"✅ Loaded {len(self.workflows)} workflows (RULE, CONTENT, GENERATE)")
     
     def get_workflow(self, verb: str) -> Dict[str, WorkflowNode]:
         """Get workflow by verb (RULE or CONTENT)."""
@@ -179,6 +214,13 @@ class WorkflowEngine:
         """
         if verb == "RULE":
             if current_agent == "model.verifySQL":
+                return "tool.executeSQL"
+        elif verb == "CARD":
+            if current_agent == "model.verifyRequest":
+                return "model.requestToExtractRiskModel"
+            elif current_agent == "model.requestToExtractRiskModel":
+                return "model.verifyUpsertRiskModel"
+            elif current_agent == "model.verifyUpsertRiskModel":
                 return "tool.executeSQL"
         # Default fallback
         return "sendMessageToChat"

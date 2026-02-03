@@ -8,7 +8,7 @@ All messages (request, response, error) share this structure:
 - timestamp: milliseconds since epoch
 - session_id: conversation session ID
 - request_id: unique request ID (req-001, req-002, ...)
-- verb: RULE | CONTENT
+- verb: RULE | CONTENT | GENERATE
 - nextAgent: name of agent Pitboss will call next (e.g., model.Capo)
 - returnCode: 0=continue, 1=success, negative=error
 - decision: yes | no (for branching)
@@ -35,6 +35,8 @@ class Verb(str, Enum):
     """Message verb (what the message is about)."""
     RULE = "RULE"
     CONTENT = "CONTENT"
+    CARD = "CARD"
+    GENERATE = "GENERATE"  # Generate risk model from card URL
     GENERIC = "GENERIC"  # Placeholder: LanguageCapo will determine actual verb
 
 

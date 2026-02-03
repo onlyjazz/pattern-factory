@@ -11,8 +11,12 @@
 	let card: Card | null = null;
 	let loading = true;
 	let error: string | null = null;
+	let activeModelId: string | null = null;
+	let activeModelName: string | null = null;
+	let storyLink: string = '';
 
 	const apiBase = 'http://localhost:8000';
+	const frontendBase = 'http://localhost:5173';
 
 	export let data: any;
 
@@ -26,6 +30,18 @@
 			}
 
 			card = await response.json();
+
+			// Get active model ID and name from localStorage (stored by modeStore)
+			const storedActiveModel = localStorage.getItem('pf:activeModel');
+			const storedActiveModelName = localStorage.getItem('pf:activeModelName');
+			if (storedActiveModel) {
+				activeModelId = storedActiveModel;
+				activeModelName = storedActiveModelName;
+			}
+
+			// Build story link with card ID
+			// Backend will get active model from public.active_models table
+			storyLink = `${frontendBase}/cards/${id}/story`;
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Unknown error';
 		} finally {
@@ -47,6 +63,14 @@
 	{:else if card}
 		<div class="story-view-content">
 			<h1>{card.name}</h1>
+			<div class="story-link-section">
+				<h3>Risks</h3>
+				<p>
+					<strong>Story link for generating risk model:</strong>
+				</p>
+				<code class="story-link"><a href="{storyLink}" target="_blank" rel="noopener noreferrer">{storyLink}</a></code>
+				<p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Backend will use active model from database</p>
+			</div>
 			<div class="story-text">
 				{@html getRenderedMarkdown(card.story || '')}
 			</div>
@@ -86,6 +110,46 @@
 		margin-bottom: 1.5rem;
 		font-size: 2rem;
 		color: #1a1a1a;
+	}
+
+	.story-link-section {
+		background: #f9f9f9;
+		border-left: 4px solid #1976d2;
+		padding: 1rem;
+		margin-bottom: 2rem;
+		border-radius: 4px;
+	}
+
+	.story-link-section h3 {
+		margin: 0 0 0.5rem 0;
+		font-size: 1.1rem;
+		color: #1976d2;
+	}
+
+	.story-link-section p {
+		margin: 0.5rem 0;
+		font-size: 0.95rem;
+	}
+
+	.story-link {
+		display: block;
+		background: #fff;
+		border: 1px solid #ddd;
+		border-radius: 4px;
+		padding: 0.75rem;
+		margin-top: 0.5rem;
+		font-family: 'Courier New', monospace;
+		font-size: 0.9em;
+		overflow-x: auto;
+	}
+
+	.story-link a {
+		color: #1976d2;
+		text-decoration: none;
+	}
+
+	.story-link a:hover {
+		text-decoration: underline;
 	}
 
 	.story-text {

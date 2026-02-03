@@ -15,9 +15,10 @@ from typing import Tuple, Dict, Any, Optional
 import logging
 import json
 import os
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 import urllib.request
 import re
+import httpx
 from openai import OpenAI
 
 logger = logging.getLogger(__name__)
@@ -88,6 +89,19 @@ async def agent_language_capo(message_body: Dict[str, Any]) -> Tuple[str, float,
         logger.info(f"  Detected 'RUN' syntax → routing to RULE workflow")
         return ("yes", 0.95, reason, "RULE")
     
+    # Fast-path: recognize explicit "generate <URL>" or "card <URL>" syntax → route to GENERATE (risk model from card)
+    if text.upper().startswith("GENERATE "):
+        url = text[9:].strip()
+        reason = f"User wants to generate risk model from: '{url}'"
+        logger.info(f"  Detected 'GENERATE' syntax → routing to GENERATE workflow")
+        return ("yes", 0.98, reason, "GENERATE")
+    
+    if text.upper().startswith("CARD "):
+        url = text[5:].strip()
+        reason = f"User wants to generate risk model from card: '{url}'"
+        logger.info(f"  Detected 'CARD' syntax → routing to GENERATE workflow")
+        return ("yes", 0.98, reason, "GENERATE")
+    
     # Fast-path: recognize explicit "extract <URL>" syntax → route to CONTENT
     if text.upper().startswith("EXTRACT "):
         url = text[8:].strip()
@@ -115,7 +129,7 @@ async def agent_language_capo(message_body: Dict[str, Any]) -> Tuple[str, float,
             decision = data.get("decision", "no")
             verb = (data.get("verb", "") or "").strip().upper()
             # Default to RULE if empty or invalid
-            if verb not in ("RULE", "CONTENT"):
+            if verb not in ("RULE", "CONTENT", "GENERATE"):
                 verb = "RULE"
             confidence = float(data.get("confidence", 0.55))
             reason = data.get("reason", "")
@@ -264,6 +278,56 @@ async def agent_capo_rule(message_body: Dict[str, Any]) -> Tuple[str, float, str
     reason = "Message envelope is valid and ready for processing"
     
     logger.info(f"  Decision: {decision} (confidence: {confidence:.2f})")
+    return (decision, confidence, reason)
+
+
+async def agent_verify_request_generate(message_body: Dict[str, Any]) -> Tuple[str, float, str]:
+    """
+    model.verifyRequest (GENERATE flow)
+    Validate that the card URL is present and valid.
+    
+    Checks:
+    - Card URL is provided (from message_body["raw_text"] after GENERATE prefix stripped)
+    - URL is valid format (http:// or https://)
+    - URL contains /cards/{card_id}/story path structure
+    
+    NOTE: model_id extraction is deferred to agent_request_to_extract_risk_model.
+    """
+    logger.info("🤖 [model.verifyRequest] Validating card generation request...")
+    
+    # The URL was already extracted by agent_language_capo and stored in raw_text
+    # or we can extract it again from the message
+    url = message_body.get("url", "").strip()
+    raw_text = message_body.get("raw_text", "").strip()
+    
+    if not url and raw_text.upper().startswith("GENERATE "):
+        url = raw_text[9:].strip()
+    
+    if not url:
+        reason = "No card URL provided. Usage: generate <card_url>"
+        logger.info(f"  Decision: no (confidence: 0.95) - {reason}")
+        return ("no", 0.95, reason)
+    
+    # Basic URL validation
+    if not url.startswith("http://") and not url.startswith("https://"):
+        reason = f"Invalid URL format: {url}. Must start with http:// or https://"
+        logger.info(f"  Decision: no (confidence: 0.95) - {reason}")
+        return ("no", 0.95, reason)
+    
+    # Validate URL contains /cards/{card_id}/story path structure
+    if "/cards/" not in url or "/story" not in url:
+        reason = f"Invalid card URL path. Expected format: /cards/{{card_id}}/story, got: {url}"
+        logger.info(f"  Decision: no (confidence: 0.90) - {reason}")
+        return ("no", 0.90, reason)
+    
+    # Store URL in message body for next agent
+    message_body["card_url"] = url
+    
+    decision = "yes"
+    confidence = 0.99
+    reason = f"Card URL is valid: {url}"
+    
+    logger.info(f"  Decision: {decision} (confidence: {confidence:.2f}) - {reason}")
     return (decision, confidence, reason)
 
 
@@ -458,7 +522,7 @@ async def agent_verify_sql(message_body: Dict[str, Any]) -> Tuple[str, float, st
 
 async def agent_execute_sql(message_body: Dict[str, Any]) -> Tuple[str, float, str]:
     """
-    tool.executeSQL — Terminal agent for both RULE and CONTENT flows
+    tool.executeSQL — Terminal agent for RULE, CONTENT, and CARD flows
     
     RULE flow:
     1. Execute SQL via data_table tool (creates VIEW)
@@ -468,9 +532,14 @@ async def agent_execute_sql(message_body: Dict[str, Any]) -> Tuple[str, float, s
     1. Extract validated entity payload from message_body
     2. Call upsert_pattern_factory_entities procedure
     
+    CARD flow:
+    1. Extract validated risk model payload from message_body
+    2. Call threat.upsert_risk_model procedure
+    
     Stores:
     - For RULE: table_name (view name), row_count
     - For CONTENT: upsert_result status
+    - For CARD: upsert_result status, risk model summary
     """
     logger.info("🤖 [tool.executeSQL] Executing operation based on verb...")
     
@@ -484,8 +553,48 @@ async def agent_execute_sql(message_body: Dict[str, Any]) -> Tuple[str, float, s
             logger.error(f"  ❌ {reason}")
             return ("no", 0.05, reason)
         
+        # Branch: GENERATE flow (risk model upsert)
+        if verb == "GENERATE":
+            logger.info(f"  [GENERATE flow] Executing threat.upsert_risk_model procedure...")
+            
+            extracted_entities = message_body.get("extracted_entities", {})
+            model_id = extracted_entities.get("model_id")
+            card_id = extracted_entities.get("card_id")
+            
+            if not extracted_entities:
+                reason = "No extracted_entities in message_body"
+                logger.error(f"  ❌ {reason}")
+                return ("no", 0.15, reason)
+            
+            # Call the risk model upsert procedure
+            logger.info(f"  Step 1: Calling threat.upsert_risk_model procedure...")
+            upsert_res = await tool_registry.execute(
+                "execute_risk_model_upsert",
+                jsonb_payload=extracted_entities
+            )
+            
+            if upsert_res["status"] != "success":
+                reason = f"Risk model upsert procedure failed: {upsert_res.get('error')}"
+                logger.error(f"  ❌ {reason}")
+                return ("no", 0.3, reason)
+            
+            logger.info(f"    ✅ Risk model upsert completed: {upsert_res.get('message')}")
+            message_body["upsert_status"] = "success"
+            message_body["model_id"] = model_id
+            message_body["card_id"] = card_id
+            message_body["risk_model_summary"] = upsert_res.get("summary", {})
+            
+            # Success
+            decision = "yes"
+            confidence = 0.96
+            reason = f"Risk model generation and upsert complete: model_id={model_id}, card_id={card_id}"
+            
+            logger.info(f"  Decision: {decision} (confidence: {confidence:.2f})")
+            logger.info(f"  🌟 CARD flow complete: {reason}")
+            return (decision, confidence, reason)
+        
         # Branch: CONTENT flow (upsert entities)
-        if verb == "CONTENT":
+        elif verb == "CONTENT":
             logger.info(f"  [CONTENT flow] Executing upsert_pattern_factory_entities procedure...")
             
             extracted_entities = message_body.get("extracted_entities", {})
@@ -1153,6 +1262,434 @@ async def agent_verify_upsert(message_body: Dict[str, Any]) -> Tuple[str, float,
 
 
 # ============================================================================
+# CARD Flow Agents (Risk Model Extraction from Card Markdown)
+# ============================================================================
+
+def _get_gen_risk_model_system_prompt(context_builder) -> Optional[str]:
+    """
+    Load the GEN_RISK_MODEL system prompt from pattern-factory.yaml CONTENT section.
+    Returns the prompt string or None if not found.
+    """
+    try:
+        yaml_data = context_builder.yaml_data if hasattr(context_builder, 'yaml_data') else {}
+        content_rules = yaml_data.get("CONTENT", [])
+        for rule in content_rules:
+            if rule.get("rule_code") == "GEN_RISK_MODEL":
+                prompt = rule.get("prompt", "").strip()
+                if prompt:
+                    return prompt
+    except Exception as e:
+        logger.warning(f"[getGenRiskModelPrompt] Failed to load prompt from YAML: {e}")
+    return None
+
+
+def _get_verify_upsert_risk_model_system_prompt(context_builder) -> Optional[str]:
+    """
+    Load the VERIFY_UPSERT_RISK_MODEL system prompt from pattern-factory.yaml CONTENT section.
+    Returns the prompt string or None if not found.
+    """
+    try:
+        yaml_data = context_builder.yaml_data if hasattr(context_builder, 'yaml_data') else {}
+        content_rules = yaml_data.get("CONTENT", [])
+        for rule in content_rules:
+            if rule.get("rule_code") == "VERIFY_UPSERT_RISK_MODEL":
+                prompt = rule.get("prompt", "").strip()
+                if prompt:
+                    return prompt
+    except Exception as e:
+        logger.warning(f"[getVerifyUpsertRiskModelPrompt] Failed to load prompt from YAML: {e}")
+    return None
+
+
+async def agent_request_to_extract_risk_model(message_body: Dict[str, Any]) -> Tuple[str, float, str]:
+    """
+    model.requestToExtractRiskModel (CARD flow)
+    Extract threats, vulnerabilities, countermeasures from card markdown.
+    
+    Behavior:
+    - Receives card URL from message_body["card_url"] (set by verifyRequest_generate)
+    - Fetches markdown from the card URL
+    - Extracts model_id and card_id from URL parameters
+    - Calls LLM with GEN_RISK_MODEL system prompt from YAML
+    - Returns decision="no" with JSON structure for human review (HITL pattern)
+    - Stores extracted payload in message_body["extracted_entities"]
+    """
+    logger.info("🤖 [model.requestToExtractRiskModel] Extracting risk model from card markdown...")
+
+    # Clear stale metadata from previous extraction
+    message_body.pop("extracted_entities", None)
+
+    card_url = message_body.get("card_url", "").strip()
+    if not card_url:
+        reason = "No card URL provided. Expected card_url in message_body (set by verifyRequest_generate)."
+        logger.info(f"  Decision: no (confidence: 0.98) - {reason}")
+        return ("no", 0.98, reason)
+
+    # Fetch the markdown from the card URL
+    logger.info(f"  [Fetch] Fetching markdown from: {card_url}")
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(card_url)
+            response.raise_for_status()
+            story = response.text.strip()
+    except Exception as e:
+        reason = f"Failed to fetch card markdown from URL: {str(e)}"
+        logger.error(f"  Decision: no (confidence: 0.60) - {reason}")
+        return ("no", 0.60, reason)
+
+    if not story:
+        reason = "Fetched card story is empty."
+        logger.info(f"  Decision: no (confidence: 0.98) - {reason}")
+        return ("no", 0.98, reason)
+
+    logger.info(f"  [Fetch] Successfully fetched {len(story)} chars of markdown")
+
+    # Extract card_id from the card URL
+    # URL format: http://localhost:5173/cards/{card_id}/story
+    # model_id will be fetched from public.active_models table
+    
+    try:
+        parsed_url = urlparse(card_url)
+        path_parts = parsed_url.path.strip("/").split("/")
+        
+        # Extract card_id from path (format: cards/{card_id}/story)
+        card_id = None
+        if len(path_parts) >= 2 and path_parts[0] == "cards":
+            card_id = path_parts[1]
+        
+        logger.info(f"  [URL Parse] card_id={card_id}")
+        
+        if not card_id:
+            reason = "Could not extract card_id from URL. Expected format: /cards/{card_id}/story"
+            logger.info(f"  Decision: no (confidence: 0.95) - {reason}")
+            return ("no", 0.95, reason)
+    except Exception as e:
+        reason = f"Failed to parse card URL: {str(e)}"
+        logger.error(f"  Decision: no (confidence: 0.90) - {reason}")
+        return ("no", 0.90, reason)
+    
+    # Get model_id from /active-model API endpoint
+    api_base = os.getenv("API_BASE", "http://localhost:8000")
+    
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(f"{api_base}/active-model")
+            response.raise_for_status()
+            data = response.json()
+            model_id = data.get("model_id")
+            
+            if not model_id:
+                reason = "No active model found. Please activate a model first."
+                logger.info(f"  Decision: no (confidence: 0.95) - {reason}")
+                return ("no", 0.95, reason)
+            
+            logger.info(f"  [API Call] Retrieved model_id={model_id} from /active-model endpoint")
+    except Exception as e:
+        reason = f"Failed to fetch active model from API: {str(e)}"
+        logger.error(f"  Decision: no (confidence: 0.60) - {reason}")
+        return ("no", 0.60, reason)
+
+    # Load system prompt from YAML
+    context_builder = message_body.get("_ctx")
+    system_prompt = _get_gen_risk_model_system_prompt(context_builder) if context_builder else None
+
+    if not system_prompt:
+        reason = "Could not load GEN_RISK_MODEL system prompt from YAML"
+        logger.warning(f"  Decision: no (confidence: 0.70) - {reason}")
+        return ("no", 0.70, reason)
+
+    # Call LLM to extract risk model entities
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        reason = "No OPENAI_API_KEY set; cannot extract risk model"
+        logger.warning(f"  Decision: no (confidence: 0.70) - {reason}")
+        return ("no", 0.70, reason)
+
+    try:
+        client = OpenAI(api_key=api_key)
+        
+        # Provide input in the exact structure the prompt expects
+        max_chars = 60000
+        input_payload = {
+            "story": (story)[:max_chars],
+            "model_id": str(model_id),
+            "card_id": str(card_id),
+        }
+        user_message = json.dumps(input_payload, ensure_ascii=False)
+        
+        logger.info(f"  [LLM Call] Sending payload: story len={len(input_payload['story'])}, model_id={model_id}, card_id={card_id}")
+        logger.info(f"  [LLM Call] System prompt length: {len(system_prompt)} chars")
+        
+        response = await _call_openai_async(
+            client=client,
+            system_prompt=system_prompt,
+            user_message=user_message,
+            model="gpt-4o",  # Faster than gpt-4o-mini for structured extraction
+            temperature=0.2,
+            timeout=60.0,  # Should complete faster with gpt-4o
+        )
+
+        logger.info(f"  [LLM Response] Received {len(response)} chars")
+        logger.debug(f"  [LLM Response] First 500 chars: {response[:500]}")
+
+        # Parse LLM response
+        try:
+            llm_obj = json.loads(response)
+        except json.JSONDecodeError as e:
+            logger.error(f"  [LLM Response] Failed to parse JSON: {e}")
+            logger.error(f"  [LLM Response] Raw response: {response[:1000]}")
+            raise
+        
+        logger.info(f"  [Extraction] Parsed JSON successfully")
+        if isinstance(llm_obj, dict):
+            logger.info(f"  [Extraction] Top-level keys: {list(llm_obj.keys())}")
+        
+        # Accept both envelope-style and bare-payload outputs
+        extracted_data = None
+        if isinstance(llm_obj, dict):
+            if all(k in llm_obj for k in ["threats", "vulnerabilities", "countermeasures", "asset_threat", "vulnerability_threat", "countermeasure_threat"]):
+                extracted_data = llm_obj
+            elif isinstance(llm_obj.get("messageBody"), dict):
+                extracted_data = llm_obj.get("messageBody")
+                logger.info("  [Extraction] Using messageBody payload from LLM envelope")
+        
+        if extracted_data is None or not isinstance(extracted_data, dict):
+            logger.warning("  [Extraction] LLM did not return expected structure; initializing empty payload")
+            extracted_data = {}
+        
+        # Validate and normalize structure
+        required_keys = ["threats", "vulnerabilities", "countermeasures", "asset_threat", "vulnerability_threat", "countermeasure_threat"]
+        for key in required_keys:
+            if key not in extracted_data:
+                logger.warning(f"  [Extraction] Missing key: {key}")
+                extracted_data[key] = []
+            elif not isinstance(extracted_data[key], list):
+                logger.warning(f"  [Extraction] {key} is not a list: {type(extracted_data[key])}")
+                extracted_data[key] = []
+            else:
+                logger.info(f"  [Extraction] {key}: {len(extracted_data[key])} items")
+        
+        # Add model_id and card_id to extracted data (required by upsert procedure)
+        extracted_data["model_id"] = str(model_id)
+        extracted_data["card_id"] = str(card_id)
+        
+        # Store extracted entities in message_body for next agent
+        message_body["extracted_entities"] = extracted_data
+        
+        # Build user-friendly summary
+        threats = extracted_data.get("threats", [])
+        vulns = extracted_data.get("vulnerabilities", [])
+        cms = extracted_data.get("countermeasures", [])
+        
+        summary_lines = []
+        if threats:
+            threat_names = ", ".join([t.get("name", "") for t in threats if t.get("name")])
+            summary_lines.append(f"Threats: {threat_names}")
+        if vulns:
+            vuln_names = ", ".join([v.get("name", "") for v in vulns if v.get("name")])
+            summary_lines.append(f"Vulnerabilities: {vuln_names}")
+        if cms:
+            cm_names = ", ".join([c.get("name", "") for c in cms if c.get("name")])
+            summary_lines.append(f"Countermeasures: {cm_names}")
+        
+        reason = "\n".join(summary_lines) if summary_lines else "Extraction complete (no entities found)"
+        
+        logger.info(f"  Decision: yes (confidence: 0.96) - Extraction complete")
+        logger.info(f"  [Extraction] {reason}")
+        return ("yes", 0.96, reason)
+
+    except json.JSONDecodeError as e:
+        reason = f"LLM response is not valid JSON: {str(e)}"
+        logger.warning(f"  Decision: no (confidence: 0.60) - {reason}")
+        return ("no", 0.60, reason)
+    except Exception as e:
+        reason = f"Risk model extraction failed: {str(e)}"
+        logger.error(f"  Decision: no (confidence: 0.60) - {reason}", exc_info=True)
+        return ("no", 0.60, reason)
+
+
+async def agent_verify_upsert_risk_model(message_body: Dict[str, Any]) -> Tuple[str, float, str]:
+    """
+    model.verifyUpsertRiskModel (CARD flow)
+    Validate the risk model extraction payload before passing to PostgreSQL upsert.
+    
+    Responsibilities:
+    1. STRUCTURAL VALIDITY: All required arrays exist, valid JSON
+    2. REQUIRED FIELDS: Threats have tag/name/domain/probability; Vulns/CMs have name
+    3. LINK TABLE CONSISTENCY: References match extracted entities, no orphans
+    4. SAFETY VALIDATION: No SQL injection, unescaped characters
+    5. SEMANTIC CHECKS: model_id and card_id present and valid
+    
+    Returns decision="yes" to route to tool.executeSQL if valid.
+    Returns decision="no" with error details for human review if invalid.
+    """
+    logger.info("🤖 [model.verifyUpsertRiskModel] Verifying risk model payload structure and referential integrity...")
+    
+    # Extract the payload from message_body
+    extracted_entities = message_body.get("extracted_entities", {})
+    model_id = extracted_entities.get("model_id")
+    card_id = extracted_entities.get("card_id")
+    
+    if not extracted_entities:
+        reason = "No extracted entities found in message_body"
+        logger.warning(f"  Decision: no (confidence: 0.95) - {reason}")
+        return ("no", 0.95, reason)
+    
+    # Validate model_id and card_id
+    if not model_id:
+        reason = "model_id is missing from extracted entities"
+        logger.warning(f"  Decision: no (confidence: 0.93) - {reason}")
+        return ("no", 0.93, reason)
+    
+    if not card_id:
+        reason = "card_id is missing from extracted entities"
+        logger.warning(f"  Decision: no (confidence: 0.93) - {reason}")
+        return ("no", 0.93, reason)
+    
+    # Validate structural validity
+    required_keys = ["threats", "vulnerabilities", "countermeasures", "asset_threat", "vulnerability_threat", "countermeasure_threat"]
+    missing_keys = [k for k in required_keys if k not in extracted_entities]
+    
+    if missing_keys:
+        reason = f"Missing required array keys: {', '.join(missing_keys)}"
+        logger.warning(f"  Decision: no (confidence: 0.92) - {reason}")
+        return ("no", 0.92, reason)
+    
+    # Validate all values are lists
+    for key in required_keys:
+        if not isinstance(extracted_entities.get(key), list):
+            reason = f"Field '{key}' must be an array, got {type(extracted_entities[key]).__name__}"
+            logger.warning(f"  Decision: no (confidence: 0.91) - {reason}")
+            return ("no", 0.91, reason)
+    
+    # Validate required fields for each entity type
+    
+    # THREATS: tag, name, domain, probability required; threat tags must be unique
+    threat_tags = set()
+    for i, threat in enumerate(extracted_entities.get("threats", [])):
+        if not isinstance(threat, dict):
+            reason = f"Threat at index {i} is not an object"
+            logger.warning(f"  Decision: no (confidence: 0.89) - {reason}")
+            return ("no", 0.89, reason)
+        
+        for req_field in ["tag", "name", "domain", "probability"]:
+            if not threat.get(req_field):
+                reason = f"Threat at index {i} missing required field '{req_field}'"
+                logger.warning(f"  Decision: no (confidence: 0.89) - {reason}")
+                return ("no", 0.89, reason)
+        
+        tag = threat.get("tag", "").strip()
+        if tag in threat_tags:
+            reason = f"Threat tag '{tag}' is not unique (duplicate at index {i})"
+            logger.warning(f"  Decision: no (confidence: 0.89) - {reason}")
+            return ("no", 0.89, reason)
+        threat_tags.add(tag)
+    
+    # VULNERABILITIES: name required
+    for i, vuln in enumerate(extracted_entities.get("vulnerabilities", [])):
+        if not isinstance(vuln, dict):
+            reason = f"Vulnerability at index {i} is not an object"
+            logger.warning(f"  Decision: no (confidence: 0.89) - {reason}")
+            return ("no", 0.89, reason)
+        if not vuln.get("name") or not isinstance(vuln.get("name"), str) or not vuln.get("name").strip():
+            reason = f"Vulnerability at index {i} missing or empty 'name' field"
+            logger.warning(f"  Decision: no (confidence: 0.89) - {reason}")
+            return ("no", 0.89, reason)
+    
+    # COUNTERMEASURES: name required
+    for i, cm in enumerate(extracted_entities.get("countermeasures", [])):
+        if not isinstance(cm, dict):
+            reason = f"Countermeasure at index {i} is not an object"
+            logger.warning(f"  Decision: no (confidence: 0.89) - {reason}")
+            return ("no", 0.89, reason)
+        if not cm.get("name") or not isinstance(cm.get("name"), str) or not cm.get("name").strip():
+            reason = f"Countermeasure at index {i} missing or empty 'name' field"
+            logger.warning(f"  Decision: no (confidence: 0.89) - {reason}")
+            return ("no", 0.89, reason)
+    
+    # Validate link table consistency
+    
+    # Build sets of entity identifiers for referential integrity checks
+    vuln_names = {v.get("name", "").strip() for v in extracted_entities.get("vulnerabilities", []) if v.get("name")}
+    cm_tags = {c.get("tag", "").strip() for c in extracted_entities.get("countermeasures", []) if c.get("tag")}
+    
+    # asset_threat: asset_tag and threat_tag must reference valid tags
+    for i, link in enumerate(extracted_entities.get("asset_threat", [])):
+        if not isinstance(link, dict):
+            reason = f"asset_threat at index {i} is not an object"
+            logger.warning(f"  Decision: no (confidence: 0.88) - {reason}")
+            return ("no", 0.88, reason)
+        
+        threat_tag = link.get("threat_tag", "").strip()
+        if threat_tag not in threat_tags:
+            reason = f"asset_threat at index {i} references non-existent threat tag '{threat_tag}'"
+            logger.warning(f"  Decision: no (confidence: 0.88) - {reason}")
+            return ("no", 0.88, reason)
+    
+    # vulnerability_threat: vulnerability_name and threat_tag must reference valid entities
+    for i, link in enumerate(extracted_entities.get("vulnerability_threat", [])):
+        if not isinstance(link, dict):
+            reason = f"vulnerability_threat at index {i} is not an object"
+            logger.warning(f"  Decision: no (confidence: 0.88) - {reason}")
+            return ("no", 0.88, reason)
+        
+        vuln_name = link.get("vulnerability_name", "").strip()
+        threat_tag = link.get("threat_tag", "").strip()
+        
+        if vuln_name not in vuln_names:
+            reason = f"vulnerability_threat at index {i} references non-existent vulnerability '{vuln_name}'"
+            logger.warning(f"  Decision: no (confidence: 0.88) - {reason}")
+            return ("no", 0.88, reason)
+        
+        if threat_tag not in threat_tags:
+            reason = f"vulnerability_threat at index {i} references non-existent threat tag '{threat_tag}'"
+            logger.warning(f"  Decision: no (confidence: 0.88) - {reason}")
+            return ("no", 0.88, reason)
+    
+    # countermeasure_threat: countermeasure_tag and threat_tag must reference valid entities
+    for i, link in enumerate(extracted_entities.get("countermeasure_threat", [])):
+        if not isinstance(link, dict):
+            reason = f"countermeasure_threat at index {i} is not an object"
+            logger.warning(f"  Decision: no (confidence: 0.88) - {reason}")
+            return ("no", 0.88, reason)
+        
+        cm_tag = link.get("countermeasure_tag", "").strip()
+        threat_tag = link.get("threat_tag", "").strip()
+        
+        if cm_tag not in cm_tags:
+            reason = f"countermeasure_threat at index {i} references non-existent countermeasure tag '{cm_tag}'"
+            logger.warning(f"  Decision: no (confidence: 0.88) - {reason}")
+            return ("no", 0.88, reason)
+        
+        if threat_tag not in threat_tags:
+            reason = f"countermeasure_threat at index {i} references non-existent threat tag '{threat_tag}'"
+            logger.warning(f"  Decision: no (confidence: 0.88) - {reason}")
+            return ("no", 0.88, reason)
+    
+    # Safety validation: check for SQL injection patterns
+    dangerous_patterns = [";", "--", "/*", "*/", "xp_", "sp_"]
+    
+    for threat in extracted_entities.get("threats", []):
+        for value in threat.values():
+            if isinstance(value, str):
+                for pattern in dangerous_patterns:
+                    if pattern in value.lower() and pattern != "--":
+                        reason = f"Threat contains suspicious pattern: {value[:50]}"
+                        logger.warning(f"  Decision: no (confidence: 0.85) - {reason}")
+                        return ("no", 0.85, reason)
+    
+    # All validations passed
+    decision = "yes"
+    confidence = 0.94
+    entity_summary = f"threats={len(extracted_entities.get('threats', []))} vulns={len(extracted_entities.get('vulnerabilities', []))} cms={len(extracted_entities.get('countermeasures', []))}"
+    reason = f"Payload validation passed: {entity_summary}"
+    
+    logger.info(f"  Decision: {decision} (confidence: {confidence:.2f})")
+    logger.info(f"  ✅ All structural, referential, and safety checks passed")
+    return (decision, confidence, reason)
+
+
+# ============================================================================
 # Agent Registry
 # ============================================================================
 
@@ -1172,7 +1709,60 @@ AGENT_REGISTRY = {
     "model.verifyRequest_content": agent_verify_request_content,
     "model.requestToExtractEntities": agent_request_to_extract_entities,
     "model.verifyUpsert": agent_verify_upsert,
+    
+    # CARD/GENERATE flow
+    "model.verifyRequest_generate": agent_verify_request_generate,
+    "model.requestToExtractRiskModel": agent_request_to_extract_risk_model,
+    "model.verifyUpsertRiskModel": agent_verify_upsert_risk_model,
 }
+
+
+def _get_agent_for_verb(agent_name: str, verb: str):
+    """
+    Route to correct agent based on verb.
+    
+    Verbs:
+    - RULE: rule extraction flow
+    - CONTENT: content extraction from URLs flow  
+    - CARD: risk model generation from card flow
+    - GENERATE: alias for CARD
+    """
+    # Normalize GENERATE to CARD
+    if verb == "GENERATE":
+        verb = "CARD"
+    
+    match verb:
+        case "RULE":
+            match agent_name:
+                case "model.Capo":
+                    return agent_capo_rule
+                case "model.verifyRequest":
+                    return agent_verify_request
+                case _:
+                    return AGENT_REGISTRY.get(agent_name)
+        
+        case "CONTENT":
+            match agent_name:
+                case "model.Capo":
+                    return agent_capo_content
+                case "model.verifyRequest":
+                    return agent_verify_request_content
+                case _:
+                    return AGENT_REGISTRY.get(agent_name)
+        
+        case "CARD":
+            # CARD flow - dedicated agents for risk model generation
+            match agent_name:
+                case "model.Capo":
+                    return agent_capo_rule
+                case "model.verifyRequest":
+                    return agent_verify_request_generate  # Validate card URL
+                case _:
+                    return AGENT_REGISTRY.get(agent_name)
+        
+        case _:
+            logger.warning(f"Unknown verb: {verb}")
+            return None
 
 
 async def call_agent(agent_name: str, verb: str, message_body: Dict[str, Any]):
@@ -1181,7 +1771,7 @@ async def call_agent(agent_name: str, verb: str, message_body: Dict[str, Any]):
     
     Args:
         agent_name: Agent name (e.g., "model.Capo" or "model.LanguageCapo")
-        verb: Workflow verb (RULE or CONTENT). For LanguageCapo, verb is ignored.
+        verb: Workflow verb (RULE, CONTENT, CARD, or GENERATE). For LanguageCapo, verb is ignored.
         message_body: Message body
     
     Returns:
@@ -1197,18 +1787,11 @@ async def call_agent(agent_name: str, verb: str, message_body: Dict[str, Any]):
             return ("no", 0.0, f"Agent error: {str(e)}", "RULE")
 
     # Route to correct agent based on verb
-    if agent_name == "model.Capo":
-        agent_fn = agent_capo_rule if verb == "RULE" else agent_capo_content
-    elif agent_name == "model.verifyRequest":
-        agent_fn = agent_verify_request if verb == "RULE" else agent_verify_request_content
-    else:
-        # Look up agent directly in registry
-        key = f"{agent_name}_{verb.lower()}" if verb != "RULE" else agent_name
-        agent_fn = AGENT_REGISTRY.get(agent_name) or AGENT_REGISTRY.get(key)
-        
-        if not agent_fn:
-            logger.error(f"❌ Unknown agent: {agent_name}")
-            return ("no", 0.0, f"Unknown agent: {agent_name}")
+    agent_fn = _get_agent_for_verb(agent_name, verb)
+    
+    if not agent_fn:
+        logger.error(f"❌ Unknown agent: {agent_name}")
+        return ("no", 0.0, f"Unknown agent: {agent_name}")
     
     # Call agent
     try:

@@ -70,7 +70,7 @@ class PitbossSupervisor:
         
         # Check for invalid verb
         if not verb_str:
-            error_msg = "Missing or empty 'verb' field. Must be: RULE or CONTENT"
+            error_msg = "Missing or empty 'verb' field. Must be: RULE, CONTENT, CARD, or GENERATE"
             logger.error(f"Invalid envelope: {error_msg}")
             if self.websocket:
                 await self.websocket.send_json(make_error(
@@ -82,7 +82,7 @@ class PitbossSupervisor:
             return
         
         if verb_str not in [v.value for v in Verb]:
-            error_msg = f"Invalid verb '{verb_str}'. Must be: RULE or CONTENT"
+            error_msg = f"Invalid verb '{verb_str}'. Must be: RULE, CONTENT, CARD, or GENERATE"
             logger.error(f"Invalid envelope: {error_msg}")
             if self.websocket:
                 await self.websocket.send_json(make_error(

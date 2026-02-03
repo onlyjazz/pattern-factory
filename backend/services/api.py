@@ -350,6 +350,19 @@ async def get_card(card_id: str):
         raise HTTPException(status_code=404, detail="Card not found")
     return dict(row)
 
+@app.get("/cards/{card_id}/story", tags=["Cards"])
+async def get_card_story(card_id: str):
+    """Get only the raw markdown story for a card."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        story = await conn.fetchval(
+            "SELECT story FROM cards WHERE id = $1",
+            card_id
+        )
+    if story is None:
+        raise HTTPException(status_code=404, detail="Card not found")
+    return {"story": story}
+
 @app.put("/cards/{card_id}", tags=["Cards"])
 async def update_card(card_id: str, patch: CardUpdate):
     """Update a card."""

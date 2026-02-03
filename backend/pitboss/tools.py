@@ -274,6 +274,81 @@ class ExecuteUpsertTool(Tool):
 
 
 # -------------------------------------------------------------------------
+# Execute Risk Model Upsert Tool — Call upsert_risk_model procedure
+# -------------------------------------------------------------------------
+class ExecuteRiskModelUpsertTool(Tool):
+    """
+    Execute the PostgreSQL upsert procedure for risk model extraction (CARD flow).
+    
+    Calls: CALL threat.upsert_risk_model(%s::jsonb, NULL::jsonb)
+    Where %s is the validated JSON payload from verifyUpsertRiskModel.
+    
+    Payload structure:
+    {
+        "model_id": integer,
+        "card_id": uuid,
+        "threats": [],
+        "vulnerabilities": [],
+        "countermeasures": [],
+        "asset_threat": [],
+        "vulnerability_threat": [],
+        "countermeasure_threat": []
+    }
+    """
+
+    def __init__(self, db_pool):
+        super().__init__("execute_risk_model_upsert", db_pool)
+
+    async def execute(self, jsonb_payload: Dict[str, Any], **kwargs):
+        start = datetime.now()
+        try:
+            import json as json_module
+            
+            # Convert payload to JSON string for parameterized query
+            payload_json = json_module.dumps(jsonb_payload)
+            
+            async with self.db_pool.acquire() as conn:
+                # Execute the risk model upsert procedure
+                # The procedure signature expects:
+                #   IN p_payload jsonb,
+                #   OUT p_result jsonb
+                result = await conn.fetchrow(
+                    "CALL threat.upsert_risk_model($1::jsonb, NULL::jsonb)",
+                    payload_json
+                )
+                
+                # Extract summary from result if available
+                summary = {}
+                if result:
+                    try:
+                        # Result is a tuple with JSONB output
+                        result_json = result[0] if isinstance(result, tuple) else result
+                        if isinstance(result_json, str):
+                            summary = json_module.loads(result_json)
+                        elif isinstance(result_json, dict):
+                            summary = result_json
+                    except Exception:
+                        summary = {}
+            
+            duration = (datetime.now() - start).total_seconds()
+            self.log_execution(True, duration)
+            
+            return {
+                "status": "success",
+                "duration": duration,
+                "message": "Risk model upserted successfully",
+                "summary": summary
+            }
+
+        except Exception as e:
+            duration = (datetime.now() - start).total_seconds()
+            self.log_execution(False, duration)
+            logger.error(f"[ExecuteRiskModelUpsertTool] Error: {e}")
+            
+            return {"status": "error", "error": str(e), "duration": duration}
+
+
+# -------------------------------------------------------------------------
 # Tool Registry
 # -------------------------------------------------------------------------
 class ToolRegistry:
@@ -289,6 +364,7 @@ class ToolRegistry:
         self.register(DataTableTool(self.db_pool))
         self.register(RegisterViewTool(self.db_pool))
         self.register(ExecuteUpsertTool(self.db_pool))
+        self.register(ExecuteRiskModelUpsertTool(self.db_pool))
 
     def register(self, tool: Tool):
         self.tools[tool.name] = tool
