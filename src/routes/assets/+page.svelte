@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { globalSearch } from '$lib/searchStore';
+	import { modeStore } from '$lib/modeStore';
 	import type { Asset } from '$lib/db';
 	
 	let assets: Asset[] = [];
@@ -10,6 +11,7 @@
 	
 	let filteredAssets: Asset[] = [];
 	let showAddModal = false;
+	let activeModelId: number | null = null;
 	let newAsset: Partial<Asset> = { 
 		name: '', 
 		description: ''
@@ -21,6 +23,10 @@
 	const apiBase = 'http://localhost:8000';
 	
 	onMount(async () => {
+		const unsubscribe = modeStore.subscribe((state) => {
+			activeModelId = state.activeModel;
+		});
+		
 		try {
 			const response = await fetch(`${apiBase}/assets`);
 			if (!response.ok) throw new Error('Failed to fetch assets');
@@ -32,6 +38,8 @@
 		} finally {
 			loading = false;
 		}
+		
+		return unsubscribe;
 	});
 	
 	function filterAssets() {
@@ -90,7 +98,7 @@
 					description: newAsset.description,
 					fixed_value: newAsset.fixed_value || 0,
 					disabled: newAsset.disabled || false,
-					model_id: newAsset.model_id || 1,
+					model_id: activeModelId || 1,
 				})
 			});
 			if (!response.ok) throw new Error('Failed to create asset');

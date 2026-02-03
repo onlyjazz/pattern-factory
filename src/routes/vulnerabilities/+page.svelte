@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { globalSearch } from '$lib/searchStore';
+	import { modeStore } from '$lib/modeStore';
 	import type { Vulnerability } from '$lib/db';
 	
 	let vulnerabilities: Vulnerability[] = [];
@@ -10,6 +11,7 @@
 	
 	let filteredVulnerabilities: Vulnerability[] = [];
 	let showAddModal = false;
+	let activeModelId: number | null = null;
 	let newVulnerability: Partial<Vulnerability> = { 
 		name: '', 
 		description: '',
@@ -23,6 +25,10 @@
 	const apiBase = 'http://localhost:8000';
 	
 	onMount(async () => {
+		const unsubscribe = modeStore.subscribe((state) => {
+			activeModelId = state.activeModel;
+		});
+		
 		try {
 			const response = await fetch(`${apiBase}/vulnerabilities`);
 			if (!response.ok) throw new Error('Failed to fetch vulnerabilities');
@@ -34,6 +40,8 @@
 		} finally {
 			loading = false;
 		}
+		
+		return unsubscribe;
 	});
 	
 	function filterVulnerabilities() {
@@ -95,16 +103,16 @@
 				addModalError = 'Please fill in all required fields';
 				return;
 			}
-			const response = await fetch(`${apiBase}/vulnerabilities`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					name: newVulnerability.name,
-					description: newVulnerability.description,
-					disabled: newVulnerability.disabled || false,
-					model_id: newVulnerability.model_id || 1,
-				})
-			});
+		const response = await fetch(`${apiBase}/vulnerabilities`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				name: newVulnerability.name,
+				description: newVulnerability.description,
+				disabled: newVulnerability.disabled || false,
+				model_id: activeModelId || 1,
+			})
+		});
 			if (!response.ok) throw new Error('Failed to create vulnerability');
 			const created = await response.json();
 			vulnerabilities = [...vulnerabilities, { ...created, id: String(created.id) }];

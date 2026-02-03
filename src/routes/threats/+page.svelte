@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { globalSearch } from '$lib/searchStore';
+	import { modeStore } from '$lib/modeStore';
 	import type { Threat, Card } from '$lib/db';
 	
 	let threats: Threat[] = [];
@@ -12,6 +13,7 @@
 	
 	let filteredThreats: Threat[] = [];
 	let showAddModal = false;
+	let activeModelId: number | null = null;
 	let newThreat: Partial<Threat> = { 
 		name: '', 
 		description: '',
@@ -46,6 +48,10 @@
 	const apiBase = 'http://localhost:8000';
 	
 	onMount(async () => {
+		const unsubscribe = modeStore.subscribe((state) => {
+			activeModelId = state.activeModel;
+		});
+		
 		try {
 			const response = await fetch(`${apiBase}/threats`);
 			if (!response.ok) throw new Error('Failed to fetch threats');
@@ -57,6 +63,8 @@
 		} finally {
 			loading = false;
 		}
+		
+		return unsubscribe;
 	});
 	
 	function filterThreats() {
@@ -182,7 +190,7 @@
 				denial_of_service: newThreat.denial_of_service || false,
 				elevation_of_privilege: newThreat.elevation_of_privilege || false,
 			disabled: newThreat.disabled || false,
-			model_id: newThreat.model_id || 1,
+			model_id: activeModelId || 1,
 			card_id: selectedCardId || null
 			})
 		});

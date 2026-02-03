@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { globalSearch } from '$lib/searchStore';
+	import { modeStore } from '$lib/modeStore';
 	import type { Countermeasure } from '$lib/db';
 	
 	let countermeasures: Countermeasure[] = [];
@@ -10,6 +11,7 @@
 	
 	let filteredCountermeasures: Countermeasure[] = [];
 	let showAddModal = false;
+	let activeModelId: number | null = null;
 	let newCountermeasure: Partial<Countermeasure> = { 
 		name: '', 
 		description: '',
@@ -29,6 +31,10 @@ let sortField: keyof Countermeasure | string | null = 'tag';
 	const apiBase = 'http://localhost:8000';
 	
 	onMount(async () => {
+		const unsubscribe = modeStore.subscribe((state) => {
+			activeModelId = state.activeModel;
+		});
+		
 		try {
 			const response = await fetch(`${apiBase}/countermeasures`);
 			if (!response.ok) throw new Error('Failed to fetch countermeasures');
@@ -40,6 +46,8 @@ let sortField: keyof Countermeasure | string | null = 'tag';
 		} finally {
 			loading = false;
 		}
+		
+		return unsubscribe;
 	});
 	
 	function filterCountermeasures() {
@@ -120,7 +128,7 @@ let sortField: keyof Countermeasure | string | null = 'tag';
 					include_recurring_cost: newCountermeasure.include_recurring_cost !== undefined ? newCountermeasure.include_recurring_cost : true,
 					implemented: newCountermeasure.implemented || false,
 					disabled: newCountermeasure.disabled || false,
-					model_id: newCountermeasure.model_id || 1,
+					model_id: activeModelId || 1,
 				})
 			});
 			if (!response.ok) throw new Error('Failed to create countermeasure');
