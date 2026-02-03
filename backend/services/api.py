@@ -1022,7 +1022,7 @@ async def get_assets():
         rows = await conn.fetch("""
             SELECT id, name, description, tag, version, fixed_value, fixed_value_period, recurring_value, 
                    include_fixed_value, include_recurring_value, yearly_value, disabled, model_id, created_at, updated_at
-            FROM threat.assets
+            FROM threat.vassets
             ORDER BY created_at DESC
         """)
     return [dict(r) for r in rows]
