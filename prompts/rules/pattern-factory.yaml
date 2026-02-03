@@ -374,6 +374,13 @@ RULES:
     logic: |
       list threat name, threat probability in the 'Baseline' model
 
+  - rule_code: CME
+    name: "Countermeasure effectiveness"
+    description: "Mitigation levels of countermeasures"
+    logic: |
+      list countermeasure name, mitigation_level, yearly_cost in the 'Radiaction' model
+
+
 CAPO:
   - rule_code: CAPO
     name: "Capo system prompt"
