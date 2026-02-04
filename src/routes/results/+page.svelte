@@ -2,6 +2,7 @@
   import { page } from '$app/stores';
   import { onMount } from 'svelte';
   import { globalSearch } from '$lib/searchStore';
+  import ExportCSV from '$lib/ExportCSV.svelte';
   
   let viewName = '';
   let viewTitle = 'Views';
@@ -218,6 +219,7 @@
           <div class="message">No data found</div>
         {:else}
           <div class="results-info">
+            <ExportCSV {data} fileName="{viewName || 'export'}.csv" />
             <span class="search-results">{filteredData.length} of {data.length} results</span>
           </div>
           
@@ -275,6 +277,9 @@
   }
 
   .results-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
     margin-bottom: 1rem;
   }
   
