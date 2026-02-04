@@ -291,6 +291,26 @@ DATA:
           - version
           - created_at
           - updated_at
+        
+        threat_impact:
+          - threat_tag
+          - threat_name
+          - probability
+          - var_before_mitigation
+          - var_after_mitigation
+          - risk_reduction
+          - residual_risk_pct
+          - residual_risk_level
+        
+        threat_countermeasures:
+          - threat_tag
+          - threat_name
+          - probability
+          - countermeasure_tag
+          - countermeasure_name
+          - mitigation_level
+          - implemented
+          - disabled
 
 RULES:
 
@@ -374,12 +394,29 @@ RULES:
     logic: |
       list threat name, threat probability in the 'Baseline' model
 
-  - rule_code: CME
-    name: "Countermeasure effectiveness"
-    description: "Mitigation levels of countermeasures"
+  - rule_code: ALIST
+    name: "List of assets"
+    description: " List of assets"
     logic: |
-      list countermeasure name, mitigation_level, yearly_cost in the 'Radiaction' model
+      list asset tag, asset name, asset yearly_value in the 'Radiaction' model
 
+  - rule_code: CLIST
+    name: "List countermeasures"
+    description: " List of countermeasures"
+    logic: |
+      list countermeasure name, countermeasure yearly_cost in the 'Radiaction' model
+
+  - rule_code: THRIM
+    name: "Threat impact"
+    description: "Threat Impact"
+    logic: |
+      select * from threat.threat_impact
+
+  - rule_code: THRCM
+    name: "Threats countermeasures"
+    description: "Threats countermeasures"
+    logic: |
+      select * from threat.threat_countermeasures
 
 CAPO:
   - rule_code: CAPO
