@@ -1,3 +1,6 @@
+DROP VIEW "THRCM" CASCADE;
+DROP VIEW "THRIM" CASCADE;
+--
 DROP VIEW threat.threat_impact;
 CREATE OR REPLACE VIEW threat.threat_impact AS
 WITH threat_mitigation AS (
@@ -22,6 +25,7 @@ WITH threat_mitigation AS (
 ),
 threat_details AS (
     SELECT 
+        t.model_id,
         t.tag AS threat_tag,
         t.name AS threat_name,
         t.probability,
@@ -71,8 +75,9 @@ threat_details AS (
     
     WHERE t.disabled = false 
       AND a.disabled = false
+      AND t.model_id = (SELECT model_id FROM public.active_models LIMIT 1)
     
-    GROUP BY t.id, t.tag, t.name, t.probability, tm.residual_risk_multiplier
+    GROUP BY t.id, t.model_id, t.tag, t.name, t.probability, tm.residual_risk_multiplier
 )
 -- Individual threats
 SELECT * FROM threat_details
@@ -81,6 +86,7 @@ UNION ALL
 
 -- Summary row
 SELECT 
+    (SELECT model_id FROM public.active_models LIMIT 1) AS model_id,
     'TOTAL' AS threat_tag,
     'Total Portfolio Risk' AS threat_name,
     NULL AS probability,
@@ -121,6 +127,7 @@ TOTAL      | Total Portfolio Risk     |             | 3560000   | 83527     | 97
 DROP VIEW IF EXISTS threat.threat_countermeasures;
 CREATE OR REPLACE VIEW threat.threat_countermeasures AS
 SELECT 
+    t.model_id,
     CASE 
         WHEN ROW_NUMBER() OVER (PARTITION BY t.tag ORDER BY c.name) = 1 
         THEN t.tag 
@@ -148,4 +155,25 @@ INNER JOIN threat.countermeasures c
     ON ct.countermeasure_id = c.id AND ct.model_id = c.model_id
 WHERE t.disabled = false
   AND ct.included_in_mitigation = true
+  AND t.model_id = (SELECT model_id FROM public.active_models LIMIT 1)
 ORDER BY t.tag, c.name;
+
+--
+--
+DROP VIEW IF EXISTS threat.asset_threat_exploitability;
+CREATE OR REPLACE VIEW threat.asset_threat_exploitability AS
+SELECT
+    a.name AS asset_name,
+    t.name AS threat_name,
+    t.probability AS threat_probability,
+    at.damage AS threat_damage_to_asset,
+    ROUND((t.probability / 100.0) * (at.damage / 100.0) * 100, 1) AS exploitability
+FROM threat.assets a
+INNER JOIN threat.asset_threat at
+    ON a.id = at.asset_id AND a.model_id = at.model_id
+INNER JOIN threat.threats t
+    ON at.threat_id = t.id AND at.model_id = t.model_id
+WHERE a.disabled = false
+  AND t.disabled = false
+  AND a.model_id = (SELECT model_id FROM public.active_models LIMIT 1)
+ORDER BY a.name, t.name;
