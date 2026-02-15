@@ -424,6 +424,12 @@ RULES:
     logic: |
       select * from threat.asset_threat_exploitability
 
+  - rule_code: VULNEXPLOIT
+    name: "Vulnerability Exploitability"
+    description: "Show vulnerabilities ranked by exploitability (threat probability × damage to asset) for the active model."
+    logic: |
+      select asset_name, vulnerability_name, threat_name, threat_probability, pct_damage_to_asset, exploitability from threat.vulnerability_exploitability
+
   - rule_code: THRCM
     name: "Threats countermeasures"
     description: "Threats countermeasures"
