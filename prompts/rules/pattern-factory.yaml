@@ -418,12 +418,6 @@ RULES:
     logic: |
       select * from threat.threat_impact
 
-  - rule_code: EXPLOITABILITY
-    name: "Threat Exploitability"
-    description: "Threat Exploitability"
-    logic: |
-      select * from threat.asset_threat_exploitability
-
   - rule_code: VULNEXPLOIT
     name: "Vulnerability Exploitability"
     description: "Show vulnerabilities ranked by exploitability (threat probability × damage to asset) for the active model."
