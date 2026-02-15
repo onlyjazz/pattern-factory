@@ -1,0 +1,16 @@
+flowchart LR
+    SC[Supply Chain<br/>⚠️ Supplier Integrity]
+
+    A[Manufacturing<br/>Produce & Assembly<br/><b>ATP #1</b><br/>⚠️ Build Environment]
+    B[Site Inspection<br/>⚠️ Human Process]
+    C[Production Test<br/>On Jig / System<br/>⚠️ Test Coverage]
+    D[Shipping<br/>⚠️ Chain of Custody]
+    E[Hospital Installation<br/><b>ATP #2</b><br/>⚠️ Site Controls]
+    F[Customer / Radiation Site<br/>Operational Use<br/>⚠️ Operational Drift]
+
+    SC --> A
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F

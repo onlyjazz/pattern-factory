@@ -1,0 +1,16 @@
+flowchart LR
+    SC[Supply Chain]
+
+    A[MedImp<br/>Produce & Assembly<br/>Manufacturing<br/><b>ATP #1</b>]
+    B[Site Inspection]
+    C[Production<br/>Test on Jig / System]
+    D[Ship to Customer]
+    E[Hospital Installation<br/><b>ATP #2</b>]
+    F[Radiation / Customer Site<br/>Operational Use]
+
+    SC --> A
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F

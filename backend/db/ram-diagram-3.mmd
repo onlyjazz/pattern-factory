@@ -1,0 +1,13 @@
+flowchart LR
+    A[Manufacturing<br/><b>ATP #1</b><br/>STRIDE:<br/>S,T,R]
+    B[Site Inspection<br/>STRIDE:<br/>R,E]
+    C[Production Test<br/>STRIDE:<br/>T,R,I]
+    D[Shipping<br/>STRIDE:<br/>S,T]
+    E[Hospital Installation<br/><b>ATP #2</b><br/>STRIDE:<br/>S,E]
+    F[Operational Use<br/>STRIDE:<br/>T,I,D]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F

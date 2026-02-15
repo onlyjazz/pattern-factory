@@ -398,13 +398,13 @@ RULES:
     name: "List of assets"
     description: " List of assets"
     logic: |
-      list asset tag, asset name, asset yearly_value in the 'Radiaction' model
+      list asset tag, asset name, asset fixed_value, asset recurring_value asset yearly_value in the 'Radiaction' model
 
   - rule_code: CLIST
     name: "List countermeasures"
     description: " List of countermeasures"
     logic: |
-      list countermeasure name, countermeasure yearly_cost in the 'Radiaction' model
+      list countermeasure name, countermeasure fixed_implementation_cost, recurring_implementation_cost, countermeasure yearly_cost in the 'Radiaction' model
 
   - rule_code: THRIM
     name: "Threat impact"

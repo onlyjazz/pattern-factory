@@ -1,0 +1,16 @@
+flowchart LR
+    SC[Supply Chain<br/>Assets:<br/>• Components<br/>• Firmware Images]
+
+    A[Manufacturing<br/><b>ATP #1</b><br/>Assets:<br/>• Device HW<br/>• Embedded SW<br/>• Config Artifacts]
+    B[Site Inspection<br/>Assets:<br/>• Inspection Reports<br/>• Acceptance Records]
+    C[Production Test<br/>Assets:<br/>• Test Jigs<br/>• Calibration Data<br/>• Logs]
+    D[Shipping<br/>Assets:<br/>• Physical Device<br/>• Seals / Labels]
+    E[Hospital Installation<br/><b>ATP #2</b><br/>Assets:<br/>• Installed System<br/>• Network Context]
+    F[Operational Use<br/>Assets:<br/>• Patient Exposure<br/>• Usage Data<br/>• Safety Margins]
+
+    SC --> A
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
