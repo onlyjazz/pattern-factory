@@ -418,6 +418,12 @@ RULES:
     logic: |
       select * from threat.threat_impact
 
+  - rule_code: EXPLOITABILITY
+    name: "Threat Exploitability"
+    description: "Threat Exploitability"
+    logic: |
+      select * from threat.asset_threat_exploitability
+
   - rule_code: THRCM
     name: "Threats countermeasures"
     description: "Threats countermeasures"
