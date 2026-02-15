@@ -317,6 +317,14 @@ DATA:
           - mitigation_level
           - implemented
           - disabled
+        
+        vulnerability_exploitability:
+          - asset_name
+          - vulnerability_name
+          - threat_name
+          - threat_probability
+          - pct_damage_to_asset
+          - exploitability
 
 RULES:
 
@@ -401,7 +409,7 @@ RULES:
       list threat name, threat probability in the 'Baseline' model
 
   - rule_code: ALIST
-    name: "List of assets"
+    name: "List assets"
     description: " List of assets"
     logic: |
       list asset tag, asset name, asset fixed_value, asset recurring_value asset yearly_value where model_id = (select model_id from active_models limit 1)
@@ -413,19 +421,19 @@ RULES:
       list countermeasure name, countermeasure fixed_implementation_cost, recurring_implementation_cost, countermeasure yearly_cost where model_id = (select model_id from active_models limit 1)
 
   - rule_code: THRIM
-    name: "Threat impact"
-    description: "Threat Impact"
+    name: "Residual Risk"
+    description: "Threat Impact after applying countermeasures"
     logic: |
       select * from threat.threat_impact
 
   - rule_code: VULNEXPLOIT
-    name: "Vulnerability Exploitability"
-    description: "Show vulnerabilities ranked by exploitability (threat probability × damage to asset) for the active model."
+    name: "Exploitability"
+    description: "Show vulnerabilities ranked by exploitability"
     logic: |
-      select asset_name, vulnerability_name, threat_name, threat_probability, pct_damage_to_asset, exploitability from threat.vulnerability_exploitability
+      select * from threat.vulnerability_exploitability
 
   - rule_code: THRCM
-    name: "Threats countermeasures"
+    name: "Security countermeasures"
     description: "Threats countermeasures"
     logic: |
       select * from threat.threat_countermeasures
