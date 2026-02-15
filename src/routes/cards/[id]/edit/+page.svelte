@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import type { Card, Pattern } from '$lib/db';
+	import CheckboxField from '$lib/CheckboxField.svelte';
 
 	let card: Card | null = null;
 	let patterns: Pattern[] = [];
@@ -9,6 +10,7 @@
 	let error: string | null = null;
 	let saveError: string | null = null;
 	let isSaving = false;
+	let duplicateCard = false;
 
 	let patternSearchQuery = '';
 	let filteredPatterns: Pattern[] = [];
@@ -75,23 +77,40 @@
 		try {
 			isSaving = true;
 			saveError = null;
-			const response = await fetch(`${apiBase}/cards/${card.id}`, {
-				method: 'PUT',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					name: card.name,
-					description: card.description,
-					pattern_id: selectedPatternId,
-					story: card.story || null,
-					order_index: card.order_index || 0,
-					domain: card.domain || null,
-					audience: card.audience || null,
-					maturity: card.maturity || null
-				})
-			});
-			if (!response.ok) throw new Error('Failed to save card');
-			// Navigate back to view page
-			window.location.href = `/cards/view/${card.id}`;
+			
+			const cardData = {
+				name: card.name,
+				description: card.description,
+				pattern_id: selectedPatternId,
+				story: card.story || null,
+				order_index: card.order_index || 0,
+				domain: card.domain || null,
+				audience: card.audience || null,
+				maturity: card.maturity || null
+			};
+			
+			if (duplicateCard) {
+				// Create a new card
+				const response = await fetch(`${apiBase}/cards`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(cardData)
+				});
+				if (!response.ok) throw new Error('Failed to create duplicate card');
+				const newCard = await response.json();
+				// Navigate to the new card view page
+				window.location.href = `/cards/view/${newCard.id}`;
+			} else {
+				// Update existing card
+				const response = await fetch(`${apiBase}/cards/${card.id}`, {
+					method: 'PUT',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(cardData)
+				});
+				if (!response.ok) throw new Error('Failed to save card');
+				// Navigate back to view page
+				window.location.href = `/cards/view/${card.id}`;
+			}
 		} catch (e) {
 			saveError = e instanceof Error ? e.message : 'Failed to save card';
 			isSaving = false;
@@ -235,6 +254,15 @@
 						</div>
 
 						<div class="form-footer">
+							<div style="margin-bottom: 16px;">
+								<CheckboxField
+									id="duplicate-card"
+									bind:checked={duplicateCard}
+									label="Duplicate"
+									description="When checked, a new card will be created"
+									disabled={isSaving}
+								/>
+							</div>
 							<button
 								type="button"
 								class="button button_secondary"

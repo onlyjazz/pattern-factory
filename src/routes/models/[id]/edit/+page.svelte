@@ -2,11 +2,14 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import type { Model } from '$lib/db';
+	import CheckboxField from '$lib/CheckboxField.svelte';
 	
 	let model: Partial<Model> = {};
 	let loading = true;
 	let error: string | null = null;
 	let saveError: string | null = null;
+	let isSaving = false;
+	let duplicateModel = false;
 	
 	const apiBase = 'http://localhost:8000';
 	
@@ -27,30 +30,49 @@
 	
 	async function handleSave() {
 		try {
+			isSaving = true;
 			saveError = null;
 			if (!model.name) {
 				saveError = 'Model name is required';
+				isSaving = false;
 				return;
 			}
 			const modelId = $page.params.id;
-			const response = await fetch(`${apiBase}/models/${modelId}`, {
-				method: 'PUT',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					name: model.name,
-					version: model.version || null,
-					author: model.author || null,
-					company: model.company || null,
-					category: model.category || null,
-					keywords: model.keywords || null,
-					description: model.description || null
-				})
-			});
-			if (!response.ok) throw new Error('Failed to update model');
-			// Redirect back to models list
-			window.location.href = '/models';
+			
+			const modelData = {
+				name: model.name,
+				version: model.version || null,
+				author: model.author || null,
+				company: model.company || null,
+				category: model.category || null,
+				keywords: model.keywords || null,
+				description: model.description || null
+			};
+			
+			if (duplicateModel) {
+				// Create a new model
+				const response = await fetch(`${apiBase}/models`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(modelData)
+				});
+				if (!response.ok) throw new Error('Failed to create duplicate model');
+				// Redirect to models list
+				window.location.href = '/models';
+			} else {
+				// Update existing model
+				const response = await fetch(`${apiBase}/models/${modelId}`, {
+					method: 'PUT',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(modelData)
+				});
+				if (!response.ok) throw new Error('Failed to update model');
+				// Redirect back to models list
+				window.location.href = '/models';
+			}
 		} catch (e) {
 			saveError = e instanceof Error ? e.message : 'Failed to save model';
+			isSaving = false;
 		}
 	}
 	
@@ -163,12 +185,23 @@
 						</div>
 
 						<div class="form-actions">
-							<button type="button" class="button button_secondary" onclick={handleCancel}>
-								Cancel
-							</button>
-							<button type="submit" class="button button_blue">
-								Save
-							</button>
+							<div style="margin-bottom: 16px; width: 100%;">
+								<CheckboxField
+									id="duplicate-model"
+									bind:checked={duplicateModel}
+									label="Duplicate"
+									description="When checked, a new model will be created"
+									disabled={isSaving}
+								/>
+							</div>
+							<div style="display: flex; gap: 12px;">
+								<button type="button" class="button button_secondary" onclick={handleCancel} disabled={isSaving}>
+									Cancel
+								</button>
+								<button type="submit" class="button button_blue" disabled={isSaving}>
+									{isSaving ? 'Saving...' : 'Save'}
+								</button>
+							</div>
 						</div>
 					</form>
 				{/if}
