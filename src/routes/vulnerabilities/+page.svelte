@@ -12,14 +12,14 @@
 	let filteredVulnerabilities: Vulnerability[] = [];
 	let showAddModal = false;
 	let activeModelId: number | null = null;
-	let newVulnerability: Partial<Vulnerability> = { 
+	let newVulnerability: Partial<Vulnerability> = {
 		name: '', 
 		description: '',
 		disabled: false,
 		model_id: 1
 	};
 	
-	let sortField: keyof Vulnerability | string | null = 'tag';
+	let sortField: keyof Vulnerability | string | null = 'name';
 	let sortDirection: 'asc' | 'desc' = 'asc';
 	
 	const apiBase = 'http://localhost:8000';
@@ -34,7 +34,6 @@
 			if (!response.ok) throw new Error('Failed to fetch vulnerabilities');
 			const data = await response.json();
 			vulnerabilities = data.map((v: any) => ({ ...v, id: String(v.id) }));
-			filterVulnerabilities();
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Unknown error';
 		} finally {
@@ -44,32 +43,30 @@
 		return unsubscribe;
 	});
 	
-	function filterVulnerabilities() {
-		filteredVulnerabilities = vulnerabilities.filter(v => {
-			const matchesSearch = v.name.toLowerCase().includes($globalSearch.toLowerCase()) ||
-				v.description.toLowerCase().includes($globalSearch.toLowerCase());
-			return matchesSearch;
-		});
-		sortVulnerabilities();
-	}
-	
-	function sortVulnerabilities() {
-		if (!sortField) return;
-		filteredVulnerabilities = [...filteredVulnerabilities].sort((a, b) => {
-			let aVal = a[sortField] || '';
-			let bVal = b[sortField] || '';
-			
-			// For 'tag' field, sort by numeric id
-			if (sortField === 'tag') {
-				const aNum = parseInt(String(a.id), 10);
-				const bNum = parseInt(String(b.id), 10);
-				const comparison = aNum - bNum;
-				return sortDirection === 'asc' ? comparison : -comparison;
-			}
-			
-			const comparison = String(aVal).localeCompare(String(bVal));
-			return sortDirection === 'asc' ? comparison : -comparison;
-		});
+	function filterAndSortVulnerabilities(items: Vulnerability[], search: string, field: keyof Vulnerability | string | null, direction: 'asc' | 'desc'): Vulnerability[] {
+		let result = items;
+		
+		// Apply search filter
+		if (search.trim() !== '') {
+			const term = search.toLowerCase();
+			result = result.filter(v => {
+				const name = (v.name || '').toLowerCase();
+				const description = (v.description || '').toLowerCase();
+				return name.includes(term) || description.includes(term);
+			});
+		}
+		
+		// Apply sorting
+		if (field) {
+			result = [...result].sort((a, b) => {
+				const aVal = a[field as keyof Vulnerability] || '';
+				const bVal = b[field as keyof Vulnerability] || '';
+				const comparison = String(aVal).localeCompare(String(bVal));
+				return direction === 'asc' ? comparison : -comparison;
+			});
+		}
+		
+		return result;
 	}
 	
 	function toggleSort(field: keyof Vulnerability) {
@@ -79,11 +76,9 @@
 			sortField = field;
 			sortDirection = 'asc';
 		}
-		sortVulnerabilities();
 	}
 	
-	$: if (vulnerabilities) filterVulnerabilities();
-	$: if ($globalSearch !== undefined) filterVulnerabilities();
+	$: filteredVulnerabilities = filterAndSortVulnerabilities(vulnerabilities, $globalSearch, sortField, sortDirection);
 	
 	function closeAddModal() {
 		showAddModal = false;
@@ -116,7 +111,6 @@
 			if (!response.ok) throw new Error('Failed to create vulnerability');
 			const created = await response.json();
 			vulnerabilities = [...vulnerabilities, { ...created, id: String(created.id) }];
-			filterVulnerabilities();
 			closeAddModal();
 		} catch (e) {
 			addModalError = e instanceof Error ? e.message : 'Failed to create vulnerability';
@@ -133,7 +127,6 @@
 			
 			if (!response.ok) throw new Error('Failed to delete vulnerability');
 			vulnerabilities = vulnerabilities.filter(v => v.id !== vulnerabilityId);
-			filterVulnerabilities();
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to delete vulnerability';
 		}

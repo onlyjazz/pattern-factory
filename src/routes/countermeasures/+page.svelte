@@ -12,7 +12,9 @@
 	let filteredCountermeasures: Countermeasure[] = [];
 	let showAddModal = false;
 	let activeModelId: number | null = null;
-	let newCountermeasure: Partial<Countermeasure> = { 
+	let sortField: keyof Countermeasure | string | null = 'name';
+	let sortDirection: 'asc' | 'desc' = 'asc';
+	let newCountermeasure: Partial<Countermeasure> = {
 		name: '', 
 		description: '',
 		fixed_implementation_cost: 0,
@@ -24,9 +26,6 @@
 		disabled: false,
 		model_id: 1
 	};
-	
-let sortField: keyof Countermeasure | string | null = 'tag';
-	let sortDirection: 'asc' | 'desc' = 'asc';
 	
 	const apiBase = 'http://localhost:8000';
 	
@@ -40,7 +39,6 @@ let sortField: keyof Countermeasure | string | null = 'tag';
 			if (!response.ok) throw new Error('Failed to fetch countermeasures');
 			const data = await response.json();
 			countermeasures = data.map((c: any) => ({ ...c, id: String(c.id) }));
-			filterCountermeasures();
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Unknown error';
 		} finally {
@@ -50,32 +48,30 @@ let sortField: keyof Countermeasure | string | null = 'tag';
 		return unsubscribe;
 	});
 	
-	function filterCountermeasures() {
-		filteredCountermeasures = countermeasures.filter(c => {
-			const matchesSearch = c.name.toLowerCase().includes($globalSearch.toLowerCase()) ||
-				c.description.toLowerCase().includes($globalSearch.toLowerCase());
-			return matchesSearch;
-		});
-		sortCountermeasures();
-	}
-	
-	function sortCountermeasures() {
-		if (!sortField) return;
-		filteredCountermeasures = [...filteredCountermeasures].sort((a, b) => {
-			let aVal = a[sortField] || '';
-			let bVal = b[sortField] || '';
-			
-			// For 'tag' field, sort by numeric id
-			if (sortField === 'tag') {
-				const aNum = parseInt(String(a.id), 10);
-				const bNum = parseInt(String(b.id), 10);
-				const comparison = aNum - bNum;
-				return sortDirection === 'asc' ? comparison : -comparison;
-			}
-			
-			const comparison = String(aVal).localeCompare(String(bVal));
-			return sortDirection === 'asc' ? comparison : -comparison;
-		});
+	function filterAndSortCountermeasures(items: Countermeasure[], search: string, field: keyof Countermeasure | string | null, direction: 'asc' | 'desc'): Countermeasure[] {
+		let result = items;
+		
+		// Apply search filter
+		if (search.trim() !== '') {
+			const term = search.toLowerCase();
+			result = result.filter(c => {
+				const name = (c.name || '').toLowerCase();
+				const description = (c.description || '').toLowerCase();
+				return name.includes(term) || description.includes(term);
+			});
+		}
+		
+		// Apply sorting
+		if (field) {
+			result = [...result].sort((a, b) => {
+				const aVal = a[field as keyof Countermeasure] || '';
+				const bVal = b[field as keyof Countermeasure] || '';
+				const comparison = String(aVal).localeCompare(String(bVal));
+				return direction === 'asc' ? comparison : -comparison;
+			});
+		}
+		
+		return result;
 	}
 	
 	function toggleSort(field: keyof Countermeasure) {
@@ -85,11 +81,9 @@ let sortField: keyof Countermeasure | string | null = 'tag';
 			sortField = field;
 			sortDirection = 'asc';
 		}
-		sortCountermeasures();
 	}
 	
-	$: if (countermeasures) filterCountermeasures();
-	$: if ($globalSearch !== undefined) filterCountermeasures();
+	$: filteredCountermeasures = filterAndSortCountermeasures(countermeasures, $globalSearch, sortField, sortDirection);
 	
 	function closeAddModal() {
 		showAddModal = false;
@@ -134,7 +128,6 @@ let sortField: keyof Countermeasure | string | null = 'tag';
 			if (!response.ok) throw new Error('Failed to create countermeasure');
 			const created = await response.json();
 			countermeasures = [...countermeasures, { ...created, id: String(created.id) }];
-			filterCountermeasures();
 			closeAddModal();
 		} catch (e) {
 			addModalError = e instanceof Error ? e.message : 'Failed to create countermeasure';
@@ -150,8 +143,7 @@ let sortField: keyof Countermeasure | string | null = 'tag';
 			});
 			
 			if (!response.ok) throw new Error('Failed to delete countermeasure');
-			countermeasures = countermeasures.filter(c => c.id !== countermeasureId);
-			filterCountermeasures();
+		countermeasures = countermeasures.filter(c => c.id !== countermeasureId);
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to delete countermeasure';
 		}

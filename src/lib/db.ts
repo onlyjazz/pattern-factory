@@ -59,6 +59,7 @@ export interface Vulnerability {
     id: ID;
     name: string;
     description: string;
+    version?: number;
     disabled: boolean;
     model_id: number;
     created_at?: string;
@@ -69,6 +70,7 @@ export interface Countermeasure {
     id: ID;
     name: string;
     description: string;
+    version?: number;
     yearly_cost: number;
     fixed_implementation_cost: number;
     fixed_cost_period: number;
