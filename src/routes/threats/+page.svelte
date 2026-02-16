@@ -289,8 +289,8 @@
 									<th class="tal sortable" class:sorted-asc={sortField === 'name' && sortDirection === 'asc'} class:sorted-desc={sortField === 'name' && sortDirection === 'desc'} onclick={() => toggleSort('name')}>
 										Name
 									</th>
-									<th class="tal sortable" class:sorted-asc={sortField === 'description' && sortDirection === 'asc'} class:sorted-desc={sortField === 'description' && sortDirection === 'desc'} onclick={() => toggleSort('description')}>
-										Description
+									<th class="tal sortable" class:sorted-asc={sortField === 'domain' && sortDirection === 'asc'} class:sorted-desc={sortField === 'domain' && sortDirection === 'desc'} onclick={() => toggleSort('domain')}>
+										Domain
 									</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'probability' && sortDirection === 'asc'} class:sorted-desc={sortField === 'probability' && sortDirection === 'desc'} onclick={() => toggleSort('probability')}>
 										Probability
@@ -310,7 +310,7 @@
 								<tr class="threat-row" onclick={() => window.location.href = `/threats/${t.id}`}>
 									<td class="tal">{t.tag || '-'}</td>
 									<td class="tal">{t.name}</td>
-									<td class="tal">{t.description}</td>
+									<td class="tal">{t.domain || '-'}</td>
 									<td class="tal">{t.probability || '-'}</td>
 									<td class="tal">{t.mitigation_level || '-'}</td>
 									<td class="tal">{t.disabled ? 'Yes' : 'No'}</td>
