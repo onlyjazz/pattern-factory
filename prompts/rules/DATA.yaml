@@ -1,0 +1,292 @@
+DATA:
+    
+  schemas:
+
+    public:
+      tables:
+
+        active_models:
+          - user_id
+          - model_id
+          - created_at
+          - updated_at
+
+        categories:
+          - id
+          - description
+          - created_at
+          - updated_at
+          - deleted_at
+
+        guests:
+          - id
+          - name
+          - description
+          - linkedin_url
+          - job_description
+          - org_id
+          - post_id
+          - content_source
+          - created_at
+          - updated_at
+          - deleted_at
+
+        orgs:
+          - id
+          - name
+          - description
+          - stage
+          - funding
+          - date_funded
+          - date_founded
+          - linkedin_company_url
+          - content_source
+          - category_id
+          - created_at
+          - updated_at
+          - deleted_at
+
+        patterns:
+          - id
+          - name
+          - description
+          - content_source
+          - kind
+          - search_vector
+          - created_at
+          - updated_at
+          - deleted_at
+
+        posts:
+          - id
+          - name
+          - description
+          - content_url
+          - content_source
+          - published_at
+          - created_at
+          - updated_at
+          - deleted_at
+
+        pattern_guest_link:
+          - pattern_id
+          - guest_id
+
+        pattern_org_link:
+          - pattern_id
+          - org_id
+
+        pattern_post_link:
+          - pattern_id
+          - post_id
+
+        system_log:
+          - id
+          - event
+          - context
+          - created_at
+
+        views_registry:
+          - id
+          - name
+          - table_name
+          - sql
+          - created_at
+          - updated_at
+
+    threat:
+      tables:
+
+        models:
+          - id
+          - name
+          - version
+          - author
+          - company
+          - category
+          - keywords
+          - description
+          - created_at
+          - updated_at
+ 
+        areas:
+          - id
+          - model_id
+          - name
+          - description
+          - use_for_threats
+          - use_for_vulnerabilities
+          - use_for_countermeasures
+          - use_for_assets
+
+        assets:
+          - id
+          - model_id
+          - name
+          - description
+          - fixed_value
+          - fixed_value_period
+          - recurring_value
+          - include_fixed_value
+          - include_recurring_value
+          - disabled
+          - created_at
+          - updated_at
+          - tag
+          - version
+          - yearly_value
+
+        threats:
+          - id
+          - model_id
+          - name
+          - description
+          - probability
+          - damage_description
+          - spoofing
+          - tampering
+          - repudiation
+          - information_disclosure
+          - denial_of_service
+          - elevation_of_privilege
+          - mitigation_level
+          - disabled
+          - created_at
+          - updated_at
+          - card_id
+          - version
+          - domain
+          - tag
+
+        vulnerabilities:
+          - id
+          - model_id
+          - name
+          - description
+          - disabled
+          - created_at
+          - updated_at
+          - version 
+
+        countermeasures:
+          - id
+          - model_id
+          - name
+          - description
+          - fixed_implementation_cost
+          - recurring_implementation_cost
+          - fixed_cost_period
+          - detailed_design
+          - implemented
+          - include_fixed_cost
+          - include_recurring_cost
+          - disabled
+          - created_at
+          - updated_at
+          - version
+          - yearly_cost
+
+        entrypoints:
+          - id
+          - model_id
+          - name
+          - description
+
+        attacker_types:
+          - id
+          - model_id
+          - name
+          - description
+          - tools_available
+
+        area_asset:
+          - model_id  
+          - area_id
+          - asset_id
+
+        area_threat:
+          - model_id
+          - area_id
+          - threat_id
+
+        area_vulnerability:
+          - model_id
+          - area_id
+          - vulnerability_id
+
+        area_countermeasure:
+          - model_id
+          - area_id
+          - countermeasure_id
+
+        asset_threat:
+          - model_id
+          - asset_id
+          - threat_id
+          - damage
+
+        vulnerability_threat:
+          - model_id
+          - vulnerability_id
+          - threat_id
+
+        countermeasure_threat:
+          - model_id
+          - countermeasure_id
+          - threat_id
+          - mitigation_level
+          - included_in_mitigation
+
+        attacker_types:
+          - id
+          - name
+          - description
+          - tools_available
+
+        entrypoint_threat:
+          - model_id
+          - entrypoint_id
+          - threat_id
+
+        parameters:
+          - id
+          - parameter_name
+          - display_name
+          - value
+
+        risk_history:
+          - time
+          - series
+          - value
+          - model_id
+          - version
+          - created_at
+          - updated_at
+        
+        threat_impact:
+          - threat_tag
+          - threat_name
+          - probability
+          - var_before_mitigation
+          - var_after_mitigation
+          - risk_reduction
+          - residual_risk_pct
+          - residual_risk_level
+        
+        threat_countermeasures:
+          - threat_tag
+          - threat_name
+          - probability
+          - countermeasure_tag
+          - countermeasure_name
+          - mitigation_level
+          - implemented
+          - disabled
+        
+        vulnerability_exploitability:
+          - asset_name
+          - vulnerability_name
+          - threat_name
+          - threat_probability
+          - pct_damage_to_asset
+          - exploitability

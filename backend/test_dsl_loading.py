@@ -18,35 +18,46 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pitboss.context_builder import ContextBuilder
 
 def test_dsl_loading():
-    """Test that DSL loads correctly."""
+    """Test that DSL loads correctly from split component files."""
     logger.info("=" * 70)
-    logger.info("Testing DSL Loading (pattern-factory.yaml)")
+    logger.info("Testing DSL Loading (Split Component YAML Files)")
     logger.info("=" * 70)
     
     logger.info(f"Current working directory: {os.getcwd()}")
     logger.info(f"Script location: {os.path.abspath(__file__)}")
     
     try:
-        # Create context builder (will load DSL automatically)
+        # Create context builder (will load all component YAML files automatically)
         builder = ContextBuilder(db_connection=None)
         
         logger.info("\n✅ DSL loaded successfully!")
-        logger.info(f"DSL path: {builder.rules_yaml_path}")
+        logger.info(f"Rules directory: {builder.rules_dir}")
+        logger.info(f"Component files loaded: {', '.join(builder.COMPONENT_FILES)}")
         
         # Verify we have data
         if builder.yaml_data:
             system = builder.yaml_data.get("SYSTEM", {})
             data = builder.yaml_data.get("DATA", {})
             rules = builder.yaml_data.get("RULES", [])
+            capo = builder.yaml_data.get("CAPO", [])
+            content = builder.yaml_data.get("CONTENT", [])
             
             logger.info(f"\nDSL Content Summary:")
             logger.info(f"  - SYSTEM sections: {list(system.keys())}")
             logger.info(f"  - SYSTEM.prompt length: {len(system.get('prompt', ''))}")
-            logger.info(f"  - DATA.tables: {len(data.get('tables', {}))}")
-            logger.info(f"  - Available tables: {list(data.get('tables', {}).keys())[:5]}... ({len(data.get('tables', {}))} total)")
+            
+            # Check DATA with nested schemas
+            data_section = data.get('DATA', data)
+            schemas = data_section.get('schemas', {})
+            total_tables = sum(len(s.get('tables', {})) for s in schemas.values() if isinstance(s, dict))
+            logger.info(f"  - DATA schemas: {', '.join(schemas.keys())}")
+            logger.info(f"  - Available tables: {total_tables} total across {len(schemas)} schemas")
+            
             logger.info(f"  - RULES defined: {len(rules)}")
             if rules:
                 logger.info(f"  - First rule: {rules[0].get('name', 'N/A')}")
+            logger.info(f"  - CAPO prompts: {len(capo)}")
+            logger.info(f"  - CONTENT prompts: {len(content)}")
             
             # Test context building
             logger.info(f"\n✅ Testing context building...")

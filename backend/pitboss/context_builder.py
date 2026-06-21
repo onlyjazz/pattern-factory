@@ -24,117 +24,163 @@ logger = logging.getLogger(__name__)
 
 class ContextBuilder:
     """
-    Builds LLM-ready context:
+    Builds LLM-ready context by loading split component YAML files:
 
-    SYSTEM: fixed instruction block from pattern-factory.yaml
-    DATA:   list of tables + columns (schema)
-    USER:   the natural-language rule logic
+    SYSTEM.yaml:   System instruction block
+    DATA.yaml:     Database table and column definitions
+    RULES.yaml:    Predefined rule definitions
+    CAPO.yaml:     Capo router and human-in-the-loop prompts
+    CONTENT.yaml:  Entity extraction and risk model prompts
 
-    No protocol, no clinical tables, no eligibility, no CRFs.
+    Each file is loaded independently with its own mtime tracking for hot-reload.
     """
+
+    # Component files (relative to prompts/rules/)
+    COMPONENT_FILES = [
+        "SYSTEM.yaml",
+        "DATA.yaml",
+        "RULES.yaml",
+        "CAPO.yaml",
+        "CONTENT.yaml"
+    ]
 
     def __init__(self, db_connection=None, rules_yaml_path: str = None):
         self.db = db_connection
 
-        # Allow override but default to prompts/rules/pattern-factory.yaml
+        # Allow override but default to prompts/rules/ directory
         # Resolve relative to the backend directory to support different working directories
         if rules_yaml_path:
-            self.rules_yaml_path = rules_yaml_path
+            # Support legacy single-file path (will be ignored, we load from directory)
+            self.rules_dir = os.path.dirname(rules_yaml_path)
         else:
             # Get the backend root directory (parent of pitboss/)
             backend_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             # Go up one more level to project root
             project_root = os.path.dirname(backend_root)
-            self.rules_yaml_path = os.path.join(
-                project_root, "prompts", "rules", "pattern-factory.yaml"
-            )
+            self.rules_dir = os.path.join(project_root, "prompts", "rules")
+
+        # Build full paths to component files
+        self.component_paths = {
+            name: os.path.join(self.rules_dir, name)
+            for name in self.COMPONENT_FILES
+        }
 
         self.max_context_tokens = 32000
 
         # Load on init
         self.yaml_data = self._load_yaml()
         
-        # Initialize mtime tracking AFTER loading (so we capture the current mtime)
+        # Initialize mtime tracking AFTER loading (so we capture the current mtimes)
+        self._last_mtimes = {}
         try:
-            self._last_yaml_mtime = os.path.getmtime(self.rules_yaml_path) if os.path.exists(self.rules_yaml_path) else None
-            msg = f"[ContextBuilder] Initial YAML mtime cached: {self._last_yaml_mtime}"
-            logger.info(msg)
-            print(msg)  # Also print to ensure visibility
+            for name, path in self.component_paths.items():
+                if os.path.exists(path):
+                    self._last_mtimes[name] = os.path.getmtime(path)
+                    msg = f"[ContextBuilder] Cached initial mtime for {name}: {self._last_mtimes[name]}"
+                    logger.info(msg)
+                    print(msg)
+                else:
+                    self._last_mtimes[name] = None
+                    msg = f"[ContextBuilder] Component file not found: {path}"
+                    logger.warning(msg)
+                    print(msg)
         except Exception as e:
-            msg = f"[ContextBuilder] Failed to cache initial YAML mtime: {e}"
+            msg = f"[ContextBuilder] Failed to cache initial component mtimes: {e}"
             logger.warning(msg)
             print(msg)
-            self._last_yaml_mtime = None
+            self._last_mtimes = {name: None for name in self.COMPONENT_FILES}
 
     # ---------------------------------------------------------------------
-    # YAML Loader with Hot-Reload
+    # YAML Loader with Multi-File Hot-Reload
     # ---------------------------------------------------------------------
     def reload_if_changed(self) -> bool:
-        """Check if YAML file has been modified and reload if needed.
+        """Check if any component YAML file has been modified and reload if needed.
         Returns True if reloaded, False otherwise.
         """
         try:
-            if not os.path.exists(self.rules_yaml_path):
-                logger.warning(f"[ContextBuilder] YAML file does not exist: {self.rules_yaml_path}")
-                return False
+            changed_files = []
+            for name, path in self.component_paths.items():
+                if not os.path.exists(path):
+                    continue
+                current_mtime = os.path.getmtime(path)
+                if current_mtime != self._last_mtimes.get(name):
+                    changed_files.append(f"{name} (old={self._last_mtimes.get(name)}, new={current_mtime})")
             
-            current_mtime = os.path.getmtime(self.rules_yaml_path)
-            logger.debug(f"[ContextBuilder] Checking YAML mtime: current={current_mtime}, last={self._last_yaml_mtime}")
-            
-            # Check if file was modified
-            if current_mtime != self._last_yaml_mtime:
-                msg = f"\n{'='*80}\n🔄 HOT-RELOAD: YAML file modified\n   File: {self.rules_yaml_path}\n   Old mtime: {self._last_yaml_mtime}\n   New mtime: {current_mtime}\n   Reloading rules...\n"
+            if changed_files:
+                msg = f"\n{'='*80}\n🔄 HOT-RELOAD: Component file(s) modified\n   Files: {', '.join(changed_files)}\n   Reloading rules...\n"
                 logger.warning(msg)
                 print(msg)
                 self.yaml_data = self._load_yaml()
-                self._last_yaml_mtime = current_mtime
-                success_msg = f"✅ YAML reloaded successfully\n{'='*80}\n"
+                
+                # Update all mtimes
+                for name, path in self.component_paths.items():
+                    if os.path.exists(path):
+                        self._last_mtimes[name] = os.path.getmtime(path)
+                
+                success_msg = f"✅ Component files reloaded successfully\n{'='*80}\n"
                 logger.warning(success_msg)
                 print(success_msg)
                 return True
             
             return False
         except Exception as e:
-            logger.warning(f"Error checking YAML modification: {e}")
+            logger.warning(f"Error checking component file modifications: {e}")
             return False
     
     def _load_yaml(self) -> Dict[str, Any]:
-        """Load pattern-factory.yaml file."""
+        """Load component YAML files and merge them into a single dict.
+        
+        Loads SYSTEM.yaml, DATA.yaml, RULES.yaml, CAPO.yaml, CONTENT.yaml
+        and merges them into a single in-memory dict with keys:
+        SYSTEM, DATA, RULES, CAPO, CONTENT.
+        """
+        result = {}
         try:
-            # Verify file exists
-            if not os.path.exists(self.rules_yaml_path):
-                logger.error(f"DSL file not found: {self.rules_yaml_path}")
-                logger.error(f"Current working directory: {os.getcwd()}")
-                logger.error(f"Absolute path resolved to: {os.path.abspath(self.rules_yaml_path)}")
-                raise FileNotFoundError(f"DSL file not found at {self.rules_yaml_path}")
+            for component_name in self.COMPONENT_FILES:
+                component_path = self.component_paths[component_name]
+                
+                if not os.path.exists(component_path):
+                    logger.warning(f"Component file not found: {component_path}")
+                    continue
+                
+                with open(component_path, "r") as f:
+                    data = yaml.safe_load(f)
+                    if data:
+                        # Each file has a root key matching its name (SYSTEM, DATA, RULES, CAPO, CONTENT)
+                        # Extract that key and merge into result
+                        root_key = component_name.replace(".yaml", "").upper()
+                        if root_key in data:
+                            result[root_key] = data[root_key]
+                            logger.debug(f"Loaded {component_name}: root key '{root_key}' found")
+                        else:
+                            logger.warning(f"No root key '{root_key}' found in {component_name}")
             
-            with open(self.rules_yaml_path, "r") as f:
-                data = yaml.safe_load(f)
-                logger.info(f"✅ Loaded Pattern Factory DSL: {self.rules_yaml_path}")
-                
-                # Log what was loaded
-                system_keys = list(data.get("SYSTEM", {}).keys()) if data.get("SYSTEM") else []
-                
-                # Count tables from both flat and nested schema structures
-                data_section = data.get("DATA", {})
-                data_tables = len(data_section.get("tables", {}))  # Flat structure
-                # Add tables from nested schemas
+            logger.info(f"✅ Loaded Pattern Factory DSL from {len([p for p in self.component_paths.values() if os.path.exists(p)])} component files")
+            
+            # Log what was loaded
+            if "SYSTEM" in result:
+                logger.info(f"   ✓ SYSTEM prompt loaded")
+            if "DATA" in result:
+                data_section = result.get("DATA", {})
                 schemas = data_section.get("schemas", {})
-                if schemas:
-                    for schema_data in schemas.values():
-                        if isinstance(schema_data, dict):
-                            data_tables += len(schema_data.get("tables", {}))
-                
-                rules_count = len(data.get("RULES", []))
-                logger.info(f"   SYSTEM sections: {', '.join(system_keys)}")
-                logger.info(f"   DATA tables: {data_tables}")
-                logger.info(f"   Predefined RULES: {rules_count}")
-                
-                return data
+                data_tables = sum(len(s.get("tables", {})) for s in schemas.values() if isinstance(s, dict))
+                logger.info(f"   ✓ DATA schema loaded ({data_tables} tables)")
+            if "RULES" in result:
+                rules_count = len(result.get("RULES", []))
+                logger.info(f"   ✓ RULES loaded ({rules_count} rules)")
+            if "CAPO" in result:
+                capo_count = len(result.get("CAPO", []))
+                logger.info(f"   ✓ CAPO loaded ({capo_count} prompts)")
+            if "CONTENT" in result:
+                content_count = len(result.get("CONTENT", []))
+                logger.info(f"   ✓ CONTENT loaded ({content_count} prompts)")
+            
+            return result
         except Exception as e:
-            logger.error(f"Failed to load YAML file {self.rules_yaml_path}: {e}")
+            logger.error(f"Failed to load component YAML files: {e}")
             logger.error(f"Working directory: {os.getcwd()}")
-            logger.error(f"Backend location: {os.path.dirname(os.path.dirname(os.path.abspath(__file__)))}")
+            logger.error(f"Rules directory: {self.rules_dir}")
+            logger.error(f"Component paths: {list(self.component_paths.values())}")
             return {"SYSTEM": {}, "DATA": {}}
 
     # ---------------------------------------------------------------------

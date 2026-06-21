@@ -1,0 +1,111 @@
+RULES:
+
+  - rule_code: PIP
+    name: "All patterns all posts"
+    description: "A list of patterns in posts."
+    logic: |
+      select * from pattern_posts
+
+  - rule_code: POSTS
+    name: "List of posts"
+    description: "A list of posts."
+    logic: |
+      select name, description, content_url, content_source, published_at from posts
+
+  - rule_code: PIE
+    name: "Patterns in Episodes"
+    description: "Show patterns that appear in podcast episode."
+    logic: |
+      show me posts with  pattern_name, episode_name and episode_url where content_source is 'podcast'
+      Use the content_source field to determine if the pattern is from a podcast episode ('podcast')
+
+  - rule_code: LIST_ORGS 
+    name: "Organizations who were on the podcast"
+    description: "List of organizations who were on the podcast"
+    logic: |
+      show me the orgs with name, description, date founded, date funded, funding stage
+
+  - rule_code: PATTERNS_BY_GUEST
+    name: "Patterns by Guest"
+    description: "List all patterns associated with each guest and where those patterns appear."
+    logic: |
+      show me the patterns connected to guests, including the guest name, job description, 
+      the pattern kind, and the relevant episodes or posts if available
+      Use the content_source field to determine if the pattern is from an episode or post.
+
+  - rule_code: PATTERNS_BY_ORGANIZATION
+    name: "Patterns by Organization"
+    description: "List patterns associated with organizations and their funding stages."
+    logic: |
+      show me the patterns connected to organizations, including the organization name, 
+      funding stage, and the type of pattern
+
+  - rule_code: TOP_PATTERNS_BY_FREQUENCY
+    name: "Top 10 Patterns by Frequency"
+    description: "Rank patterns by how many times they appear across guests, episodes, posts, or orgs."
+    logic: |
+      show me the top 10 patterns by how frequently they appear in podcast episodes, guests, posts, 
+      or organizations. Use the content_source field to determine if the pattern is from an episode or post.
+
+  - rule_code: EPISODES_WITH_MOST_PATTERNS
+    name: "Episodes with the Most Patterns"
+    description: "Rank episodes by the number of patterns linked to them."
+    logic: |
+      show me the episodes with the most patterns, including the pattern count, 
+      the episode title, and the episode URL
+
+  - rule_code: GUESTS_DISCUSSING_SAME_PATTERN
+    name: "Guests Discussing the Same Pattern"
+    description: "Find groups of guests who discuss the same pattern."
+    logic: |
+      show me guests who discuss the same pattern, including the pattern name 
+      and the list of guests associated with that pattern
+
+  - rule_code: PATTERNS_BY_ORG_FUNDING_STAGE
+    name: "Patterns Related to Funding Stage"
+    description: "Explore relationships between pattern types and the funding stage of organizations."
+    logic: |
+      show me the relationship between patterns and the funding stage of organizations, 
+      grouped by stage and showing the count of patterns per stage
+
+  - rule_code: TIME_TO_FUNDING
+    name: "Time to Funding After Founding"
+    description: "Compute time from founding date to funding date for organizations."
+    logic: |
+     show name, stage, and the number of years from date_founded to date_funded for all orgs
+     
+  - rule_code: WCRT
+    name: "Cards in Baseline"
+    description: "What threats are in the Baseline model"
+    logic: |
+      list threat name, threat probability in the 'Baseline' model
+
+  - rule_code: ALIST
+    name: "List assets"
+    description: " List of assets"
+    logic: |
+      list asset tag, asset name, asset fixed_value, asset recurring_value asset yearly_value where model_id = (select model_id from active_models limit 1)
+
+  - rule_code: CLIST
+    name: "List countermeasures"
+    description: " List of countermeasures"
+    logic: |
+      list countermeasure name, countermeasure fixed_implementation_cost, recurring_implementation_cost, countermeasure yearly_cost where model_id = (select model_id from active_models limit 1)
+
+  - rule_code: THRIM
+    name: "Residual Risk"
+    description: "Threat Impact after applying countermeasures"
+    logic: |
+      select * from threat.threat_impact
+
+  - rule_code: VULNEXPLOIT
+    name: "Exploitability"
+    description: "Show vulnerabilities ranked by exploitability"
+    logic: |
+      select * from threat.vulnerability_exploitability
+
+  - rule_code: THRCM
+    name: "Security countermeasures"
+    description: "Threats countermeasures"
+    logic: |
+      select * from threat.threat_countermeasures
