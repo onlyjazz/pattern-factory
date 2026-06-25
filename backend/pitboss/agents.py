@@ -1447,7 +1447,7 @@ async def agent_request_to_extract_risk_model(message_body: Dict[str, Any]) -> T
         # Accept both envelope-style and bare-payload outputs
         extracted_data = None
         if isinstance(llm_obj, dict):
-            if all(k in llm_obj for k in ["threats", "vulnerabilities", "countermeasures", "asset_threat", "vulnerability_threat", "countermeasure_threat"]):
+            if all(k in llm_obj for k in ["assets", "threats", "vulnerabilities", "countermeasures", "asset_threat", "vulnerability_threat", "countermeasure_threat"]):
                 extracted_data = llm_obj
             elif isinstance(llm_obj.get("messageBody"), dict):
                 extracted_data = llm_obj.get("messageBody")
@@ -1458,7 +1458,7 @@ async def agent_request_to_extract_risk_model(message_body: Dict[str, Any]) -> T
             extracted_data = {}
         
         # Validate and normalize structure
-        required_keys = ["threats", "vulnerabilities", "countermeasures", "asset_threat", "vulnerability_threat", "countermeasure_threat"]
+        required_keys = ["assets", "threats", "vulnerabilities", "countermeasures", "asset_threat", "vulnerability_threat", "countermeasure_threat"]
         for key in required_keys:
             if key not in extracted_data:
                 logger.warning(f"  [Extraction] Missing key: {key}")
@@ -1477,11 +1477,15 @@ async def agent_request_to_extract_risk_model(message_body: Dict[str, Any]) -> T
         message_body["extracted_entities"] = extracted_data
         
         # Build user-friendly summary
+        assets = extracted_data.get("assets", [])
         threats = extracted_data.get("threats", [])
         vulns = extracted_data.get("vulnerabilities", [])
         cms = extracted_data.get("countermeasures", [])
         
         summary_lines = []
+        if assets:
+            asset_names = ", ".join([a.get("name", "") for a in assets if a.get("name")])
+            summary_lines.append(f"Assets: {asset_names}")
         if threats:
             threat_names = ", ".join([t.get("name", "") for t in threats if t.get("name")])
             summary_lines.append(f"Threats: {threat_names}")
@@ -1547,7 +1551,7 @@ async def agent_verify_upsert_risk_model(message_body: Dict[str, Any]) -> Tuple[
         return ("no", 0.93, reason)
     
     # Validate structural validity
-    required_keys = ["threats", "vulnerabilities", "countermeasures", "asset_threat", "vulnerability_threat", "countermeasure_threat"]
+    required_keys = ["assets", "threats", "vulnerabilities", "countermeasures", "asset_threat", "vulnerability_threat", "countermeasure_threat"]
     missing_keys = [k for k in required_keys if k not in extracted_entities]
     
     if missing_keys:
@@ -1563,6 +1567,37 @@ async def agent_verify_upsert_risk_model(message_body: Dict[str, Any]) -> Tuple[
             return ("no", 0.91, reason)
     
     # Validate required fields for each entity type
+    
+    # ASSETS: tag, name, fixed_value, recurring_value required; asset tags must be unique
+    asset_tags = set()
+    for i, asset in enumerate(extracted_entities.get("assets", [])):
+        if not isinstance(asset, dict):
+            reason = f"Asset at index {i} is not an object"
+            logger.warning(f"  Decision: no (confidence: 0.89) - {reason}")
+            return ("no", 0.89, reason)
+        
+        # Check required fields
+        for req_field in ["tag", "name"]:
+            if not asset.get(req_field) or not isinstance(asset.get(req_field), str) or not asset.get(req_field).strip():
+                reason = f"Asset at index {i} missing or empty required field '{req_field}'"
+                logger.warning(f"  Decision: no (confidence: 0.89) - {reason}")
+                return ("no", 0.89, reason)
+        
+        # Check numeric fields
+        for num_field in ["fixed_value", "recurring_value"]:
+            val = asset.get(num_field)
+            if not isinstance(val, (int, float)) or val < 0:
+                reason = f"Asset at index {i} field '{num_field}' must be numeric >= 0, got {val}"
+                logger.warning(f"  Decision: no (confidence: 0.89) - {reason}")
+                return ("no", 0.89, reason)
+        
+        # Check tag uniqueness
+        tag = asset.get("tag", "").strip()
+        if tag in asset_tags:
+            reason = f"Asset tag '{tag}' is not unique (duplicate at index {i})"
+            logger.warning(f"  Decision: no (confidence: 0.89) - {reason}")
+            return ("no", 0.89, reason)
+        asset_tags.add(tag)
     
     # THREATS: tag, name, domain, probability required; threat tags must be unique
     threat_tags = set()
@@ -1620,7 +1655,14 @@ async def agent_verify_upsert_risk_model(message_body: Dict[str, Any]) -> Tuple[
             logger.warning(f"  Decision: no (confidence: 0.88) - {reason}")
             return ("no", 0.88, reason)
         
+        asset_tag = link.get("asset_tag", "").strip()
         threat_tag = link.get("threat_tag", "").strip()
+        
+        if asset_tag not in asset_tags:
+            reason = f"asset_threat at index {i} references non-existent asset tag '{asset_tag}'"
+            logger.warning(f"  Decision: no (confidence: 0.88) - {reason}")
+            return ("no", 0.88, reason)
+        
         if threat_tag not in threat_tags:
             reason = f"asset_threat at index {i} references non-existent threat tag '{threat_tag}'"
             logger.warning(f"  Decision: no (confidence: 0.88) - {reason}")
@@ -1681,7 +1723,7 @@ async def agent_verify_upsert_risk_model(message_body: Dict[str, Any]) -> Tuple[
     # All validations passed
     decision = "yes"
     confidence = 0.94
-    entity_summary = f"threats={len(extracted_entities.get('threats', []))} vulns={len(extracted_entities.get('vulnerabilities', []))} cms={len(extracted_entities.get('countermeasures', []))}"
+    entity_summary = f"assets={len(extracted_entities.get('assets', []))} threats={len(extracted_entities.get('threats', []))} vulns={len(extracted_entities.get('vulnerabilities', []))} cms={len(extracted_entities.get('countermeasures', []))}"
     reason = f"Payload validation passed: {entity_summary}"
     
     logger.info(f"  Decision: {decision} (confidence: {confidence:.2f})")

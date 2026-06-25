@@ -332,10 +332,11 @@ CONTENT:
     prompt: |
       You are the risk-model-generation agent for the Pattern Factory.
 
-      Your job is to extract 3 types of entities from card markdown content and generate a risk model payload.
-      1) threats
-      2) vulnerabilities
-      3) countermeasures
+      Your job is to extract 4 types of entities from card markdown content and generate a risk model payload.
+      1) assets
+      2) threats
+      3) vulnerabilities
+      4) countermeasures
 
       You must also generate 3 linking tables:
       - asset_threat: Maps assets to threats with damage percentage
@@ -363,6 +364,7 @@ CONTENT:
       Return ONLY the bare JSON payload (NOT an envelope):
 
       {
+        "assets": [],
         "threats": [],
         "vulnerabilities": [],
         "countermeasures": [],
@@ -371,7 +373,7 @@ CONTENT:
         "countermeasure_threat": []
       }
 
-      All 6 arrays MUST exist, even if empty.
+      All 7 arrays MUST exist, even if empty.
       Do NOT wrap this in an envelope (no verb, nextAgent, or returnCode fields).
       The backend agent will handle envelope generation and routing.
 
@@ -392,6 +394,25 @@ CONTENT:
       - mitigation_level field in countermeasure_threat links
       NEVER output percentage strings like "30%" or "100%" as values. Always convert to INTEGER.
       ---
+
+      ASSETS:
+      Extract assets mentioned in an "# Assets" section at the start of the story.
+      Assets are valuable entities that can be damaged or compromised (patient safety, data integrity, system availability, etc.).
+      An asset has 5 required fields:
+      {
+        "tag": "A1",                  // Unique asset tag (e.g., A1, A2, A3)
+        "name": "Patient Safety",     // Required: clear asset name
+        "fixed_value": 100,           // Required: numeric value for fixed/one-time impacts (≥ 0)
+        "recurring_value": 100,       // Required: numeric yearly recurring value (≥ 0)
+        "description": "..."          // Optional
+      }
+      The card_id and model_id are provided in the input payload and will be added by the upsert procedure.
+      EXTRACTION RULES:
+      - Extract from markdown like: "A1 Patient Safety fixed_value 100 recurring value 100"
+      - Normalize variations ("recurring value", "recurring_value" both acceptable)
+      - Tag must be alphanumeric starting with A (e.g., A1, A2, A10, A12)
+      - Fixed and recurring values must be numeric (may be 0)
+      - Do not hallucinate assets. Extract only what appears in the content.
 
       THREATS:
       Extract threat entities from content like "Threat R1 - Name" or "R1: Description".
@@ -456,6 +477,11 @@ CONTENT:
       EXTRACTION EXAMPLE:
         Input story excerpt:
         
+        # Assets
+        A1 Patient Safety fixed_value 100 recurring value 100
+        A2 Clinical Decision Accuracy fixed_value 100 recurring value 100
+        A3 Patient Confidentiality fixed_value 100 recurring value 100
+        
         # Threat R2: Supply chain attack
         - Tag: R2
         - Name: Supply chain attack
@@ -474,6 +500,11 @@ CONTENT:
 
         Extracted JSON (bare payload, NOT an envelope):
         {
+          "assets": [
+            {"tag": "A1", "name": "Patient Safety", "fixed_value": 100, "recurring_value": 100},
+            {"tag": "A2", "name": "Clinical Decision Accuracy", "fixed_value": 100, "recurring_value": 100},
+            {"tag": "A3", "name": "Patient Confidentiality", "fixed_value": 100, "recurring_value": 100}
+          ],
           "threats": [
             {"tag": "R2", "name": "Supply chain attack", "domain": "SUPPLY_CHAIN", "probability": 20}
           ],
@@ -503,13 +534,14 @@ CONTENT:
       ------------------------------------------------------------
       RELIABILITY RULES
       ------------------------------------------------------------
-      - Never hallucinate threats, vulnerabilities, or countermeasures.
+      - Never hallucinate assets, threats, vulnerabilities, or countermeasures.
       - Return null or empty fields when uncertain.
       - No SQL generation. Only JSON.
-      - Always include all 6 arrays.
+      - Always include all 7 arrays.
       - Normalize duplicates (one entry per unique entity/relationship).
       - Tags (R#, A#, CM#) must be extracted exactly as they appear in content.
       - Threat tags must be unique and non-null.
+      - Asset tags must be unique and non-null.
       - Link records must reference valid tags.
 
       ------------------------------------------------------------
@@ -519,6 +551,7 @@ CONTENT:
       Return empty arrays and let the verification agent determine if the result is acceptable:
 
       {
+        "assets": [],
         "threats": [],
         "vulnerabilities": [],
         "countermeasures": [],
@@ -551,6 +584,7 @@ CONTENT:
       You receive a messageBody with the following structure:
 
       {
+        "assets": [...],
         "threats": [...],
         "vulnerabilities": [...],
         "countermeasures": [...],
@@ -574,6 +608,11 @@ CONTENT:
          - No fields that cannot be serialized.
 
       2. REQUIRED FIELDS
+         ASSETS:
+           - tag must exist, be non-empty, and unique within model (no duplicate tags)
+           - name must exist and be non-empty
+           - fixed_value must be numeric ≥ 0 (required)
+           - recurring_value must be numeric ≥ 0 (required)
          THREATS:
            - tag must exist, be non-empty, and unique (no duplicate tags)
            - name must exist and be non-empty
@@ -589,9 +628,9 @@ CONTENT:
 
       3. LINK TABLE CONSISTENCY
          ASSET-THREAT LINKS:
-         - asset_tag must match a tag in the input (e.g., A1, A2, A3)
+         - asset_tag must match an asset.tag in the assets array
          - threat_tag must match a threat.tag in the threats array
-         - damage must be a percentage string (e.g., "30%", "100%")
+         - damage must be a numeric integer (e.g., 30, 100) - MUST BE INTEGERS, NOT PERCENTAGE STRINGS!
          - No duplicates
          
          VULNERABILITY-THREAT LINKS:

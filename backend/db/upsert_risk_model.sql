@@ -7,6 +7,7 @@ AS $$
 DECLARE
     v_model_id          INTEGER;
     v_card_id           UUID;
+    v_asset_count       INTEGER := 0;
     v_threat_count      INTEGER := 0;
     v_vuln_count        INTEGER := 0;
     v_cm_count          INTEGER := 0;
@@ -44,6 +45,51 @@ BEGIN
         );
         RETURN;
     END IF;
+
+    ---------------------------------------------------------------------
+    -- 0. BULK UPSERT ASSETS
+    ---------------------------------------------------------------------
+    -- Assets have: tag, name, fixed_value, recurring_value, description, card_id, model_id
+    -- tag is the unique identifier within a model
+    -- recurring_value is yearly
+    WITH upserted_assets AS (
+        INSERT INTO threat.assets (
+            model_id,
+            tag,
+            name,
+            description,
+            fixed_value,
+            recurring_value,
+            card_id,
+            disabled,
+            created_at,
+            updated_at
+        )
+        SELECT 
+            v_model_id,
+            value->>'tag',
+            value->>'name',
+            value->>'description',
+            COALESCE((value->>'fixed_value')::INTEGER, 0),
+            COALESCE((value->>'recurring_value')::INTEGER, 0),
+            v_card_id,
+            false,
+            NOW(),
+            NOW()
+        FROM jsonb_array_elements(COALESCE(v_payload->'assets', '[]'::jsonb))
+        WHERE value->>'name' IS NOT NULL
+          AND value->>'tag' IS NOT NULL
+        ON CONFLICT (model_id, tag) DO UPDATE SET
+            name            = EXCLUDED.name,
+            description     = EXCLUDED.description,
+            fixed_value     = EXCLUDED.fixed_value,
+            recurring_value = EXCLUDED.recurring_value,
+            card_id         = EXCLUDED.card_id,
+            updated_at      = NOW()
+        RETURNING id
+    )
+    SELECT COUNT(*) INTO v_asset_count FROM upserted_assets;
+
 
     ---------------------------------------------------------------------
     -- 1. BULK UPSERT THREATS
@@ -288,6 +334,7 @@ BEGIN
         'summary', jsonb_build_object(
             'model_id', v_model_id,
             'card_id', v_card_id,
+            'assets_upserted', v_asset_count,
             'threats_upserted', v_threat_count,
             'vulnerabilities_upserted', v_vuln_count,
             'countermeasures_upserted', v_cm_count,
