@@ -200,9 +200,6 @@
 									<th class="tal sortable" class:sorted-asc={sortField === 'pattern_name' && sortDirection === 'asc'} class:sorted-desc={sortField === 'pattern_name' && sortDirection === 'desc'} onclick={() => toggleSort('pattern_name')}>
 										Pattern
 									</th>
-									<th class="tal sortable" class:sorted-asc={sortField === 'order_index' && sortDirection === 'asc'} class:sorted-desc={sortField === 'order_index' && sortDirection === 'desc'} onclick={() => toggleSort('order_index')}>
-										Order
-									</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'domain' && sortDirection === 'asc'} class:sorted-desc={sortField === 'domain' && sortDirection === 'desc'} onclick={() => toggleSort('domain')}>
 										Domain
 									</th>
@@ -221,7 +218,6 @@
 								<tr class="card-row">
 									<td class="tal"><a href="/cards/view/story/{c.id}" class="story-link">{c.name}</a></td>
 										<td class="tal">{c.pattern_name || '-'}</td>
-										<td class="tal">{c.order_index || '-'}</td>
 										<td class="tal">{c.domain || '-'}</td>
 										<td class="tal">{c.audience || '-'}</td>
 										<td class="tal">{c.maturity || '-'}</td>
