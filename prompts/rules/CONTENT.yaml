@@ -419,11 +419,14 @@ CONTENT:
       A threat has 5 required fields:
       {
         "tag": "R1",                          // Unique threat tag (e.g., R1, R2, R5)
-        "name": "Change Preset Configuration",
-        "domain": "CYBER_PHYSICAL",          // Domain category (e.g., CYBER_PHYSICAL, PHYSICAL_SECURITY, REGULATORY)
-        "probability": 0.4,                  // Probability as decimal 0.0-1.0 (ALWAYS convert percentages!)
-        "description": "..."                 // Optional, defaults to name if omitted
+        "name": "Missed aortic aneurysm due to image quality degradation",  // Required: concise threat name
+        "description": "Misdiagnosis that didn't find aortic aneurysm because of degraded image quality",  // Required: detailed description of the threat
+        "domain": "CLINICAL",                // Domain category (e.g., CLINICAL, CYBER, REGULATORY, OPERATIONAL)
+        "probability": 0.15                  // Probability as decimal 0.0-1.0 (ALWAYS convert percentages!)
       }
+      CRITICAL: name and description must be separate fields. Do NOT concatenate them.
+      - name: short, concise title
+      - description: detailed explanation of what the threat is and how it manifests
       The card_id and model_id are provided in the input payload and will be added by the upsert procedure.
 
       VULNERABILITIES:
@@ -485,6 +488,7 @@ CONTENT:
         # Threat R2: Supply chain attack
         - Tag: R2
         - Name: Supply chain attack
+        - Description: Compromised firmware from supplier is distributed to customers
         - Domain: SUPPLY_CHAIN
         - Probability: 0.2
         - Affects Assets: A3, A6, A2 (each with 100% damage)
@@ -506,7 +510,7 @@ CONTENT:
             {"tag": "A3", "name": "Patient Confidentiality", "fixed_value": 100, "recurring_value": 100}
           ],
           "threats": [
-            {"tag": "R2", "name": "Supply chain attack", "domain": "SUPPLY_CHAIN", "probability": 20}
+            {"tag": "R2", "name": "Supply chain attack", "description": "Compromised firmware from supplier is distributed to customers", "domain": "SUPPLY_CHAIN", "probability": 20}
           ],
           "vulnerabilities": [
             {"name": "PLC and sensor firmware integrity"}

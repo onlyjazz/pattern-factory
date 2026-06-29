@@ -120,7 +120,7 @@ BEGIN
             v_model_id,
             value->>'tag',
             value->>'name',
-            COALESCE(value->>'description', value->>'name'),
+            value->>'description',
             value->>'domain',
             NULLIF(value->>'probability', '')::NUMERIC,
             v_card_id,
