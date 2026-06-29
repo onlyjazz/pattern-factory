@@ -18,7 +18,10 @@
   }
   
   function drawChart() {
-    if (!threats.length || !chartInitialized) return;
+    if (!threats.length) return;
+    
+    const container = document.getElementById('curve_chart');
+    if (!container) return;
     
     const data = google.visualization.arrayToDataTable([
       ['Threat', 'VaR Before Mitigation', 'VaR After Mitigation'],
@@ -27,7 +30,6 @@
     
     const options = {
       title: '',
-      curveType: 'function',
       legend: { position: 'bottom' },
       hAxis: {
         title: 'Threats',
@@ -39,37 +41,15 @@
         format: '#,###'
       },
       colors: ['#2563eb', '#16a34a'],
-      pointSize: 5,
-      lineWidth: 2,
       chartArea: { width: '75%', height: '75%' },
       bar: { groupWidth: '75%' }
     };
     
-    const chart = new google.visualization.ColumnChart(document.getElementById('curve_chart'));
+    const chart = new google.visualization.ColumnChart(container);
     chart.draw(data, options);
   }
   
   onMount(async () => {
-    // Load Google Charts library
-    if (!window.google) {
-      const script = document.createElement('script');
-      script.src = 'https://www.gstatic.com/charts/loader.js';
-      script.onload = () => {
-        google.charts.load('current', { packages: ['corechart'] });
-        google.charts.setOnLoadCallback(() => {
-          chartInitialized = true;
-          drawChart();
-        });
-      };
-      document.head.appendChild(script);
-    } else if (!chartInitialized) {
-      google.charts.load('current', { packages: ['corechart'] });
-      google.charts.setOnLoadCallback(() => {
-        chartInitialized = true;
-        drawChart();
-      });
-    }
-    
     try {
       const response = await fetch(`${apiBase}/query/THRIM`);
       if (!response.ok) throw new Error('Failed to fetch THRIM data');
@@ -77,15 +57,28 @@
       
       // Get top 5 rows
       threats = allData.slice(0, 5);
-      
-      // Draw chart after data loads
-      if (chartInitialized) {
-        drawChart();
-      }
     } catch (e) {
       error = e instanceof Error ? e.message : 'Unknown error';
     } finally {
       loading = false;
+    }
+    
+    // Load Google Charts library after DOM is ready
+    if (!window.google) {
+      const script = document.createElement('script');
+      script.src = 'https://www.gstatic.com/charts/loader.js';
+      script.onload = () => {
+        google.charts.load('current', { packages: ['corechart'] });
+        google.charts.setOnLoadCallback(() => {
+          drawChart();
+        });
+      };
+      document.head.appendChild(script);
+    } else {
+      google.charts.load('current', { packages: ['corechart'] });
+      google.charts.setOnLoadCallback(() => {
+        drawChart();
+      });
     }
   });
 </script>
