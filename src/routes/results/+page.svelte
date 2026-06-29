@@ -165,6 +165,24 @@
       }
     }
     
+    // Format numbers with commas (e.g., 98100000 becomes 98,100,000)
+    if (typeof value === 'number') {
+      return value.toLocaleString('en-US');
+    }
+    
+    // Try to parse string as number and format if valid
+    if (typeof value === 'string' && value.trim() !== '') {
+      const num = parseFloat(value);
+      if (!isNaN(num) && isFinite(num)) {
+        // Check if it looks like a whole number (no decimal point in original)
+        if (!value.includes('.')) {
+          return Math.floor(num).toLocaleString('en-US');
+        }
+        // For decimals, format with 2 decimal places
+        return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+    }
+    
     return String(value);
   }
 
