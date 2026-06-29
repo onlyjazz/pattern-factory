@@ -35,6 +35,9 @@ class ModelConfig:
     max_retries: int = 3
     retry_delay: float = 1.0
     
+    # Timeout settings (in seconds)
+    extraction_timeout: float = 300.0  # 5-minute timeout for large payload processing
+    
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for OpenAI API calls."""
         return {

@@ -1424,9 +1424,9 @@ async def agent_request_to_extract_risk_model(message_body: Dict[str, Any]) -> T
             client=client,
             system_prompt=system_prompt,
             user_message=user_message,
-            model="gpt-4o",  # Faster than gpt-4o-mini for structured extraction
-            temperature=0.2,
-            timeout=60.0,  # Should complete faster with gpt-4o
+            model="gpt-5.5",  # Using GPT-5.5 for superior structured extraction
+            temperature=1.0,  # gpt-5.5 only supports temperature=1.0 (default)
+            timeout=300.0,  # 5-minute timeout for large payload processing
         )
 
         logger.info(f"  [LLM Response] Received {len(response)} chars")
