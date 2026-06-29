@@ -4,43 +4,8 @@
   let threats: any[] = [];
   let loading = true;
   let error = '';
+  let chartInitialized = false;
   const apiBase = 'http://localhost:8000';
-  
-  // Chart dimensions
-  const chartWidth = 1000;
-  const chartHeight = 400;
-  const padding = { top: 40, right: 40, bottom: 100, left: 60 };
-  const innerWidth = chartWidth - padding.left - padding.right;
-  const innerHeight = chartHeight - padding.top - padding.bottom;
-  
-  onMount(async () => {
-    try {
-      const response = await fetch(`${apiBase}/query/THRIM`);
-      if (!response.ok) throw new Error('Failed to fetch THRIM data');
-      const allData = await response.json();
-      
-      // Get top 5 rows
-      threats = allData.slice(0, 5);
-    } catch (e) {
-      error = e instanceof Error ? e.message : 'Unknown error';
-    } finally {
-      loading = false;
-    }
-  });
-  
-  // Calculate scales
-  function getMaxValue(): number {
-    if (threats.length === 0) return 0;
-    return Math.max(
-      ...threats.map(t => Math.max(t.var_before_mitigation, t.var_after_mitigation))
-    );
-  }
-  
-  function scaleY(value: number): number {
-    const max = getMaxValue();
-    if (max === 0) return 0;
-    return (value / max) * innerHeight;
-  }
   
   function formatNumber(num: number): string {
     if (num >= 1000000) {
@@ -52,23 +17,77 @@
     return num.toString();
   }
   
-  // SVG coordinates
-  function getBarX(threatIndex: number, isAfter: boolean): number {
-    const barWidth = 30;
-    const barGap = 8;
-    const groupWidth = barWidth * 2 + barGap; // width of one group (2 bars + gap)
-    const groupSpacing = innerWidth / threats.length;
-    const groupX = padding.left + (threatIndex * groupSpacing) + (groupSpacing - groupWidth) / 2;
-    return groupX + (isAfter ? barWidth + barGap : 0);
+  function drawChart() {
+    if (!threats.length || !chartInitialized) return;
+    
+    const data = google.visualization.arrayToDataTable([
+      ['Threat', 'VaR Before Mitigation', 'VaR After Mitigation'],
+      ...threats.map(t => [t.threat_tag, t.var_before_mitigation, t.var_after_mitigation])
+    ]);
+    
+    const options = {
+      title: '',
+      curveType: 'function',
+      legend: { position: 'bottom' },
+      hAxis: {
+        title: 'Threats',
+        titleTextStyle: { color: '#333' }
+      },
+      vAxis: {
+        title: 'Value (VaR)',
+        titleTextStyle: { color: '#333' },
+        format: '#,###'
+      },
+      colors: ['#2563eb', '#16a34a'],
+      pointSize: 5,
+      lineWidth: 2,
+      chartArea: { width: '75%', height: '75%' },
+      bar: { groupWidth: '75%' }
+    };
+    
+    const chart = new google.visualization.ColumnChart(document.getElementById('curve_chart'));
+    chart.draw(data, options);
   }
   
-  function getBarY(value: number): number {
-    return padding.top + innerHeight - scaleY(value);
-  }
-  
-  function getBarHeight(value: number): number {
-    return scaleY(value);
-  }
+  onMount(async () => {
+    // Load Google Charts library
+    if (!window.google) {
+      const script = document.createElement('script');
+      script.src = 'https://www.gstatic.com/charts/loader.js';
+      script.onload = () => {
+        google.charts.load('current', { packages: ['corechart'] });
+        google.charts.setOnLoadCallback(() => {
+          chartInitialized = true;
+          drawChart();
+        });
+      };
+      document.head.appendChild(script);
+    } else if (!chartInitialized) {
+      google.charts.load('current', { packages: ['corechart'] });
+      google.charts.setOnLoadCallback(() => {
+        chartInitialized = true;
+        drawChart();
+      });
+    }
+    
+    try {
+      const response = await fetch(`${apiBase}/query/THRIM`);
+      if (!response.ok) throw new Error('Failed to fetch THRIM data');
+      const allData = await response.json();
+      
+      // Get top 5 rows
+      threats = allData.slice(0, 5);
+      
+      // Draw chart after data loads
+      if (chartInitialized) {
+        drawChart();
+      }
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Unknown error';
+    } finally {
+      loading = false;
+    }
+  });
 </script>
 
 <div id="application-content-area">
@@ -85,104 +104,7 @@
     <div class="message">No data found</div>
   {:else}
     <div class="chart-container">
-      <svg {chartWidth} {chartHeight} class="chart">
-        <!-- Y-axis -->
-        <line
-          x1={padding.left}
-          y1={padding.top}
-          x2={padding.left}
-          y2={padding.top + innerHeight}
-          stroke="#333"
-          stroke-width="2"
-        />
-        
-        <!-- X-axis -->
-        <line
-          x1={padding.left}
-          y1={padding.top + innerHeight}
-          x2={padding.left + innerWidth}
-          y2={padding.top + innerHeight}
-          stroke="#333"
-          stroke-width="2"
-        />
-        
-        <!-- Y-axis labels (values) -->
-        {#each [0, 0.25, 0.5, 0.75, 1] as scale}
-          {@const value = getMaxValue() * scale}
-          {@const y = padding.top + innerHeight - (scale * innerHeight)}
-          <text
-            x={padding.left - 10}
-            y={y}
-            text-anchor="end"
-            dominant-baseline="middle"
-            font-size="12"
-            fill="#666"
-          >
-            {formatNumber(value)}
-          </text>
-          <line
-            x1={padding.left - 5}
-            y1={y}
-            x2={padding.left}
-            y2={y}
-            stroke="#333"
-            stroke-width="1"
-          />
-        {/each}
-        
-        <!-- Bars for each threat -->
-        {#each threats as threat, idx}
-          <!-- Before mitigation bar (blue) -->
-          <rect
-            x={getBarX(idx, false)}
-            y={getBarY(threat.var_before_mitigation)}
-            width="30"
-            height={getBarHeight(threat.var_before_mitigation)}
-            fill="#2563eb"
-            opacity="0.8"
-            class="bar"
-          />
-          
-          <!-- After mitigation bar (green) -->
-          <rect
-            x={getBarX(idx, true)}
-            y={getBarY(threat.var_after_mitigation)}
-            width="30"
-            height={getBarHeight(threat.var_after_mitigation)}
-            fill="#16a34a"
-            opacity="0.8"
-            class="bar"
-          />
-        {/each}
-        
-        <!-- X-axis labels (threat names) -->
-        {#each threats as threat, idx}
-          {@const groupSpacing = innerWidth / threats.length}
-          {@const groupX = padding.left + (idx * groupSpacing) + groupSpacing / 2}
-          <text
-            x={groupX}
-            y={padding.top + innerHeight + 20}
-            text-anchor="middle"
-            font-size="11"
-            fill="#333"
-            class="threat-label"
-          >
-            {threat.threat_tag}
-          </text>
-        {/each}
-      </svg>
-      
-      <!-- Legend -->
-      <div class="legend">
-        <div class="legend-item">
-          <div class="legend-color" style="background-color: #2563eb;"></div>
-          <span>VaR Before Mitigation</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color" style="background-color: #16a34a;"></div>
-          <span>VaR After Mitigation</span>
-        </div>
-      </div>
+      <div id="curve_chart" class="google-chart"></div>
     </div>
     
     <!-- Summary table -->
@@ -234,39 +156,9 @@
     gap: 2rem;
   }
   
-  .chart {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  }
-  
-  .bar {
-    transition: opacity 0.2s ease;
-  }
-  
-  .bar:hover {
-    opacity: 1 !important;
-  }
-  
-  .threat-label {
-    font-weight: 500;
-  }
-  
-  .legend {
-    display: flex;
-    gap: 2rem;
-    justify-content: center;
-  }
-  
-  .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.9rem;
-  }
-  
-  .legend-color {
-    width: 20px;
-    height: 20px;
-    border-radius: 3px;
+  .google-chart {
+    width: 100%;
+    height: 500px;
   }
   
   .summary-section {
