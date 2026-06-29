@@ -30,22 +30,23 @@
     
     const options = {
       title: '',
-      legend: { position: 'bottom', textStyle: { fontName: 'Roboto', fontSize: 13 } },
+      legend: { position: 'bottom', textStyle: { fontSize: 13 } },
       hAxis: {
         title: 'Threats',
-        titleTextStyle: { color: '#333', fontName: 'Roboto', fontSize: 13 },
-        textStyle: { fontName: 'Roboto', fontSize: 13, color: '#666' }
+        titleTextStyle: { color: '#333', fontSize: 13 },
+        textStyle: { fontSize: 13, color: '#666' }
       },
       vAxis: {
         title: 'Value (VaR)',
-        titleTextStyle: { color: '#333', fontName: 'Roboto', fontSize: 13 },
-        textStyle: { fontName: 'Roboto', fontSize: 13, color: '#666' },
+        titleTextStyle: { color: '#333', fontSize: 13 },
+        textStyle: { fontSize: 13, color: '#666' },
         format: '#,###'
       },
       colors: ['#2563eb', '#16a34a'],
       chartArea: { width: '75%', height: '75%' },
       bar: { groupWidth: '75%' },
-      tooltip: { textStyle: { fontName: 'Roboto', fontSize: 12, color: '#333' } }
+      tooltip: { textStyle: { fontSize: 12, color: '#333' } },
+      fontName: 'Roboto'
     };
     
     const chart = new google.visualization.ColumnChart(container);
@@ -150,11 +151,25 @@
     display: flex;
     flex-direction: column;
     gap: 2rem;
+    font-family: 'Roboto', Helvetica, Arial, sans-serif;
   }
   
   .google-chart {
     width: 100%;
     height: 500px;
+    font-family: 'Roboto', Helvetica, Arial, sans-serif;
+  }
+  
+  :global(#curve_chart) {
+    font-family: 'Roboto', Helvetica, Arial, sans-serif !important;
+  }
+  
+  :global(#curve_chart svg) {
+    font-family: 'Roboto', Helvetica, Arial, sans-serif !important;
+  }
+  
+  :global(#curve_chart text) {
+    font-family: 'Roboto', Helvetica, Arial, sans-serif !important;
   }
   
   .summary-section {
