@@ -2,7 +2,7 @@
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import { modeStore } from '$lib/modeStore';
-import { Network, FileText, Route, ListTree, AlertTriangle, Box, Bug, Shield, List, Activity } from 'lucide-svelte';
+import { Network, FileText, Route, ListTree, AlertTriangle, Box, Bug, Shield, List, Gauge } from 'lucide-svelte';
 
 	let currentPath = '';
 	let views: any[] = [];
@@ -18,7 +18,7 @@ import { Network, FileText, Route, ListTree, AlertTriangle, Box, Bug, Shield, Li
 	];
 
 	const modelLinks = [
-		{ name: "The Big Picture", href: "/bigpicture", icon: Activity },
+		{ name: "The Big Picture", href: "/bigpicture", icon: Gauge },
 		{ name: "Models", href: "/models", icon: ListTree },
 		{ name: "Cards", href: "/cards", icon: FileText },
 		{ name: "Risks", href: "/threats", icon: AlertTriangle },
