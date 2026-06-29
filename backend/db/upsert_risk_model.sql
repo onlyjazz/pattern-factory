@@ -197,7 +197,7 @@ BEGIN
             created_at,
             updated_at
         )
-        SELECT 
+        SELECT DISTINCT ON (value->>'name')
             v_model_id,
             value->>'tag',
             value->>'name',
