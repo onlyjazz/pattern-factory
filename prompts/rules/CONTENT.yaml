@@ -381,18 +381,18 @@ CONTENT:
       ENTITY EXTRACTION RULES
       ------------------------------------------------------------
 
-      CRITICAL: PERCENTAGE CONVERSION
+      CRITICAL: PERCENTAGE & PROBABILITY CONVERSION
       ---
-      IMPORTANT: Any numeric value that appears as a percentage (e.g., "30%", "100%", "0.5%") MUST be converted to aN INTEGER in the JSON output.
+      IMPORTANT: Numeric percentage values MUST be converted to INTEGER 0-100.
       - "30%" → 30
       - "100%" → 100
-      - ".5%" → 0
-      - "50%" → 50
+      - "95%" → 95
       This applies to:
-      - threat.probability field
-      - damage field in asset_threat links
-      - mitigation_level field in countermeasure_threat links
-      NEVER output percentage strings like "30%" or "100%" as values. Always convert to INTEGER.
+      - threat.probability field: INTEGER 0-100 (e.g., 15 means 15% probability)
+      - damage field in asset_threat links: INTEGER 0-100
+      - mitigation_level field in countermeasure_threat links: INTEGER 0-100
+      NEVER output decimal probabilities like 0.15. Always use INTEGER 0-100.
+      NEVER output percentage strings like "30%" or "100%". Always convert to INTEGER.
       ---
 
       ASSETS:
@@ -422,11 +422,12 @@ CONTENT:
         "name": "Missed aortic aneurysm due to image quality degradation",  // Required: concise threat name
         "description": "Misdiagnosis that didn't find aortic aneurysm because of degraded image quality",  // Required: detailed description of the threat
         "domain": "CLINICAL",                // Domain category (e.g., CLINICAL, CYBER, REGULATORY, OPERATIONAL)
-        "probability": 0.15                  // Probability as decimal 0.0-1.0 (ALWAYS convert percentages!)
+        "probability": 15                    // REQUIRED: Probability as INTEGER 0-100 (15 means 15%, 100 means 100%)
       }
       CRITICAL: name and description must be separate fields. Do NOT concatenate them.
       - name: short, concise title
       - description: detailed explanation of what the threat is and how it manifests
+      - probability: MUST be INTEGER 0-100, not decimal. If story has "Probability: 15%", use 15 not 0.15.
       The card_id and model_id are provided in the input payload and will be added by the upsert procedure.
 
       VULNERABILITIES:
@@ -490,7 +491,7 @@ CONTENT:
         - Name: Supply chain attack
         - Description: Compromised firmware from supplier is distributed to customers
         - Domain: SUPPLY_CHAIN
-        - Probability: 0.2
+        - Probability: 20
         - Affects Assets: A3, A6, A2 (each with 100% damage)
         - Vulnerability: PLC and sensor firmware integrity
         
