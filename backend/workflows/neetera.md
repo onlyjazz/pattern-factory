@@ -839,20 +839,16 @@ VULN-S3: Shared Infrastructure Risk (Multi-tenancy) – Weak logical isolation a
 Countermeasures
 
 CM281: Edge Autonomous Fallback Mode (Local Survivability). mitigation_level 90 recurring_implementation_cost 20000 fixed_implementation_cost 50000
-If the connection to the BioT cloud ingest endpoint drops, the physical Neteera hardware switches to a "Local Alert" state.
 
-The device continues to run its micro-radar classification algorithms locally at the edge. It routes critical bed-exit and respiratory distress notifications over the local facility Wi-Fi directly to an on-premise pager or nurse call system, bypasssing the cloud entirely during an outage.
+Description: If the connection to the BioT cloud ingest endpoint drops, the physical Neteera hardware switches to a "Local Alert" state. The device continues to run its micro-radar classification algorithms locally at the edge. It routes critical bed-exit and respiratory distress notifications over the local facility Wi-Fi directly to an on-premise pager or nurse call system, bypasssing the cloud entirely during an outage.
 
 CM282: Multi-Party / Independent Code Signing Validation mitigation_level 90 recurring_implementation_cost 20000 fixed_implementation_cost 50000
 
-Prevents a compromised upstream provider from pushing malicious firmware updates to the physical sensors.
-
-The Neteera edge device requires a dual-signature for any firmware update. Even if the BioT pipeline initiates the update, the device will reject the package unless it is also cryptographically signed by an independent Neteera corporate private key kept in an offline Hardware Security Module (HSM).
+Description: Prevents a compromised upstream provider from pushing malicious firmware updates to the physical sensors. The Neteera edge device requires a dual-signature for any firmware update. Even if the BioT pipeline initiates the update, the device will reject the package unless it is also cryptographically signed by an independent Neteera corporate private key kept in an offline Hardware Security Module (HSM).
 
 CM283: Continuous Security Posture Drift Monitoring. mitigation_level 90 recurring_implementation_cost 20000 fixed_implementation_cost 50000
-Mitigates shared infrastructure risk by monitoring the boundary between Neteera and the platform provider.
 
-Automate real-time IAM (Identity and Access Management) auditing. If the upstream provider modifies access permissions, introduces an unvetted third-party API, or alters data-at-rest encryption settings on the AWS bucket, an automated alert triggers to isolate the Neteera environment.
+Description: Mitigates shared infrastructure risk by monitoring the boundary between Neteera and the platform provider. Automate real-time IAM (Identity and Access Management) auditing. If the upstream provider modifies access permissions, introduces an unvetted third-party API, or alters data-at-rest encryption settings on the AWS bucket, an automated alert triggers to isolate the Neteera environment.
 
 Threat: R29
 
