@@ -87,9 +87,11 @@ Tag: R1
 
 Name: Early physiological deterioration not detected
 
+Description: Early physiological deterioration not detected
+
 Domain: CLINICAL
 
-Probability: 0.14
+Probability: 14
 
 Affects Assets: A1, A2, A6, A10
 
@@ -113,9 +115,11 @@ Tag: R2
 
 Name: False deterioration indication
 
+Description: False deterioration indication
+
 Domain: CLINICAL
 
-Probability: 0.16
+Probability: 16
 
 Affects Assets: A1, A2, A10, A11
 
@@ -138,9 +142,11 @@ Tag: R3
 
 Name: Contactless physiological measurements become inaccurate
 
+Description: Contactless physiological measurements become inaccurate
+
 Domain: CLINICAL
 
-Probability: 0.10
+Probability: 10
 
 Affects Assets: A1, A2, A6
 
@@ -166,9 +172,11 @@ Tag: R4
 
 Name: Bed-exit event not detected
 
+Description: Bed-exit event not detected
+
 Domain: CLINICAL
 
-Probability: 0.08
+Probability: 8
 
 Affects Assets: A1, A10, A11
 
@@ -197,9 +205,11 @@ Tag: R5
 
 Name: False bed-exit notification
 
+Description: False bed-exit notification
+
 Domain: CLINICAL
 
-Probability: 0.11
+Probability: 11
 
 Affects Assets: A10, A11
 
@@ -219,9 +229,11 @@ Tag: R6
 
 Name: Sleep and movement classification inaccurate
 
+Description: Sleep and movement classification inaccurate
+
 Domain: CLINICAL
 
-Probability: 0.10
+Probability: 10
 
 Affects Assets: A2, A10
 
@@ -241,9 +253,11 @@ Tag: R7
 
 Name: Patient associated with incorrect monitoring session
 
+Description: Patient associated with incorrect monitoring session
+
 Domain: OPERATIONAL
 
-Probability: 0.05
+Probability: 5
 
 Affects Assets: A1, A2, A3, A11
 
@@ -267,9 +281,11 @@ Tag: R8
 
 Name: Physiological monitoring unavailable
 
+Description: Physiological monitoring unavailable
+
 Domain: OPERATIONAL
 
-Probability: 0.07
+Probability: 7
 
 Affects Assets: A7, A8, A11
 
@@ -290,9 +306,11 @@ Tag: R9
 
 Name: Unauthorized modification of physiological processing software
 
+Description: Unauthorized modification of physiological processing software
+
 Domain: CYBER
 
-Probability: 0.04
+Probability: 4
 
 Affects Assets: A1, A2, A5, A9
 
@@ -314,9 +332,11 @@ Tag: R10
 
 Name: Physiological measurements exposed to unauthorized parties
 
+Description: Physiological measurements exposed to unauthorized parties
+
 Domain: PRIVACY
 
-Probability: 0.10
+Probability: 10
 
 Affects Assets: A3, A9, A10
 
@@ -338,9 +358,11 @@ Tag: R11
 
 Name: Sensor measurements intentionally manipulated
 
+Description: Sensor measurements intentionally manipulated
+
 Domain: CYBER
 
-Probability: 0.03
+Probability: 3
 
 Affects Assets: A1, A2, A5, A6
 
@@ -362,9 +384,11 @@ Tag: R12
 
 Name: Clinical workflow disrupted by system integration failure
 
+Description: Clinical workflow disrupted by system integration failure
+
 Domain: OPERATIONAL
 
-Probability: 0.08
+Probability: 8
 
 Affects Assets: A7, A10, A11
 
@@ -386,9 +410,11 @@ Tag: R14
 
 Name: Security vulnerabilities remain unremediated after deployment
 
+Description: Security vulnerabilities remain unremediated after deployment
+
 Domain: REGULATORY
 
-Probability: 0.06
+Probability: 6
 
 Affects Assets: A9, A10, A12
 
@@ -434,9 +460,11 @@ Tag: R16
 
 Name: Malicious firmware installed on patient monitoring sensor
 
+Description: Malicious firmware installed on patient monitoring sensor
+
 Domain: CYBER
 
-Probability: 0.04
+Probability: 4
 
 Affects Assets: A1, A2, A5, A6, A9
 
@@ -486,9 +514,11 @@ Tag: R18
 
 Name: Replay of physiological measurements
 
+Description: Replay of physiological measurements
+
 Domain: CYBER
 
-Probability: 0.04
+Probability: 4
 
 Affects Assets: A1, A2, A6
 
@@ -512,9 +542,11 @@ Tag: R19
 
 Name: Unauthorized access to patient monitoring APIs
 
+Description: Unauthorized access to patient monitoring APIs
+
 Domain: CYBER
 
-Probability: 0.08
+Probability: 8
 
 Affects Assets: A3, A7, A9
 
@@ -538,9 +570,11 @@ Tag: R20
 
 Name: Clinician portal privilege escalation
 
+Description: Clinician portal privilege escalation
+
 Domain: CYBER
 
-Probability: 0.05
+Probability: 5
 
 Affects Assets: A3, A9, A10
 
@@ -590,9 +624,11 @@ Tag: R22
 
 Name: Supply chain compromise introduces vulnerable software
 
+Description: Supply chain compromise introduces vulnerable software
+
 Domain: SUPPLYCHAIN
 
-Probability: 0.05
+Probability: 5
 
 Affects Assets: A5, A9, A12
 
@@ -616,9 +652,11 @@ Tag: R23
 
 Name: CI/CD pipeline compromise deploys malicious software
 
+Description: CI/CD pipeline compromise deploys malicious software
+
 Domain: CYBER
 
-Probability: 0.03
+Probability: 3
 
 Affects Assets: A5, A9, A12
 
@@ -668,9 +706,11 @@ Tag: R24A
 
 Name: Cloud service dependency failure interrupts monitoring
 
+Description: Cloud service dependency failure interrupts monitoring
+
 Domain: OPERATIONAL
 
-Probability: 0.07
+Probability: 7
 
 Affects Assets: A7, A8, A11
 
@@ -694,9 +734,11 @@ Tag: R25
 
 Name: Message queue saturation delays clinical events
 
+Description: Message queue saturation delays clinical events
+
 Domain: OPERATIONAL
 
-Probability: 0.05
+Probability: 5
 
 Affects Assets: A7, A11
 
@@ -720,9 +762,11 @@ Tag: R26
 
 Name: Storage exhaustion prevents physiological data recording
 
+Description: Storage exhaustion prevents physiological data recording
+
 Domain: OPERATIONAL
 
-Probability: 0.04
+Probability: 4
 
 Affects Assets: A7, A12
 
@@ -746,9 +790,11 @@ Tag: R27
 
 Name: Sensor configuration modified without authorization
 
+Description: Sensor configuration modified without authorization
+
 Domain: CYBER
 
-Probability: 0.04
+Probability: 4
 
 Affects Assets: A1, A2, A5, A6
 
@@ -772,11 +818,11 @@ Tag: R28
 
 Name:BioT system -Infrastructure Supply Chain Failure / Compromise.
 
-A malicious compromise or sudden operational outage of the upstream IoT platform provider (BioT Medical / AWS) corrupts the device management pipeline or completely halts clinical data delivery.
+Description: A malicious compromise or sudden operational outage of the upstream IoT platform provider (BioT Medical / AWS) corrupts the device management pipeline or completely halts clinical data delivery.
 
 Domain: SUPPLYCHAIN 
 
-Probability: 0.08
+Probability: 8
 
 Damage: 90
 
@@ -812,11 +858,13 @@ Threat: R29
 
 Tag: R29
 
-Name: Upstream Supply Chain Phishing: As seen in recent trends hitting other medical device software and robotics companies, the highest-probability entry point is rarely a zero-day exploit in the platform's code. Instead, it is an attacker phishing a BioT engineer or cloud administrator to steal credentials, gaining access to the AWS console to manipulate database configurations or software update hooks.
+Name: Upstream Supply Chain Phishing
+
+Description: As seen in recent trends hitting other medical device software and robotics companies, the highest-probability entry point is rarely a zero-day exploit in the platform's code. Instead, it is an attacker phishing a BioT engineer or cloud administrator to steal credentials, gaining access to the AWS console to manipulate database configurations or software update hooks.
 
 Domain: SUPPLYCHAIN
 
-Probability: 0.08
+Probability: 8
 
 Affects Assets: A7, A9, A10, A11, A12 
 

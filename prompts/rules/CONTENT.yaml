@@ -440,17 +440,23 @@ CONTENT:
       Do not hallucinate vulnerabilities. Extract only what appears in the content.
 
       COUNTERMEASURES:
-      Extract countermeasures from "Countermeasures:" sections in format: "CM# - Name mitigation level X%".
-      A countermeasure has 5 required fields:
+      Extract countermeasures from "Countermeasures:" or "Countermeasures" sections.
+      Format can be:
+      - "CM# - Name (Description). mitigation level X% fixed_implementation_cost Y recurring_implementation_cost Z"
+      - "CM#: Name. mitigation level X% ... Description: ..."
+      A countermeasure has 5 fields (3 required, 2 optional):
       {
-        "tag": "CM12",                               // Tag like CM12, CM13 (optional, may be inferred from context)
-        "name": "Sealed system",                    // Required
-        "description": "...",                       // Optional
+        "tag": "CM12",                               // Required: Tag like CM12, CM281, etc.
+        "name": "Sealed system",                    // Required: short name
+        "description": "...",                       // Optional: detailed explanation of what the countermeasure does
         "fixed_implementation_cost": 5000,          // Required: one-time fixed cost (numeric, ≥ 0)
-        "recurring_implementation_cost": 1000       // Required: monthly recurring cost (numeric, ≥ 0)
+        "recurring_implementation_cost": 1000       // Required: yearly recurring cost (numeric, ≥ 0)
       }
-      Cost periods: fixed_cost_period defaults to 12 months; include_fixed_cost and include_recurring_cost default to true.
-      The upsert procedure will handle model_id assignment and compute yearly_cost automatically.
+      CRITICAL RULES:
+      - Always extract the description if present. Do NOT omit it.
+      - description can be multi-line and should capture the full explanation of the countermeasure.
+      - Cost periods: fixed_cost_period defaults to 12 months; include_fixed_cost and include_recurring_cost default to true.
+      - The upsert procedure will handle model_id assignment and compute yearly_cost automatically.
 
       LINKING ASSET-THREAT:
       When a threat mentions "Affects Assets: A2, A6, A4", create asset_threat records:
@@ -517,9 +523,9 @@ CONTENT:
             {"name": "PLC and sensor firmware integrity"}
           ],
           "countermeasures": [
-            {"tag": "CM2", "name": "Multiple ATP tests", "fixed_implementation_cost": 0, "recurring_implementation_cost": 5000},
-            {"tag": "CM3", "name": "Test on jig before shipment", "fixed_implementation_cost": 0, "recurring_implementation_cost": 5000},
-            {"tag": "CM4", "name": "Site inspection", "fixed_implementation_cost": 0, "recurring_implementation_cost": 5000}
+            {"tag": "CM2", "name": "Multiple ATP tests", "description": "Automated test procedures validate firmware before deployment", "fixed_implementation_cost": 0, "recurring_implementation_cost": 5000},
+            {"tag": "CM3", "name": "Test on jig before shipment", "description": "Physical device testing on specialized test equipment", "fixed_implementation_cost": 0, "recurring_implementation_cost": 5000},
+            {"tag": "CM4", "name": "Site inspection", "description": "Regular on-site audits verify deployment configurations", "fixed_implementation_cost": 0, "recurring_implementation_cost": 5000}
           ],
           "asset_threat": [
             {"asset_tag": "A3", "threat_tag": "R2", "damage": 100},
