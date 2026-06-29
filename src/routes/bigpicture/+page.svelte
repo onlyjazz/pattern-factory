@@ -30,19 +30,22 @@
     
     const options = {
       title: '',
-      legend: { position: 'bottom' },
+      legend: { position: 'bottom', textStyle: { fontName: 'Roboto', fontSize: 13 } },
       hAxis: {
         title: 'Threats',
-        titleTextStyle: { color: '#333' }
+        titleTextStyle: { color: '#333', fontName: 'Roboto', fontSize: 13 },
+        textStyle: { fontName: 'Roboto', fontSize: 13, color: '#666' }
       },
       vAxis: {
         title: 'Value (VaR)',
-        titleTextStyle: { color: '#333' },
+        titleTextStyle: { color: '#333', fontName: 'Roboto', fontSize: 13 },
+        textStyle: { fontName: 'Roboto', fontSize: 13, color: '#666' },
         format: '#,###'
       },
       colors: ['#2563eb', '#16a34a'],
       chartArea: { width: '75%', height: '75%' },
-      bar: { groupWidth: '75%' }
+      bar: { groupWidth: '75%' },
+      tooltip: { textStyle: { fontName: 'Roboto', fontSize: 12, color: '#333' } }
     };
     
     const chart = new google.visualization.ColumnChart(container);
