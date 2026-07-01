@@ -33,16 +33,17 @@
 			const response = await fetch(`${apiBase}/assets/${asset.id}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					name: asset.name,
-					description: asset.description || null,
-					tag: asset.tag || null,
-					fixed_value: asset.fixed_value || 0,
-					fixed_value_period: asset.fixed_value_period || 12,
-					recurring_value: asset.recurring_value || 0,
-					include_fixed_value: asset.include_fixed_value || true,
-					include_recurring_value: asset.include_recurring_value || true
-				})
+			body: JSON.stringify({
+				name: asset.name,
+				description: asset.description || null,
+				tag: asset.tag || null,
+				fixed_value: asset.fixed_value || 0,
+				fixed_value_period: asset.fixed_value_period || 12,
+				recurring_value: asset.recurring_value || 0,
+				include_fixed_value: asset.include_fixed_value || true,
+				include_recurring_value: asset.include_recurring_value || true,
+				disabled: asset.disabled || false
+			})
 			});
 			if (!response.ok) throw new Error('Failed to save asset');
 			window.location.href = `/assets/${asset.id}`;

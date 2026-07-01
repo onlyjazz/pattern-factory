@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { globalSearch } from '$lib/searchStore';
 	import { modeStore } from '$lib/modeStore';
 	import type { Model } from '$lib/db';
@@ -127,6 +128,8 @@
 			if (!response.ok) throw new Error('Failed to activate model');
 			// Update mode store to reflect active model with name
 			modeStore.setActiveModel(modelId, modelName || null);
+			// Navigate to bigpicture page
+			await goto('/bigpicture');
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to activate model';
 		}

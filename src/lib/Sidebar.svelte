@@ -13,18 +13,14 @@ import { Network, FileText, Route, ListTree, AlertTriangle, Box, Bug, Shield, Li
 
 	const exploreLinks = [
 		{ name: "Patterns", href: "/patterns", icon: Network },
-		{ name: "Cards", href: "/cards", icon: FileText },
+		{ name: "Stories", href: "/cards", icon: FileText },
 		{ name: "Paths", href: "/paths", icon: Route }
 	];
 
 	const modelLinks = [
-		{ name: "The Big Picture", href: "/bigpicture", icon: Gauge },
 		{ name: "Models", href: "/models", icon: ListTree },
-		{ name: "Cards", href: "/cards", icon: FileText },
-		{ name: "Risks", href: "/threats", icon: AlertTriangle },
-		{ name: "Assets", href: "/assets", icon: Box },
-		{ name: "Vulnerabilities", href: "/vulnerabilities", icon: Bug },
-		{ name: "Countermeasures", href: "/countermeasures", icon: Shield }
+		{ name: "Threats", href: "/threats", icon: AlertTriangle },
+		{ name: "Assets", href: "/assets", icon: Box }
 	];
 
 	$: links = $modeStore.mode === 'explore' ? exploreLinks : modelLinks;

@@ -132,9 +132,9 @@
 <!-- PAGE HEADER -->
 <div id="application-content-area">
 	<div class="page-title">
-		<button class="button button_green" onclick={() => (showAddModal = true)}>
+		<!-- <button class="button button_green" onclick={() => (showAddModal = true)}>
 			Add Asset
-		</button>
+		</button> -->
 		<h1 class="heading heading_1">Assets</h1>
 	</div>
 

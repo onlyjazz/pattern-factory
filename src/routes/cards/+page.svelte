@@ -170,9 +170,9 @@
 <div id="application-content-area">
 	<div class="page-title">
 		<button class="button button_green" onclick={() => (showAddModal = true)}>
-			Add Card
+			Add Story
 		</button>
-		<h1 class="heading heading_1">Cards</h1>
+		<h1 class="heading heading_1">Stories</h1>
 	</div>
 
 	<div class="grid-row">
@@ -180,15 +180,15 @@
 		<div class="grid-col grid-col_24">
 			<div class="studies card">
 				<div class="card-header">
-					<div class="heading heading_3">Card Library</div>
+					<div class="heading heading_3">Story Library</div>
 				</div>
 
 				{#if loading}
-					<div class="message">Loading cards...</div>
+					<div class="message">Loading stories...</div>
 				{:else if error}
 					<div class="message message-error">Error: {error}</div>
 				{:else if filteredCards.length === 0}
-					<div class="message">No cards found</div>
+					<div class="message">No stories found</div>
 				{:else}
 					<div class="table">
 						<table>
@@ -246,7 +246,7 @@
 	<div class="modal-overlay" onclick={closeAddModal}>
 		<div class="modal-content" role="dialog" aria-labelledby="add-modal-title" onclick={(e) => e.stopPropagation()}>
 			<div class="modal-header">
-				<h2 id="add-modal-title" class="heading heading_2">Add Card</h2>
+				<h2 id="add-modal-title" class="heading heading_2">Add Story</h2>
 				<button
 					class="modal-close"
 					onclick={closeAddModal}

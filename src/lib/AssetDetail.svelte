@@ -133,7 +133,7 @@
 			</div>
 
 			<div class="detail-section">
-				<h3>Include Options</h3>
+				<h3>Options</h3>
 				<div style="margin-bottom: 1.5rem;">
 					<CheckboxField
 						id="include-fixed-value"
@@ -143,12 +143,21 @@
 					/>
 				</div>
 
-				<div style="margin-bottom: 0;">
+				<div style="margin-bottom: 1.5rem;">
 					<CheckboxField
 						id="include-recurring-value"
 						bind:checked={asset.include_recurring_value}
 						label="Include recurring value"
 						description="When checked the yearly value will include the recurring value"
+					/>
+				</div>
+
+				<div style="margin-bottom: 0;">
+					<CheckboxField
+						id="exclude-asset"
+						bind:checked={asset.disabled}
+						label="Exclude asset"
+						description="When checked the asset will be excluded from the threat model"
 					/>
 				</div>
 			</div>
@@ -206,7 +215,7 @@
 			</div>
 
 			<div class="detail-section">
-				<h3>Include Options</h3>
+				<h3>Options</h3>
 				<div class="detail-row">
 					<div class="detail-field">
 						<label>Include Fixed Value</label>
@@ -215,6 +224,12 @@
 					<div class="detail-field">
 						<label>Include Recurring Value</label>
 						<p>{asset.include_recurring_value ? 'Yes' : 'No'}</p>
+					</div>
+				</div>
+				<div class="detail-row">
+					<div class="detail-field">
+						<label>Exclude asset</label>
+						<p>{asset.disabled ? 'Yes' : 'No'}</p>
 					</div>
 				</div>
 			</div>
