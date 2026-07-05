@@ -12,6 +12,8 @@ Pattern Factory is a full-stack application combining:
 
 The application extracts patterns and antipatterns from podcast transcripts and Substack content using an AI-driven agent system, storing them with linked relationships across episodes, guests, organizations, and posts.
 
+> **Architecture reference:** Read `ARCHITECTURE.md` before any architectural change or refactor. It is the source of truth for the system architecture map, module responsibilities, API contracts, data flows, technical debt, and the engineering constraints that must be honored in future work.
+
 ## Architecture Overview
 
 ### Backend Structure
