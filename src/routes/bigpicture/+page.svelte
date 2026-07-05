@@ -114,7 +114,7 @@
               <th>Threat</th>
               <th>VaR Before Mitigation</th>
               <th>VaR After Mitigation</th>
-              <th>Risk Reduction</th>
+              <th>Mitigation Level</th>
               <th>Residual Risk %</th>
             </tr>
           </thead>
@@ -124,7 +124,7 @@
                 <td class="threat-name">{threat.threat_tag}: {threat.threat_name}</td>
                 <td class="number">{threat.var_before_mitigation.toLocaleString('en-US')}</td>
                 <td class="number">{threat.var_after_mitigation.toLocaleString('en-US')}</td>
-                <td class="center">{threat.risk_reduction}</td>
+                <td class="center">{threat.mitigation_level}</td>
                 <td class="center">{threat.residual_risk_pct.toFixed(1)}%</td>
               </tr>
             {/each}

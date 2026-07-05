@@ -269,7 +269,7 @@ DATA:
           - probability
           - var_before_mitigation
           - var_after_mitigation
-          - risk_reduction
+          - mitigation_level
           - residual_risk_pct
           - residual_risk_level
         

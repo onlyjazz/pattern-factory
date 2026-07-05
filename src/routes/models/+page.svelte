@@ -53,13 +53,23 @@
 	}
 	
 	function sortModels() {
-		if (!sortField) return;
-		filteredModels = [...filteredModels].sort((a, b) => {
-			const aVal = a[sortField] || '';
-			const bVal = b[sortField] || '';
-			const comparison = String(aVal).localeCompare(String(bVal));
-			return sortDirection === 'asc' ? comparison : -comparison;
-		});
+		const activeId = $modeStore.activeModel;
+		// Always pin the active model to the top of the list, regardless of
+		// which column the user has clicked to sort by. The remaining models
+		// follow the user's sort selection (or API order when no sort chosen).
+		const active = filteredModels.filter(m => m.id === activeId);
+		const rest = filteredModels.filter(m => m.id !== activeId);
+
+		if (sortField) {
+			rest.sort((a, b) => {
+				const aVal = a[sortField] || '';
+				const bVal = b[sortField] || '';
+				const comparison = String(aVal).localeCompare(String(bVal));
+				return sortDirection === 'asc' ? comparison : -comparison;
+			});
+		}
+
+		filteredModels = [...active, ...rest];
 	}
 	
 	function toggleSort(field: keyof Model) {
@@ -74,6 +84,8 @@
 	
 	$: if (models) filterModels();
 	$: if ($globalSearch !== undefined) filterModels();
+	// Re-apply the active-model pin when the active model changes
+	$: if ($modeStore.activeModel !== undefined) filterModels();
 	
 	function closeAddModal() {
 		showAddModal = false;
