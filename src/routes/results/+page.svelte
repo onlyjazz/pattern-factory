@@ -42,6 +42,21 @@
         if (aVal == null) return dir === 'asc' ? 1 : -1;
         if (bVal == null) return dir === 'asc' ? -1 : 1;
         
+        // Check if column name contains 'tag' or values look like tags (e.g., R1, R10, A1, A10)
+        const aStr = String(aVal).trim();
+        const bStr = String(bVal).trim();
+        const tagPattern = /^[a-zA-Z]+\d+$/;
+        const isTagColumn = col && col.toLowerCase().includes('tag');
+        const bothAreTagFormat = tagPattern.test(aStr) && tagPattern.test(bStr);
+        
+        if (isTagColumn || bothAreTagFormat) {
+          // Extract numeric part and compare numerically
+          const aNum = parseInt(aStr.replace(/[^0-9]/g, '')) || 0;
+          const bNum = parseInt(bStr.replace(/[^0-9]/g, '')) || 0;
+          const comparison = aNum - bNum;
+          return dir === 'asc' ? comparison : -comparison;
+        }
+        
         // Compare values
         if (typeof aVal === 'string' && typeof bVal === 'string') {
           return dir === 'asc'

@@ -90,7 +90,7 @@
 <div id="application-content-area">
   <div class="page-title">
     <h1 class="heading heading_1">The Big Picture</h1>
-    <p class="subtitle">Top 5 Risk Threats - VaR Before and After Mitigation</p>
+    <p class="subtitle">Top 5 Risk Threats - Value at Risk (VaR) before and after mitigation</p>
   </div>
 
   {#if loading}
@@ -151,25 +151,16 @@
     display: flex;
     flex-direction: column;
     gap: 2rem;
-    font-family: 'Roboto', Helvetica, Arial, sans-serif;
+    width: 75%;
   }
   
   .google-chart {
     width: 100%;
     height: 500px;
-    font-family: 'Roboto', Helvetica, Arial, sans-serif;
-  }
-  
-  :global(#curve_chart) {
-    font-family: 'Roboto', Helvetica, Arial, sans-serif !important;
-  }
-  
-  :global(#curve_chart svg) {
-    font-family: 'Roboto', Helvetica, Arial, sans-serif !important;
   }
   
   :global(#curve_chart text) {
-    font-family: 'Roboto', Helvetica, Arial, sans-serif !important;
+    font-weight: 400 !important;
   }
   
   .summary-section {
@@ -178,6 +169,7 @@
     border-radius: 8px;
     border: 1px solid #e0e0e0;
     margin-top: 2rem;
+    width: 75%;
   }
   
   .summary-table {
@@ -188,20 +180,26 @@
   .summary-table table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.9rem;
+    font-size: 0.8em;
+    font-weight: 400;
   }
   
   .summary-table th {
     background-color: #f5f5f5;
     padding: 0.75rem;
-    text-align: left;
-    font-weight: 600;
+    text-align: center;
+    font-weight: 400;
     border-bottom: 2px solid #ddd;
+  }
+  
+  .summary-table th:first-child {
+    text-align: left;
   }
   
   .summary-table td {
     padding: 0.75rem;
     border-bottom: 1px solid #eee;
+    font-weight: 400;
   }
   
   .summary-table tr:hover {
@@ -209,13 +207,12 @@
   }
   
   .threat-name {
-    font-weight: 500;
+    font-weight: 400;
     max-width: 300px;
   }
   
   .number {
-    text-align: right;
-    font-family: 'Courier New', monospace;
+    text-align: center;
   }
   
   .center {

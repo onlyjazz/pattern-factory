@@ -56,7 +56,24 @@
 		filteredAssets = [...filteredAssets].sort((a, b) => {
 			const aVal = a[sortField] || '';
 			const bVal = b[sortField] || '';
-			const comparison = String(aVal).localeCompare(String(bVal));
+			
+			let comparison: number;
+			
+			// Numeric sorting for tag (A1, A2, A10) and yearly_value
+			if (sortField === 'tag' || sortField === 'yearly_value') {
+				// Extract numbers for tag (e.g., 'A1' -> 1)
+				const aNum = sortField === 'tag' ? 
+					parseInt(String(aVal).replace(/\D/g, '')) || 0 :
+					parseFloat(String(aVal)) || 0;
+				const bNum = sortField === 'tag' ?
+					parseInt(String(bVal).replace(/\D/g, '')) || 0 :
+					parseFloat(String(bVal)) || 0;
+				comparison = aNum - bNum;
+			} else {
+				// String sorting for other fields
+				comparison = String(aVal).localeCompare(String(bVal));
+			}
+			
 			return sortDirection === 'asc' ? comparison : -comparison;
 		});
 	}

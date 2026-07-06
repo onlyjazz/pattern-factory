@@ -128,21 +128,9 @@ DROP VIEW IF EXISTS threat.threat_countermeasures;
 CREATE OR REPLACE VIEW threat.threat_countermeasures AS
 SELECT 
     t.model_id,
-    CASE 
-        WHEN ROW_NUMBER() OVER (PARTITION BY t.tag ORDER BY c.name) = 1 
-        THEN t.tag 
-        ELSE '' 
-    END AS threat_tag,
-    CASE 
-        WHEN ROW_NUMBER() OVER (PARTITION BY t.tag ORDER BY c.name) = 1 
-        THEN t.name 
-        ELSE '' 
-    END AS threat_name,
-    CASE 
-        WHEN ROW_NUMBER() OVER (PARTITION BY t.tag ORDER BY c.name) = 1 
-        THEN t.probability::TEXT 
-        ELSE '' 
-    END AS probability,
+    t.tag AS threat_tag,
+    t.name AS threat_name,
+    t.probability::TEXT AS probability,
     c.tag AS countermeasure_tag,
     c.name AS countermeasure_name,
     ct.mitigation_level,
