@@ -339,7 +339,7 @@ import { API_BASE } from '$lib/config';
 							class="input__text"
 							class:input__text_changed={newModel.description && newModel.description.length > 0}
 							rows="4"
-						/>
+						></textarea>
 						<label for="add-description" class="input__label">Description</label>
 					</div>
 
