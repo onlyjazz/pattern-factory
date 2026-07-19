@@ -382,6 +382,176 @@ All forms and entity pages must follow a single, consistent UI pattern across th
 - Button positioning: always bottom right for form controls
 - Row interaction: row click = view, icon click = edit
 
+## Accessibility Guidelines
+
+Accessibility is critical for usability and compliance. The codebase enforces strict accessibility standards via Svelte's a11y plugin. Follow these patterns to prevent warnings that clutter the build output.
+
+### Modal Dialog Pattern (Standard for all modals)
+
+**Use this exact structure for every modal popup**:
+
+```svelte
+{#if showModal}
+  <!-- OVERLAY: Non-interactive backdrop, captures Escape key -->
+  <div class="modal-overlay" onclick={closeModal} onkeydown={(e) => e.key === 'Escape' && closeModal()} role="presentation">
+    <!-- DIALOG: Focusable container with proper ARIA attributes -->
+    <div class="modal-content" role="dialog" aria-labelledby="modal-title" tabindex="0" onclick={(e) => e.stopPropagation()}>
+      <div class="modal-header">
+        <h2 id="modal-title" class="heading heading_2">Modal Title</h2>
+        <button class="modal-close" onclick={closeModal} title="Close">×</button>
+      </div>
+      <div class="modal-body">
+        <!-- Form or content here -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="button button_secondary" onclick={closeModal}>Cancel</button>
+        <button type="button" class="button button_green" onclick={handleSubmit}>Save</button>
+      </div>
+    </div>
+  </div>
+{/if}
+```
+
+**Critical requirements**:
+1. **Modal overlay** must have:
+   - `role="presentation"` (non-interactive backdrop)
+   - `onclick={closeHandler}` (click outside to close)
+   - `onkeydown={(e) => e.key === 'Escape' && closeHandler()}` (Escape to close)
+
+2. **Modal content** (inner dialog div) must have:
+   - `role="dialog"` (accessibility role)
+   - `aria-labelledby="{heading-id}"` (ties dialog to its h2 heading)
+   - `tabindex="0"` (makes dialog focusable for keyboard users)
+   - `onclick={(e) => e.stopPropagation()}` (prevents backdrop click from closing)
+
+3. **Modal heading** (h2 inside modal-header) must have:
+   - `id=" modal-title"` (referenced by aria-labelledby)
+   - Class `heading heading_2` (typography consistency)
+
+4. **Close button** must:
+   - Have `title="Close"` for accessibility
+   - Use `×` symbol (visually consistent)
+   - Call the same closeHandler as overlay click and Escape key
+
+### Interactive Elements (Buttons vs. Divs)
+
+**RULE: Any element with onclick must be a `<button>` or `<a>` tag.**
+
+❌ **WRONG**:
+```svelte
+<div onclick={handleClick}>Click me</div>
+<div class="pattern-option" onclick={() => selectPattern(pattern)}>Pattern Name</div>
+```
+
+✅ **CORRECT**:
+```svelte
+<button type="button" onclick={handleClick}>Click me</button>
+<button type="button" class="pattern-option" onclick={() => selectPattern(pattern)} onkeydown={(e) => e.key === 'Enter' && selectPattern(pattern)}>
+  Pattern Name
+</button>
+```
+
+**Exception**: Table rows are allowed to be `<tr>` with onclick for row selection/navigation, because row is a semantic table element.
+
+### Keyboard Support Pattern
+
+Any clickable button must also support keyboard activation (Enter key):
+
+```svelte
+<button
+  type="button"
+  onclick={() => handleAction(item)}
+  onkeydown={(e) => e.key === 'Enter' && handleAction(item)}
+>
+  Action Label
+</button>
+```
+
+For dropdown items or custom option elements:
+```svelte
+<button type="button" onclick={() => selectOption(option)} onkeydown={(e) => e.key === 'Enter' && selectOption(option)}>
+  {option.name}
+</button>
+```
+
+### Common Accessibility Violations and Fixes
+
+**1. Dialog without tabindex**
+```
+Error: Elements with the 'dialog' interactive role must have a tabindex value
+```
+Fix: Add `tabindex="0"` to `<div role="dialog">` to make it keyboard-focusable.
+
+**2. Click handler without keyboard event**
+```
+Error: Visible, non-interactive elements with a click event must be accompanied by a keyboard event handler
+```
+Fix: Convert to `<button>` and add `onkeydown={(e) => e.key === 'Enter' && handler()}`.
+
+**3. Missing aria-labelledby on dialog**
+```
+Error: Missing aria-labelledby on dialog element
+```
+Fix: Add `aria-labelledby="modal-title-id"` pointing to the dialog's h2 title.
+
+**4. Click handler on non-button non-interactive element**
+```
+Error: <div> has a onclick handler but is not keyboard accessible
+```
+Fix: Change `<div onclick={...}>` to `<button type="button" onclick={...} onkeydown={...}>`.
+
+### Testing Accessibility
+
+Run the Svelte type checker to catch a11y violations early:
+```bash
+npm run check  # Shows all a11y warnings and errors
+npm run check:watch  # Continuous checking during development
+```
+
+Common patterns to search for and fix:
+```bash
+# Find all elements with onclick (potential violations)
+grep -r "onclick" src/routes --include="*.svelte"
+
+# Find divs with click handlers (should be buttons)
+grep -r "<div[^>]*onclick" src/routes --include="*.svelte"
+
+# Verify all modal-content elements have tabindex
+grep -r "role=\"dialog\"" src/routes --include="*.svelte" | grep -v "tabindex"
+```
+
+### Modal Pattern Variations
+
+**Draggable Modal** (with mouse drag support):
+```svelte
+<div
+  class="modal-content"
+  role="dialog"
+  aria-labelledby="modal-title"
+  tabindex="0"
+  onclick={(e) => e.stopPropagation()}
+  style="transform: translate({position.x}px, {position.y}px);"
+>
+  <div class="modal-header" onmousedown={startDrag}>
+    <!-- Draggable header -->
+  </div>
+</div>
+```
+
+Note: Only dynamic styles (transform for positioning) are allowed as inline styles. Static styling must use canonical CSS classes from main.css.
+
+### Canonical CSS Rule
+
+All styling must use classes from `src/main.css`. No inline styles for static properties, and no page-scoped CSS.
+
+Allowed inline styles:
+- `style="transform: translate(...)"` for dynamic modal positioning
+- Any other dynamic computed styles
+
+Not allowed:
+- `style="color: blue; font-size: 14px; margin: 10px;"` → use CSS classes instead
+- Page-scoped `<style>` blocks with custom selectors
+
 ## Technology Stack Details
 
 - **Svelte 5**: Latest reactive framework with runes
