@@ -312,7 +312,7 @@ These constraints come from `WARP.md`, the persisted project rules, and observab
 ### 7.1 UI / Styling
 
 - **No Tailwind CSS.** Do not reintroduce Tailwind. The remaining Tailwind-adjacent deps (`tailwind-merge`, `tailwind-variants`, `tw-animate-css`, `shadcn-svelte`, `bits-ui`, `flowbite-svelte`) should be removed, not extended.
-- **No page-scoped or inline CSS in form components.** Use only standard classes from `main.css`. Reusable layout components (`EntityDetailLayout`, `CheckboxField`, `SingleSelect`) exist — prefer them over bespoke styling.
+- **Canonical CSS only: no inline styles.** All layout and spacing must use reusable utility classes from `main.css`. Inline `style=` attributes are forbidden except for dynamic values (e.g., computed `transform` for positioning). Never use page-scoped or component-scoped CSS for static styles. Reusable layout components (`EntityDetailLayout`, `CheckboxField`, `SingleSelect`) enforce this constraint. When adding new styles, extend the canonical set (e.g., `.error-margin`, `.section-spacing`, `.flex-row`, `.external-link`, `.help-text`) rather than creating ad-hoc inline rules.
 - **Button class taxonomy:** `big-green-button` (add), `big-blue-button` (save / edit), `big-orange-button` (cancel), `big-red-button` (delete). Do not invent new button styles.
 - **Consistent entity page pattern:**
   - Index — list + right-aligned add button + pencil / trash icons; row click = view, icon click = edit.
