@@ -26,7 +26,7 @@
 			<div class="grid-col grid-col_24">
 				<div class="entity-card">
 					{#if saveError}
-						<div class="message message-error" class="error-margin">Error: {saveError}</div>
+						<div class="message message-error error-margin">Error: {saveError}</div>
 					{/if}
 
 					{#if isEditing}
