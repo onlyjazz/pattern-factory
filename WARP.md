@@ -552,6 +552,143 @@ Not allowed:
 - `style="color: blue; font-size: 14px; margin: 10px;"` → use CSS classes instead
 - Page-scoped `<style>` blocks with custom selectors
 
+## Code Quality Enforcement
+
+This section documents how to prevent regressions of the issues fixed in PAT-191 and similar code quality problems.
+
+### Pre-Commit Checklist
+
+Before committing Svelte code, run these checks locally:
+
+```bash
+# 1. Type checking (catches accessibility violations, unused CSS, HTML validation)
+npm run check
+
+# 2. Build verification (full compilation test)
+npm run build
+
+# 3. Search for common violations
+grep -r "<div[^>]*onclick" src/routes --include="*.svelte"
+grep -r "<textarea[^>]*/>" src/routes --include="*.svelte"
+grep -r "/style>" src/routes --include="*.svelte"  # Check for page-scoped styles
+```
+
+**If any matches appear, FIX THEM before committing.**
+
+### Automatic Validation (GitHub Actions)
+
+All PRs automatically run:
+```bash
+npm run check      # Catches a11y violations, unused CSS, type errors
+npm run build      # Full build test
+```
+
+**PR validation fails if these commands fail.** This prevents regressions from reaching main.
+
+### Common Violations Checklist
+
+When adding new UI components, avoid these patterns:
+
+**❌ Never do this:**
+```svelte
+<!-- 1. Divs with click handlers -->
+<div onclick={handler}>Click me</div>
+
+<!-- 2. Dialogs without tabindex -->
+<div role="dialog" aria-labelledby="title">Content</div>
+
+<!-- 3. Self-closing non-void elements -->
+<textarea ... />
+
+<!-- 4. Modal dialogs with onclick stopPropagation -->
+<div role="dialog" onclick={(e) => e.stopPropagation()}>...</div>
+
+<!-- 5. Divs with mouse handlers without role -->
+<div onmousedown={handler}>Drag me</div>
+
+<!-- 6. Static inline styles -->
+<div style="color: blue; margin: 10px;">Content</div>
+
+<!-- 7. Page-scoped CSS in <style> blocks -->
+<style>
+  .my-custom-class { color: red; }  /* BAD - goes in main.css instead */
+</style>
+
+<!-- 8. Unused CSS selectors -->
+<style>
+  .never-used { padding: 10px; }  /* BAD - will trigger warning */
+</style>
+```
+
+**✅ Always do this instead:**
+```svelte
+<!-- 1. Use buttons for click handlers -->
+<button type="button" onclick={handler} onkeydown={(e) => e.key === 'Enter' && handler()}>
+  Click me
+</button>
+
+<!-- 2. Always add tabindex to dialogs -->
+<div role="dialog" aria-labelledby="title" tabindex="0">Content</div>
+
+<!-- 3. Close non-void elements properly -->
+<textarea id="foo" bind:value={content}></textarea>
+
+<!-- 4. Never add onclick to modal-content (overlay handles it) -->
+<div role="dialog" aria-labelledby="title" tabindex="0">...</div>
+
+<!-- 5. Add role to elements with mouse handlers -->
+<div onmousedown={handler} role="banner">Drag me</div>
+
+<!-- 6. Use only canonical CSS classes -->
+<div class="flex-row gap-2">Content</div>
+
+<!-- 7. Put all CSS in main.css, nowhere else -->
+<!-- No <style> block at all in component -->
+
+<!-- 8. Delete unused CSS immediately -->
+<!-- Only define CSS that's used in the template -->
+```
+
+### Development Workflow
+
+1. **Before creating a PR:**
+   ```bash
+   npm run check
+   npm run build
+   ```
+   Fix any violations shown.
+
+2. **When reviewing PRs:**
+   - Check that `npm run check` passes
+   - Verify build completes without warnings
+   - Look for the patterns listed above
+
+3. **When fixing bugs:**
+   - Always run the checks before committing
+   - Use grep patterns above to find similar issues
+   - Document the fix if it's a new pattern
+
+### Svelte a11y Plugin Configuration
+
+The project uses Svelte's built-in a11y plugin which automatically:
+- Detects click handlers without keyboard support
+- Identifies dialogs without focus management (tabindex)
+- Finds missing ARIA attributes
+- Reports unused CSS selectors
+
+To see violations in your IDE as you type:
+```bash
+npm run check:watch   # Continuous checking
+```
+
+### Key Metrics to Maintain
+
+- **Zero a11y warnings** in `npm run check` output
+- **Zero unused CSS** warnings
+- **Zero build errors** from `npm run build`
+- **All modals follow standard pattern** from Accessibility Guidelines
+- **All buttons have keyboard support** (Enter key handler)
+
 ## Technology Stack Details
 
 - **Svelte 5**: Latest reactive framework with runes
