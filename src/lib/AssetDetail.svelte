@@ -134,7 +134,7 @@
 
 			<div class="detail-section">
 				<h3>Options</h3>
-				<div style="margin-bottom: 1.5rem;">
+				<div class="section-spacing">
 					<CheckboxField
 						id="include-fixed-value"
 						bind:checked={asset.include_fixed_value}
@@ -143,7 +143,7 @@
 					/>
 				</div>
 
-				<div style="margin-bottom: 1.5rem;">
+				<div class="section-spacing">
 					<CheckboxField
 						id="include-recurring-value"
 						bind:checked={asset.include_recurring_value}
@@ -152,7 +152,7 @@
 					/>
 				</div>
 
-				<div style="margin-bottom: 0;">
+				<div class="section-spacing-last">
 					<CheckboxField
 						id="exclude-asset"
 						bind:checked={asset.disabled}

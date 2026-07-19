@@ -101,7 +101,7 @@ import { API_BASE } from '$lib/config';
 						handleSave();
 					}}>
 						{#if saveError}
-							<div class="message message-error" style="margin-bottom: 20px;">Error: {saveError}</div>
+							<div class="message message-error error-margin">Error: {saveError}</div>
 						{/if}
 
 						<div class="form-section">
@@ -186,7 +186,7 @@ import { API_BASE } from '$lib/config';
 						</div>
 
 						<div class="form-actions">
-							<div style="margin-bottom: 16px; width: 100%;">
+						<div class="section-spacing-compact w-full">
 								<CheckboxField
 									id="duplicate-model"
 									bind:checked={duplicateModel}
@@ -195,7 +195,7 @@ import { API_BASE } from '$lib/config';
 									disabled={isSaving}
 								/>
 							</div>
-							<div style="display: flex; gap: 12px;">
+							<div class="flex-row-gap-12">
 								<button type="button" class="button button_secondary" onclick={handleCancel} disabled={isSaving}>
 									Cancel
 								</button>

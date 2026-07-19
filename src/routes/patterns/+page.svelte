@@ -215,7 +215,7 @@
 
             <div class="modal-body">
                 {#if addModalError}
-                    <div class="message message-error" style="margin-bottom: 20px;">Error: {addModalError}</div>
+                    <div class="message message-error" class="error-margin">Error: {addModalError}</div>
                 {/if}
                 <form onsubmit={(e) => {
                     e.preventDefault();

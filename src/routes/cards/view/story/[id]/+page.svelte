@@ -70,7 +70,7 @@ import { API_BASE, FRONTEND_BASE } from '$lib/config';
 					<strong>Story link for generating risk model:</strong>
 				</p>
 				<code class="story-link"><a href="{storyLink}" target="_blank" rel="noopener noreferrer">{storyLink}</a></code>
-				<p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">Agents will use active model from database</p>
+				<p class="help-text">Agents will use active model from database</p>
 			</div>
 			<div class="story-text">
 				{@html getRenderedMarkdown(card.story || '')}

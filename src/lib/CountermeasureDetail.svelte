@@ -124,7 +124,7 @@
 
 			<div class="detail-section">
 				<h3>Cost Options</h3>
-				<div style="margin-bottom: 1.5rem;">
+				<div class="section-spacing">
 					<CheckboxField
 						id="include-fixed-cost"
 						bind:checked={countermeasure.include_fixed_cost}
@@ -133,7 +133,7 @@
 					/>
 				</div>
 
-				<div style="margin-bottom: 0;">
+				<div class="section-spacing-last">
 					<CheckboxField
 						id="include-recurring-cost"
 						bind:checked={countermeasure.include_recurring_cost}
@@ -145,7 +145,7 @@
 
 			<div class="detail-section">
 				<h3>Status</h3>
-				<div style="margin-bottom: 1.5rem;">
+				<div class="section-spacing">
 					<CheckboxField
 						id="implemented"
 						bind:checked={countermeasure.implemented}
@@ -154,7 +154,7 @@
 					/>
 				</div>
 
-				<div style="margin-bottom: 0;">
+				<div class="section-spacing-last">
 					<CheckboxField
 						id="disabled"
 						bind:checked={countermeasure.disabled}

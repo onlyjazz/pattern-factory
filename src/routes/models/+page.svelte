@@ -176,7 +176,7 @@ import { API_BASE } from '$lib/config';
 	</div>
 
 	{#if error}
-		<div class="message message-error" style="margin: 1rem 0;">Error: {error}</div>
+		<div class="message message-error error-margin-v">Error: {error}</div>
 	{/if}
 
 	<div class="grid-row">
@@ -258,7 +258,7 @@ import { API_BASE } from '$lib/config';
 
 			<div class="modal-body">
 				{#if addModalError}
-					<div class="message message-error" style="margin-bottom: 20px;">Error: {addModalError}</div>
+					<div class="message message-error error-margin">Error: {addModalError}</div>
 				{/if}
 				<form onsubmit={(e) => {
 					e.preventDefault();

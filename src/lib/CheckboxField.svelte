@@ -7,7 +7,7 @@
 </script>
 
 <div class="checkbox-field">
-	<div style="display: flex; align-items: flex-start;">
+	<div class="flex-start">
 		<input
 			type="checkbox"
 			{id}

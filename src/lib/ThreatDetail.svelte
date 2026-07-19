@@ -92,7 +92,7 @@
 					</div>
 					<div class="detail-field">
 						<label>Disabled</label>
-						<div style="margin-top: 8px;">
+						<div class="mt-sm">
 							<CheckboxField
 								id="threat-disabled"
 								bind:checked={threat.disabled}
@@ -205,13 +205,13 @@
 					<div class="detail-row full">
 						<div class="detail-field">
 							<label>Associated Card</label>
-							<h4 style="margin: 8px 0 0 0; font-size: 15px; font-weight: 500; color: #333;">
+							<h4 class="card-heading-compact">
 								{threat.card.name}
-								<a href="/cards/view/story/{threat.card.id}" target="_blank" rel="noopener noreferrer" title="View card details" style="font-size: 9px; color: #0066cc; text-decoration: none; vertical-align: super; margin-left: 2px;">
+								<a href="/cards/view/story/{threat.card.id}" target="_blank" rel="noopener noreferrer" title="View card details" class="external-link">
 									↗
 								</a>
 							</h4>
-							<p style="margin-top: 8px;">{threat.card.description}</p>
+							<p class="mt-sm">{threat.card.description}</p>
 						</div>
 					</div>
 				{/if}

@@ -26,13 +26,13 @@
 			<div class="grid-col grid-col_24">
 				<div class="entity-card">
 					{#if saveError}
-						<div class="message message-error" style="margin-bottom: 20px;">Error: {saveError}</div>
+						<div class="message message-error" class="error-margin">Error: {saveError}</div>
 					{/if}
 
 					{#if isEditing}
 						<div class="entity-view-header">
 							<h2 class="heading heading_3">{entity.name}</h2>
-							<div style="display: flex; gap: 10px;">
+							<div class="flex-row">
 								<button
 									type="button"
 									class="button button_secondary"

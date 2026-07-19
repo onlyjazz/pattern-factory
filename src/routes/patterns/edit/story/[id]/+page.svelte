@@ -74,7 +74,7 @@ import { API_BASE } from '$lib/config';
 			<div class="grid-col grid-col_24">
 				<div class="entity-card">
 					{#if saveError}
-						<div class="message message-error" style="margin-bottom: 20px;">Error: {saveError}</div>
+						<div class="message message-error" class="error-margin">Error: {saveError}</div>
 					{/if}
 
 					<div class="story-editor-container">
