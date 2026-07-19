@@ -226,7 +226,7 @@ import { API_BASE } from '$lib/config';
 			class="modal-content"
 			role="dialog"
 			aria-labelledby="edit-modal-title"
-			onclick={(e) => e.stopPropagation()}
+			tabindex="0"
 		>
 			<div class="modal-header">
 				<h2 id="edit-modal-title" class="heading heading_2">Edit Path</h2>
@@ -279,7 +279,7 @@ import { API_BASE } from '$lib/config';
 			class="modal-content"
 			role="dialog"
 			aria-labelledby="add-modal-title"
-			onclick={(e) => e.stopPropagation()}
+			tabindex="0"
 		>
 			<div class="modal-header">
 				<h2 id="add-modal-title" class="heading heading_2">Add Path</h2>

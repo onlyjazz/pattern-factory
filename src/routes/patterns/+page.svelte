@@ -200,8 +200,8 @@
 
 <!-- ADD MODAL -->
 {#if showAddModal}
-    <div class="modal-overlay" onclick={closeAddModal} onkeydown={(e) => e.key === 'Escape' && closeAddModal()} role="presentation">
-		<div class="modal-content" role="dialog" aria-labelledby="add-modal-title" tabindex="0" onclick={(e) => e.stopPropagation()}>
+		<div class="modal-overlay" onclick={closeAddModal} onkeydown={(e) => e.key === 'Escape' && closeAddModal()} role="presentation">
+		<div class="modal-content" role="dialog" aria-labelledby="add-modal-title" tabindex="0">
             <div class="modal-header">
                 <h2 id="add-modal-title" class="heading heading_2">Add Pattern</h2>
                 <button
