@@ -395,7 +395,7 @@ Accessibility is critical for usability and compliance. The codebase enforces st
   <!-- OVERLAY: Non-interactive backdrop, captures Escape key -->
   <div class="modal-overlay" onclick={closeModal} onkeydown={(e) => e.key === 'Escape' && closeModal()} role="presentation">
     <!-- DIALOG: Focusable container with proper ARIA attributes -->
-    <div class="modal-content" role="dialog" aria-labelledby="modal-title" tabindex="0" onclick={(e) => e.stopPropagation()}>
+    <div class="modal-content" role="dialog" aria-labelledby="modal-title" tabindex="0">
       <div class="modal-header">
         <h2 id="modal-title" class="heading heading_2">Modal Title</h2>
         <button class="modal-close" onclick={closeModal} title="Close">×</button>
@@ -422,7 +422,7 @@ Accessibility is critical for usability and compliance. The codebase enforces st
    - `role="dialog"` (accessibility role)
    - `aria-labelledby="{heading-id}"` (ties dialog to its h2 heading)
    - `tabindex="0"` (makes dialog focusable for keyboard users)
-   - `onclick={(e) => e.stopPropagation()}` (prevents backdrop click from closing)
+   - **NO onclick handler** (the overlay already handles all click events)
 
 3. **Modal heading** (h2 inside modal-header) must have:
    - `id=" modal-title"` (referenced by aria-labelledby)
