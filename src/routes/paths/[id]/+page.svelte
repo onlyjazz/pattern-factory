@@ -409,7 +409,7 @@ import { API_BASE } from '$lib/config';
 
 		<!-- OPTIONALITY MODAL -->
 		{#if showOptionalityModal}
-			<div class="modal-overlay" onmouseup={stopDrag} onmousemove={onDrag} onclick={closeOptionalityModal}>
+			<div class="modal-overlay" onmouseup={stopDrag} onmousemove={onDrag} onclick={closeOptionalityModal} onkeydown={(e) => e.key === 'Escape' && closeOptionalityModal()} role="presentation">
 				<div
 					class="modal-content"
 					role="dialog"
@@ -459,7 +459,7 @@ import { API_BASE } from '$lib/config';
 
 		<!-- EMPTY NODES CONFIRMATION MODAL -->
 		{#if showEmptyNodesModal}
-			<div class="modal-overlay" onclick={closeEmptyNodesModal}>
+			<div class="modal-overlay" onclick={closeEmptyNodesModal} onkeydown={(e) => e.key === 'Escape' && closeEmptyNodesModal()} role="presentation">
 				<div class="modal-content" role="dialog" aria-labelledby="empty-nodes-modal-title" onclick={(e) => e.stopPropagation()}>
 					<div class="modal-header">
 						<h2 id="empty-nodes-modal-title" class="heading heading_2">Save empty path?</h2>
@@ -479,7 +479,7 @@ import { API_BASE } from '$lib/config';
 
 		<!-- CAUSAL FLOW ERROR MODAL -->
 		{#if showCausalFlowErrorModal}
-			<div class="modal-overlay" onclick={closeCausalFlowErrorModal}>
+			<div class="modal-overlay" onclick={closeCausalFlowErrorModal} onkeydown={(e) => e.key === 'Escape' && closeCausalFlowErrorModal()} role="presentation">
 				<div class="modal-content" role="dialog" aria-labelledby="causal-flow-error-title" onclick={(e) => e.stopPropagation()}>
 					<div class="modal-header">
 						<h2 id="causal-flow-error-title" class="heading heading_2">From node after To node</h2>

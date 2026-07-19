@@ -221,7 +221,7 @@ import { API_BASE } from '$lib/config';
 
 <!-- EDIT MODAL -->
 {#if showEditModal && Object.keys(pathToEdit).length > 0}
-	<div class="modal-overlay" onclick={closeEditModal}>
+	<div class="modal-overlay" onclick={closeEditModal} onkeydown={(e) => e.key === 'Escape' && closeEditModal()} role="presentation">
 		<div
 			class="modal-content"
 			role="dialog"
@@ -274,7 +274,7 @@ import { API_BASE } from '$lib/config';
 
 <!-- ADD MODAL -->
 {#if showAddModal}
-	<div class="modal-overlay" onclick={closeAddModal}>
+	<div class="modal-overlay" onclick={closeAddModal} onkeydown={(e) => e.key === 'Escape' && closeAddModal()} role="presentation">
 		<div
 			class="modal-content"
 			role="dialog"
