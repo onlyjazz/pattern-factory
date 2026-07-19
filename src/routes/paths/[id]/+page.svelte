@@ -417,7 +417,7 @@ import { API_BASE } from '$lib/config';
 					tabindex="0"
 					style="transform: translate({modalPosition.x}px, {modalPosition.y}px);"
 				>
-					<div class="modal-header" onmousedown={startDrag}>
+					<div class="modal-header" onmousedown={startDrag} role="banner">
 						<h2 id="optionality-modal-title" class="heading heading_2">Optionality</h2>
 						<button class="modal-close" onclick={closeOptionalityModal} title="Close">×</button>
 					</div>
@@ -647,15 +647,6 @@ import { API_BASE } from '$lib/config';
 		box-shadow: 0 0 4px rgba(25, 118, 210, 0.2);
 	}
 
-	.table-checkbox {
-		width: 18px;
-		height: 18px;
-		cursor: pointer;
-		border: 1px solid #ccc;
-		border-radius: 3px;
-		box-sizing: border-box;
-	}
-
 	.button-icon {
 		background: none;
 		border: none;
@@ -684,10 +675,6 @@ import { API_BASE } from '$lib/config';
 		display: flex;
 		gap: 1rem;
 		justify-content: flex-end;
-	}
-
-	.button-group a {
-		text-decoration: none;
 	}
 
 	:global(.modal-overlay) {
