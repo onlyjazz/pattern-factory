@@ -196,10 +196,10 @@ import { API_BASE } from '$lib/config';
 									{#if showPatternDropdown && filteredPatterns.length > 0}
 										<div class="pattern-dropdown">
 											{#each filteredPatterns as pattern}
-												<div class="pattern-option" onclick={() => selectPattern(pattern)}>
+												<button type="button" class="pattern-option" onclick={() => selectPattern(pattern)} onkeydown={(e) => e.key === 'Enter' && selectPattern(pattern)}>
 													<div class="pattern-name">{pattern.name}</div>
 													<div class="pattern-description">{pattern.description}</div>
-												</div>
+												</button>
 											{/each}
 										</div>
 									{/if}
