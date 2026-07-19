@@ -341,11 +341,12 @@ import { API_BASE } from '$lib/config';
 
 <!-- ADD MODAL -->
 {#if showAddModal}
-	<div class="modal-overlay" onclick={closeAddModal}>
+	<div class="modal-overlay" onclick={closeAddModal} onkeydown={(e) => e.key === 'Escape' && closeAddModal()} role="presentation">
 		<div class="modal-content" role="dialog" aria-labelledby="add-modal-title" tabindex="0" onclick={(e) => e.stopPropagation()}>
 			<div class="modal-header">
 				<h2 id="add-modal-title" class="heading heading_2">Add Risk</h2>
 				<button
+					type="button"
 					class="modal-close"
 					onclick={closeAddModal}
 					title="Close"
