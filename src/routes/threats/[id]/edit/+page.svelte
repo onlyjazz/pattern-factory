@@ -102,13 +102,3 @@ import { API_BASE } from '$lib/config';
 	onCancel={handleCancel}
 	onSave={handleSave}
 />
-
-<style>
-	.card-selector-wrapper {
-		margin-top: 24px;
-	}
-
-	.card-selector-wrapper h3 {
-		margin: 0 0 12px 0;
-	}
-</style>
