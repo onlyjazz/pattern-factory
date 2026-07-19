@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { marked } from 'marked';
+import { API_BASE, FRONTEND_BASE } from '$lib/config';
 
 		interface Card {
 			id: string;
@@ -15,8 +16,8 @@
 	let activeModelName: string | null = null;
 	let storyLink: string = '';
 
-	const apiBase = 'http://localhost:8000';
-	const frontendBase = 'http://localhost:5173';
+	const apiBase = API_BASE;
+	const frontendBase = FRONTEND_BASE;
 
 	export let data: any;
 

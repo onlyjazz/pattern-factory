@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { marked } from 'marked';
+import { API_BASE } from '$lib/config';
 
 	let entity: any = null;
 	let storyContent = '';
@@ -9,7 +10,7 @@
 	let saveError: string | null = null;
 	let isSaving = false;
 
-	const apiBase = 'http://localhost:8000';
+	const apiBase = API_BASE;
 
 	$: if ($page.params.id) {
 		loadEntity($page.params.id);

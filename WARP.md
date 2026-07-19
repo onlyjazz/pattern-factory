@@ -184,7 +184,13 @@ npm run test  # Currently minimal test setup
 - `PITBOSS_STRATEGY`: llm_supervised (default)
 
 **Frontend**:
-- `VITE_API_BASE`: API endpoint for frontend (default: http://localhost:8000)
+- `VITE_API_BASE`: HTTP API base URL for frontend (default: http://localhost:8000). Used by all components to construct API endpoint URLs.
+- `VITE_WS_BASE`: WebSocket base URL for frontend (default: ws://localhost:8000). Used by ChatInterface component for real-time agent communication.
+- `VITE_FRONTEND_BASE`: Frontend application base URL (default: http://localhost:5173). Used to construct links to frontend pages displayed in the UI.
+
+These variables enable deployments to different environments without code changes. For example:
+- Development: `VITE_API_BASE=http://localhost:8000 VITE_WS_BASE=ws://localhost:8000 VITE_FRONTEND_BASE=http://localhost:5173`
+- Production: `VITE_API_BASE=https://api.example.com VITE_WS_BASE=wss://api.example.com VITE_FRONTEND_BASE=https://app.example.com`
 
 See `.env.example` for template.
 

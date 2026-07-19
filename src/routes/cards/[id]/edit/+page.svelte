@@ -3,6 +3,7 @@
 	import { page } from '$app/stores';
 	import type { Card, Pattern } from '$lib/db';
 	import CheckboxField from '$lib/CheckboxField.svelte';
+import { API_BASE } from '$lib/config';
 
 	let card: Card | null = null;
 	let patterns: Pattern[] = [];
@@ -17,7 +18,7 @@
 	let showPatternDropdown = false;
 	let selectedPatternId: number | null = null;
 
-	const apiBase = 'http://localhost:8000';
+	const apiBase = API_BASE;
 
 	onMount(async () => {
 		try {

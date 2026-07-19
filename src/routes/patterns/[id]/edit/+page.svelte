@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import type { Pattern } from '$lib/db';
+import { API_BASE } from '$lib/config';
 
 	let pattern: Pattern | null = null;
 	let loading = true;
@@ -9,7 +10,7 @@
 	let saveError: string | null = null;
 	let isSaving = false;
 
-	const apiBase = 'http://localhost:8000';
+	const apiBase = API_BASE;
 	const kinds = ['pattern', 'anti-pattern'];
 	const taxonomyOptions = [
 		'',

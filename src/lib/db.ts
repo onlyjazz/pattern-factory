@@ -1,3 +1,4 @@
+import { API_BASE } from './config';
 export type ID = string
 export interface Pattern { id: ID; name: string; description: string; kind: string; story_md?: string | null; taxonomy?: string | null; }
 
@@ -127,14 +128,13 @@ export interface Path {
     updated_at?: string;
 }
 
-const apiBase = "http://localhost:8000"
 
 export async function getPattern(id: ID) {
-    const response = await fetch(`${apiBase}/patterns/${id}`)
+    const response = await fetch(`${API_BASE}/patterns/${id}`)
     return await response.json()
 }
 
 export async function getPath(id: ID) {
-    const response = await fetch(`${apiBase}/paths/${id}`)
+    const response = await fetch(`${API_BASE}/paths/${id}`)
     return await response.json()
 }

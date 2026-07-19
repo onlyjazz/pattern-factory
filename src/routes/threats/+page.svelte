@@ -3,6 +3,7 @@
 	import { globalSearch } from '$lib/searchStore';
 	import { modeStore } from '$lib/modeStore';
 	import type { Threat, Card } from '$lib/db';
+import { API_BASE } from '$lib/config';
 	
 	let threats: Threat[] = [];
 	let cards: Card[] = [];
@@ -45,7 +46,7 @@
 	let editSelectedCardId: string | null = null;
 	let editShowCardDropdown = false;
 	
-	const apiBase = 'http://localhost:8000';
+	const apiBase = API_BASE;
 	
 	onMount(async () => {
 		const unsubscribe = modeStore.subscribe((state) => {

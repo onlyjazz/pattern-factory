@@ -2,6 +2,7 @@
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import { modeStore } from '$lib/modeStore';
+	import { API_BASE } from '$lib/config';
 import { Network, FileText, Route, ListTree, AlertTriangle, Box, Bug, Shield, List, Gauge } from 'lucide-svelte';
 
 	let currentPath = '';
@@ -9,7 +10,7 @@ import { Network, FileText, Route, ListTree, AlertTriangle, Box, Bug, Shield, Li
 	let viewsLoading = false;
 	let viewsError = '';
 	let currentMode: string = 'explore';
-	const apiBase = 'http://localhost:8000';
+	const apiBase = API_BASE;
 
 	const exploreLinks = [
 		{ name: "Patterns", href: "/patterns", icon: Network },

@@ -2,6 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import ChatMessage from './ChatMessage.svelte';
 	import ChatInput from './ChatInput.svelte';
+	import { WS_BASE } from './config';
 
 	interface Message {
 		id: string;
@@ -31,7 +32,7 @@
 
 	export let onClose = () => {};
 
-	const WS_URL = 'ws://localhost:8000/ws';
+	const WS_URL = `${WS_BASE}/ws`;
 
 	onMount(() => {
 		sessionId = `session-${Math.random().toString(36).slice(2, 9)}`;

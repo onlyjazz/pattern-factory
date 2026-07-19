@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { marked } from 'marked';
+import { API_BASE } from '$lib/config';
 
 	interface Card {
 		id: string;
@@ -15,7 +16,7 @@
 	let saving = false;
 	let saveError: string | null = null;
 
-	const apiBase = 'http://localhost:8000';
+	const apiBase = API_BASE;
 
 	export let data: any;
 

@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import CountermeasureDetail from '$lib/CountermeasureDetail.svelte';
+import { API_BASE } from '$lib/config';
 
 	let countermeasure: any = null;
 	let loading = true;
@@ -9,7 +10,7 @@
 	let saveError: string | null = null;
 	let isSaving = false;
 
-	const apiBase = 'http://localhost:8000';
+	const apiBase = API_BASE;
 
 	onMount(async () => {
 		try {

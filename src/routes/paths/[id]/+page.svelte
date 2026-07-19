@@ -2,6 +2,7 @@
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import type { Path, PathNode, PathEdge } from '$lib/db';
+import { API_BASE } from '$lib/config';
 
 	let path: Path | null = null;
 	let loading = true;
@@ -30,7 +31,7 @@
 	let showCausalFlowErrorModal = false;
 
 	const nodeTypes = ['assumption', 'decision', 'state'];
-	const apiBase = 'http://localhost:8000';
+	const apiBase = API_BASE;
 
 	onMount(async () => {
 		try {

@@ -4,6 +4,7 @@
 	import { globalSearch } from '$lib/searchStore';
 	import { modeStore } from '$lib/modeStore';
 	import type { Model } from '$lib/db';
+import { API_BASE } from '$lib/config';
 	
 	let models: Model[] = [];
 	let loading = true;
@@ -25,7 +26,7 @@
 	let sortField: keyof Model | null = null;
 	let sortDirection: 'asc' | 'desc' = 'asc';
 	
-	const apiBase = 'http://localhost:8000';
+	const apiBase = API_BASE;
 	
 	onMount(async () => {
 		try {

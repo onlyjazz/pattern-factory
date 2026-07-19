@@ -2,6 +2,7 @@
         import { onMount } from 'svelte';
         import { globalSearch } from '$lib/searchStore';
         import type { Pattern } from "$lib/db";
+        import { API_BASE } from '$lib/config';
         
         let patterns: Pattern[] = [];
         let selectedKind = '';
@@ -17,7 +18,7 @@
         let sortField: keyof Pattern | null = null;
         let sortDirection: 'asc' | 'desc' = 'asc';
         
-        const apiBase = "http://localhost:8000";
+        const apiBase = API_BASE;
         
         onMount(async () => {
                 try {

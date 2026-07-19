@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { globalSearch } from '$lib/searchStore';
 	import type { Card, Pattern } from '$lib/db';
+import { API_BASE } from '$lib/config';
 	
 	let cards: (Card & { pattern_name?: string })[] = [];
 	let loading = true;
@@ -24,7 +25,7 @@
 	let selectedPatternId: number | null = null;
 	let showPatternDropdown = false;
 	
-	const apiBase = 'http://localhost:8000';
+	const apiBase = API_BASE;
 	
 	onMount(async () => {
 		try {

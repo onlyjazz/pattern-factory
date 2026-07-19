@@ -3,6 +3,7 @@
 	import { globalSearch } from '$lib/searchStore';
 	import { modeStore } from '$lib/modeStore';
 	import type { Vulnerability } from '$lib/db';
+import { API_BASE } from '$lib/config';
 	
 	let vulnerabilities: Vulnerability[] = [];
 	let loading = true;
@@ -22,7 +23,7 @@
 	let sortField: keyof Vulnerability | string | null = 'name';
 	let sortDirection: 'asc' | 'desc' = 'asc';
 	
-	const apiBase = 'http://localhost:8000';
+	const apiBase = API_BASE;
 	
 	onMount(async () => {
 		const unsubscribe = modeStore.subscribe((state) => {

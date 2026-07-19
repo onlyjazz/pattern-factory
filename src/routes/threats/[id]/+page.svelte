@@ -2,12 +2,13 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import ThreatDetail from '$lib/ThreatDetail.svelte';
+import { API_BASE } from '$lib/config';
 
 	let threat: any = null;
 	let loading = true;
 	let error: string | null = null;
 
-	const apiBase = 'http://localhost:8000';
+	const apiBase = API_BASE;
 
 	onMount(async () => {
 		try {

@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
 
-const API_BASE = process.env.VITE_API_BASE || 'http://localhost:8000';
+import { API_BASE } from '$lib/config';
 
 export const GET: RequestHandler = async ({ params }) => {
 	const { id } = params;

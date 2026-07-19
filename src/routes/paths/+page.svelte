@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { globalSearch } from '$lib/searchStore';
 	import type { Path } from '$lib/db';
+import { API_BASE } from '$lib/config';
 
 	let paths: Path[] = [];
 	let loading = true;
@@ -16,7 +17,7 @@
 	let sortField: keyof Path | null = null;
 	let sortDirection: 'asc' | 'desc' = 'asc';
 
-	const apiBase = 'http://localhost:8000';
+	const apiBase = API_BASE;
 
 	onMount(async () => {
 		try {

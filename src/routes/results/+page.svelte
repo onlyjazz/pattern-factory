@@ -3,6 +3,7 @@
   import { onMount } from 'svelte';
   import { globalSearch } from '$lib/searchStore';
   import ExportCSV from '$lib/ExportCSV.svelte';
+import { API_BASE } from '$lib/config';
   
   let viewName = '';
   let viewTitle = 'Views';
@@ -14,7 +15,7 @@
   let filteredData: any[] = [];
   let sortColumn: string | null = null;
   let sortDirection: 'asc' | 'desc' = 'asc';
-  const apiBase = 'http://localhost:8000';
+  const apiBase = API_BASE;
   
   $: filteredData = updateFilteredData(data, $globalSearch, sortColumn, sortDirection);
   

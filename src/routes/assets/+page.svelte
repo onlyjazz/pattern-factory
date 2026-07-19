@@ -3,6 +3,7 @@
 	import { globalSearch } from '$lib/searchStore';
 	import { modeStore } from '$lib/modeStore';
 	import type { Asset } from '$lib/db';
+import { API_BASE } from '$lib/config';
 	
 	let assets: Asset[] = [];
 	let loading = true;
@@ -20,7 +21,7 @@
 	let sortField: keyof Asset | null = 'tag';
 	let sortDirection: 'asc' | 'desc' = 'asc';
 	
-	const apiBase = 'http://localhost:8000';
+	const apiBase = API_BASE;
 	
 	onMount(async () => {
 		const unsubscribe = modeStore.subscribe((state) => {

@@ -1,11 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+import { API_BASE } from '$lib/config';
   
   let threats: any[] = [];
   let loading = true;
   let error = '';
   let chartInitialized = false;
-  const apiBase = 'http://localhost:8000';
+  const apiBase = API_BASE;
   
   function formatNumber(num: number): string {
     if (num >= 1000000) {

@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store';
+import { API_BASE } from './config';
 
 export type AppMode = 'explore' | 'model';
 
@@ -72,12 +73,12 @@ function createModeStore() {
 		// When switching TO model mode, fetch active model from backend
 		if (mode === 'model') {
 			try {
-				const response = await fetch('http://localhost:8000/active-model');
+				const response = await fetch(`${API_BASE}/active-model`);
 				if (response.ok) {
 					const data = await response.json();
 					if (data.model_id) {
 						// Fetch model details to get the name
-						const modelResponse = await fetch(`http://localhost:8000/models/${data.model_id}`);
+						const modelResponse = await fetch(`${API_BASE}/models/${data.model_id}`);
 						if (modelResponse.ok) {
 							const modelData = await modelResponse.json();
 							set({ mode, activeModel: data.model_id, activeModelName: modelData.name });

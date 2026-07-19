@@ -3,6 +3,7 @@
 	import { page } from '$app/stores';
 	import type { Model } from '$lib/db';
 	import CheckboxField from '$lib/CheckboxField.svelte';
+import { API_BASE } from '$lib/config';
 	
 	let model: Partial<Model> = {};
 	let loading = true;
@@ -11,7 +12,7 @@
 	let isSaving = false;
 	let duplicateModel = false;
 	
-	const apiBase = 'http://localhost:8000';
+	const apiBase = API_BASE;
 	
 	onMount(async () => {
 		// Get model ID from route params

@@ -2,12 +2,13 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import type { Card } from '$lib/db';
+import { API_BASE } from '$lib/config';
 
 	let card: Card | null = null;
 	let loading = true;
 	let error: string | null = null;
 
-	const apiBase = 'http://localhost:8000';
+	const apiBase = API_BASE;
 
 	onMount(async () => {
 		try {

@@ -3,6 +3,7 @@
 	import { page } from '$app/stores';
 	import ThreatDetail from '$lib/ThreatDetail.svelte';
 	import type { SelectItem } from '$lib/SingleSelect.svelte';
+import { API_BASE } from '$lib/config';
 
 	let threat: any = null;
 	let loading = true;
@@ -14,7 +15,7 @@
 	let cardItems: SelectItem[] = [];
 	let cardsLoading = false;
 
-	const apiBase = 'http://localhost:8000';
+	const apiBase = API_BASE;
 
 	async function loadCards() {
 		try {
