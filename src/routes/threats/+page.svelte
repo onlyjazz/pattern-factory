@@ -342,7 +342,7 @@ import { API_BASE } from '$lib/config';
 <!-- ADD MODAL -->
 {#if showAddModal}
 	<div class="modal-overlay" onclick={closeAddModal}>
-		<div class="modal-content" role="dialog" aria-labelledby="add-modal-title" onclick={(e) => e.stopPropagation()}>
+		<div class="modal-content" role="dialog" aria-labelledby="add-modal-title" tabindex="0" onclick={(e) => e.stopPropagation()}>
 			<div class="modal-header">
 				<h2 id="add-modal-title" class="heading heading_2">Add Risk</h2>
 				<button
@@ -740,82 +740,6 @@ import { API_BASE } from '$lib/config';
 		content: ' ▼';
 		opacity: 1;
 		color: #0066cc;
-	}
-
-	.card-search-container {
-		position: relative;
-	}
-
-	.card-dropdown {
-		position: absolute;
-		top: 100%;
-		left: 0;
-		right: 0;
-		background: white;
-		border: 1px solid #ddd;
-		border-top: none;
-		border-radius: 0 0 4px 4px;
-		max-height: 150px;
-		overflow-y: auto;
-		z-index: 1001;
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-	}
-
-	.card-option {
-		padding: 10px 12px;
-		cursor: pointer;
-		border-bottom: 1px solid #f0f0f0;
-	}
-
-	.card-option:hover {
-		background-color: #f5f5f5;
-	}
-
-	.card-name {
-		font-weight: 500;
-		color: #333;
-		font-size: 14px;
-	}
-
-	.card-description {
-		font-size: 12px;
-		color: #666;
-		margin-top: 4px;
-	}
-
-	.selected-cards {
-		margin-top: 12px;
-		display: flex;
-		flex-wrap: wrap;
-		gap: 8px;
-	}
-
-	.selected-card {
-		display: inline-flex;
-		align-items: center;
-		gap: 6px;
-		background: #e8f4f8;
-		border: 1px solid #0066cc;
-		border-radius: 4px;
-		padding: 4px 8px;
-		font-size: 13px;
-		color: #0066cc;
-	}
-
-	.remove-card {
-		background: none;
-		border: none;
-		color: #0066cc;
-		cursor: pointer;
-		font-size: 16px;
-		padding: 0;
-		line-height: 1;
-		display: flex;
-		align-items: center;
-	}
-
-	.remove-card:hover {
-		color: #004499;
 	}
 
 	.stride-checkboxes {
