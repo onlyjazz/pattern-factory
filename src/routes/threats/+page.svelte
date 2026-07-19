@@ -355,9 +355,9 @@ import { API_BASE } from '$lib/config';
 			</div>
 
 			<div class="modal-body">
-				{#if addModalError}
-					<div class="message message-error" class="error-margin">Error: {addModalError}</div>
-				{/if}
+          {#if addModalError}
+            <div class="message message-error error-margin">Error: {addModalError}</div>
+          {/if}
 				<form onsubmit={(e) => {
 					e.preventDefault();
 					handleCreate();
