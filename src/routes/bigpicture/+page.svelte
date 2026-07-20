@@ -56,9 +56,9 @@ import { API_BASE } from '$lib/config';
   
   onMount(async () => {
     try {
-      // Add a 5-second timeout to prevent hanging
+      // Add a 10-second timeout to prevent hanging
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
       
       const response = await fetch(`${apiBase}/query/THRIM`, { signal: controller.signal });
       clearTimeout(timeoutId);
@@ -72,10 +72,16 @@ import { API_BASE } from '$lib/config';
         }
       } else {
         const allData = await response.json();
-        // Get top 5 rows
-        threats = allData.slice(0, 5);
         
-        // Only load Google Charts if we have threat data
+        // Filter out rows with all null threat values, keep only rows with actual threat data
+        const validThreats = allData.filter((t: any) => 
+          t.var_before_mitigation !== null && t.var_before_mitigation !== undefined
+        );
+        
+        // Get top 5 rows with valid data
+        threats = validThreats.slice(0, 5);
+        
+        // Only load Google Charts if we have valid threat data
         if (threats.length > 0) {
           // Load Google Charts library after DOM is ready
           if (!window.google) {
