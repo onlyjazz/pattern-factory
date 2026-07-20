@@ -62,28 +62,31 @@ import { API_BASE } from '$lib/config';
       
       // Get top 5 rows
       threats = allData.slice(0, 5);
+      
+      // Only load Google Charts if we have threat data
+      if (threats.length > 0) {
+        // Load Google Charts library after DOM is ready
+        if (!window.google) {
+          const script = document.createElement('script');
+          script.src = 'https://www.gstatic.com/charts/loader.js';
+          script.onload = () => {
+            google.charts.load('current', { packages: ['corechart'] });
+            google.charts.setOnLoadCallback(() => {
+              drawChart();
+            });
+          };
+          document.head.appendChild(script);
+        } else {
+          google.charts.load('current', { packages: ['corechart'] });
+          google.charts.setOnLoadCallback(() => {
+            drawChart();
+          });
+        }
+      }
     } catch (e) {
       error = e instanceof Error ? e.message : 'Unknown error';
     } finally {
       loading = false;
-    }
-    
-    // Load Google Charts library after DOM is ready
-    if (!window.google) {
-      const script = document.createElement('script');
-      script.src = 'https://www.gstatic.com/charts/loader.js';
-      script.onload = () => {
-        google.charts.load('current', { packages: ['corechart'] });
-        google.charts.setOnLoadCallback(() => {
-          drawChart();
-        });
-      };
-      document.head.appendChild(script);
-    } else {
-      google.charts.load('current', { packages: ['corechart'] });
-      google.charts.setOnLoadCallback(() => {
-        drawChart();
-      });
     }
   });
 </script>
@@ -99,7 +102,7 @@ import { API_BASE } from '$lib/config';
   {:else if error}
     <div class="message message-error">Error: {error}</div>
   {:else if threats.length === 0}
-    <div class="message">No data found</div>
+    <div class="message">No threat entities</div>
   {:else}
     <div class="chart-container">
       <div id="curve_chart" class="google-chart"></div>
