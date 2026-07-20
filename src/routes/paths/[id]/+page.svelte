@@ -460,7 +460,7 @@ import { API_BASE } from '$lib/config';
 		<!-- EMPTY NODES CONFIRMATION MODAL -->
 		{#if showEmptyNodesModal}
 			<div class="modal-overlay" onclick={closeEmptyNodesModal} onkeydown={(e) => e.key === 'Escape' && closeEmptyNodesModal()} role="presentation">
-				<div class="modal-content" role="dialog" aria-labelledby="empty-nodes-modal-title" tabindex="0">
+				<div class="modal-content" role="dialog" aria-labelledby="empty-nodes-modal-title" tabindex="0" onclick={(e) => e.stopPropagation()}>
 					<div class="modal-header">
 						<h2 id="empty-nodes-modal-title" class="heading heading_2">Save empty path?</h2>
 						<button class="modal-close" onclick={closeEmptyNodesModal} title="Close">×</button>
@@ -480,7 +480,7 @@ import { API_BASE } from '$lib/config';
 		<!-- CAUSAL FLOW ERROR MODAL -->
 		{#if showCausalFlowErrorModal}
 			<div class="modal-overlay" onclick={closeCausalFlowErrorModal} onkeydown={(e) => e.key === 'Escape' && closeCausalFlowErrorModal()} role="presentation">
-				<div class="modal-content" role="dialog" aria-labelledby="causal-flow-error-title" tabindex="0">
+				<div class="modal-content" role="dialog" aria-labelledby="causal-flow-error-title" tabindex="0" onclick={(e) => e.stopPropagation()}>
 					<div class="modal-header">
 						<h2 id="causal-flow-error-title" class="heading heading_2">From node after To node</h2>
 						<button class="modal-close" onclick={closeCausalFlowErrorModal} title="Close">×</button>
