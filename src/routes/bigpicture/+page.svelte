@@ -56,35 +56,53 @@ import { API_BASE } from '$lib/config';
   
   onMount(async () => {
     try {
-      const response = await fetch(`${apiBase}/query/THRIM`);
-      if (!response.ok) throw new Error('Failed to fetch THRIM data');
-      const allData = await response.json();
+      // Add a 5-second timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
       
-      // Get top 5 rows
-      threats = allData.slice(0, 5);
+      const response = await fetch(`${apiBase}/query/THRIM`, { signal: controller.signal });
+      clearTimeout(timeoutId);
       
-      // Only load Google Charts if we have threat data
-      if (threats.length > 0) {
-        // Load Google Charts library after DOM is ready
-        if (!window.google) {
-          const script = document.createElement('script');
-          script.src = 'https://www.gstatic.com/charts/loader.js';
-          script.onload = () => {
+      if (!response.ok) {
+        // If 404 or other error, treat as no data
+        if (response.status === 404 || response.status === 400) {
+          threats = [];
+        } else {
+          throw new Error(`Server error: ${response.status}`);
+        }
+      } else {
+        const allData = await response.json();
+        // Get top 5 rows
+        threats = allData.slice(0, 5);
+        
+        // Only load Google Charts if we have threat data
+        if (threats.length > 0) {
+          // Load Google Charts library after DOM is ready
+          if (!window.google) {
+            const script = document.createElement('script');
+            script.src = 'https://www.gstatic.com/charts/loader.js';
+            script.onload = () => {
+              google.charts.load('current', { packages: ['corechart'] });
+              google.charts.setOnLoadCallback(() => {
+                drawChart();
+              });
+            };
+            document.head.appendChild(script);
+          } else {
             google.charts.load('current', { packages: ['corechart'] });
             google.charts.setOnLoadCallback(() => {
               drawChart();
             });
-          };
-          document.head.appendChild(script);
-        } else {
-          google.charts.load('current', { packages: ['corechart'] });
-          google.charts.setOnLoadCallback(() => {
-            drawChart();
-          });
+          }
         }
       }
     } catch (e) {
-      error = e instanceof Error ? e.message : 'Unknown error';
+      // Treat aborts and errors as "no data"
+      if (e instanceof Error && e.name === 'AbortError') {
+        threats = [];
+      } else {
+        error = e instanceof Error ? e.message : 'Unknown error';
+      }
     } finally {
       loading = false;
     }
