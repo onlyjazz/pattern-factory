@@ -1735,8 +1735,8 @@ async def websocket_endpoint(websocket: WebSocket):
 # -------------------------------------------------------------------------
 @app.post("/log", tags=["System"])
 async def write_log(
-    event: str,
-    context: dict = Query({}, description="Optional JSON context object")
+    event: str = Query(..., description="Event name (e.g., 'pattern_created', 'model_activated')"),
+    context: str = Query("{}", description="Optional JSON context as string")
 ):
     """Record a system event to the audit log.
     
@@ -1745,7 +1745,7 @@ async def write_log(
     
     Args:
         event (str): Human-readable event description (e.g., "pattern_created", "model_activated")
-        context (dict): Optional JSON object with event-specific metadata (default: {})
+        context (str): Optional JSON context string (default: "{}")
     
     Returns:
         dict: Confirmation with fields:
@@ -1753,14 +1753,20 @@ async def write_log(
             - event: The logged event name
     
     Example:
-        POST /log?event=user_action&context={"action": "export_pdf", "user_id": 42}
+        POST /log?event=user_action&context={"action":"export_pdf","user_id":42}
         Returns: {"status": "ok", "event": "user_action"}
     """
     pool = get_pg_pool()
+    try:
+        # Parse context as JSON string
+        context_obj = json.loads(context) if context else {}
+    except json.JSONDecodeError:
+        context_obj = {}
+    
     async with pool.acquire() as conn:
         await conn.execute(
             "INSERT INTO system_log (event, context) VALUES ($1, $2)",
-            event, json.dumps(context)
+            event, json.dumps(context_obj)
         )
     return {"status": "ok", "event": event}
 
