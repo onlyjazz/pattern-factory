@@ -38,12 +38,101 @@ POSTGRES_DSN = f"postgresql://{PGUSER}:{PGPASSWORD}@{PGHOST}:{PGPORT}/{PGDATABAS
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # -------------------------------------------------------------------------
-# FastAPI Init with CORS
+# FastAPI Init with CORS and OpenAPI Documentation
 # -------------------------------------------------------------------------
 app = FastAPI(
     title="Pattern Factory API",
-    description="Backend API (Postgres + Pitboss)",
-    version="2.1.0"
+    description="""Pattern Factory Backend API providing REST endpoints for pattern management,
+threat modeling, and Pitboss supervisor integration. The API supports:
+
+- **Patterns**: Create, read, and manage pattern definitions
+- **Episodes & Guests**: Manage podcast episodes and guest information
+- **Organizations & Posts**: Organize content sources
+- **Threat Modeling**: Manage threats, assets, vulnerabilities, and countermeasures
+- **Views Registry**: Access pre-built materialized views
+- **Universal Query**: Execute generic queries on any table/view
+- **WebSocket**: Real-time Pitboss supervisor communication
+- **System Logging**: Event auditing and diagnostics
+
+## Key Features
+
+- **Async Postgres**: Connection pooling with asyncpg
+- **OpenAPI/Swagger**: Full interactive documentation at `/docs` and `/redoc`
+- **CORS Enabled**: Development-ready CORS configuration
+- **Pitboss Integration**: WebSocket endpoint for LLM-driven rule execution
+- **Mode-aware Views**: Explore vs. Model mode filtering
+
+## Database
+
+PostgreSQL 17 with async connection pooling (min=1, max=5).
+Database connection configured via environment variables: PGHOST, PGPORT, PGUSER, PGDATABASE, PGPASSWORD.
+""",
+    version="2.1.0",
+    contact={
+        "name": "Pattern Factory Team",
+        "url": "https://github.com/onlyjazz/pattern-factory",
+    },
+    license_info={
+        "name": "MIT",
+    },
+    openapi_tags=[
+        {
+            "name": "Health",
+            "description": "API health and diagnostics endpoints",
+        },
+        {
+            "name": "Patterns",
+            "description": "Pattern CRUD operations and search",
+        },
+        {
+            "name": "Episodes",
+            "description": "Podcast episode management",
+        },
+        {
+            "name": "Guests",
+            "description": "Guest/speaker information",
+        },
+        {
+            "name": "Organizations",
+            "description": "Organization management",
+        },
+        {
+            "name": "Posts",
+            "description": "Blog post and content management",
+        },
+        {
+            "name": "Threats",
+            "description": "Risk/threat management for threat models",
+        },
+        {
+            "name": "Assets",
+            "description": "Asset management in threat models",
+        },
+        {
+            "name": "Vulnerabilities",
+            "description": "Vulnerability management",
+        },
+        {
+            "name": "Countermeasures",
+            "description": "Security countermeasure management",
+        },
+        {
+            "name": "Views",
+            "description": "Materialized view registry and metadata",
+        },
+        {
+            "name": "Query",
+            "description": "Universal table/view query endpoint",
+        },
+        {
+            "name": "WebSocket",
+            "description": "Real-time WebSocket communication for Pitboss supervisor",
+        },
+        {
+            "name": "System",
+            "description": "System logging and diagnostics",
+        },
+    ],
 )
 
 # Add CORS middleware FIRST before any routes
@@ -126,8 +215,12 @@ async def startup_openai():
 # -------------------------------------------------------------------------
 # Root Endpoint
 # -------------------------------------------------------------------------
-@app.get("/")
+@app.get("/", tags=["Health"])
 async def root():
+    """API health check and status information.
+    
+    Returns basic information about the API status, database connection, and timestamp.
+    """
     return {
         "status": "ok",
         "message": "Pattern Factory API operational",
@@ -138,8 +231,16 @@ async def root():
 # -------------------------------------------------------------------------
 # GET /patterns
 # -------------------------------------------------------------------------
-@app.get("/patterns")
+@app.get("/patterns", tags=["Patterns"])
 async def get_patterns():
+    """Retrieve all patterns.
+    
+    Returns a list of all pattern definitions in the system, ordered by creation date (newest first).
+    Each pattern includes name, description, kind (pattern or anti-pattern), story, taxonomy, and metadata.
+    
+    Returns:
+        List[dict]: Array of pattern objects with fields: id, name, description, kind, story, taxonomy, created_at, updated_at
+    """
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
@@ -164,8 +265,18 @@ class PatternCreate(BaseModel):
 # GET /patterns/search (MUST come before /patterns/{pattern_id})
 # -------------------------------------------------------------------------
 @app.get("/patterns/search", tags=["Patterns"])
-async def search_patterns(q: str = Query("")):
-    """Search patterns by name or description for autocomplete."""
+async def search_patterns(q: str = Query("", description="Search query - matches pattern name or description")):
+    """Search patterns by name or description.
+    
+    Performs a case-insensitive wildcard search on pattern names and descriptions.
+    Useful for autocomplete functionality in the frontend.
+    
+    Args:
+        q (str): Search query string (supports LIKE wildcards)
+    
+    Returns:
+        List[dict]: Matching patterns (max 50) with fields: id, name, description, kind
+    """
     pool = get_pg_pool()
     search_term = f"%{q}%"
     async with pool.acquire() as conn:
@@ -179,7 +290,22 @@ async def search_patterns(q: str = Query("")):
     return [dict(r) for r in rows]
 
 @app.get("/patterns/{pattern_id}", tags=["Patterns"])
-async def get_pattern(pattern_id: int):
+async def get_pattern(
+    pattern_id: int
+):
+    """Retrieve a single pattern by ID.
+    
+    Returns the complete pattern definition including story and taxonomy metadata.
+    
+    Args:
+        pattern_id (int): The pattern ID
+    
+    Returns:
+        dict: Pattern object with fields: id, name, description, kind, story, taxonomy, created_at, updated_at
+    
+    Raises:
+        404: If pattern not found
+    """
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
@@ -191,11 +317,26 @@ async def get_pattern(pattern_id: int):
             pattern_id
         )
     if not row:
-        return {"error": f"Pattern {pattern_id} not found"}
+        raise HTTPException(status_code=404, detail=f"Pattern {pattern_id} not found")
     return dict(row)
 
 @app.post("/patterns", tags=["Patterns"])
 async def create_pattern(pattern: PatternCreate):
+    """Create a new pattern.
+    
+    Creates a new pattern definition with name, description, and kind.
+    Kind must be either 'pattern' or 'anti-pattern'.
+    Story and taxonomy fields are optional metadata.
+    
+    Args:
+        pattern (PatternCreate): Pattern data with required fields: name, description, kind
+    
+    Returns:
+        dict: Created pattern object with generated id and timestamps
+    
+    Raises:
+        422: Invalid request body
+    """
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
@@ -211,8 +352,9 @@ async def create_pattern(pattern: PatternCreate):
             pattern.taxonomy
         )
         return dict(row)
-# Upda
+
 class PatternUpdate(BaseModel):
+    """Pattern update request body (all fields optional)."""
     name: str | None = None
     description: str | None = None
     kind: str | None = None
@@ -221,6 +363,22 @@ class PatternUpdate(BaseModel):
 
 @app.put("/patterns/{pattern_id}", tags=["Patterns"])
 async def update_pattern(pattern_id: int, patch: PatternUpdate):
+    """Update an existing pattern.
+    
+    Updates one or more fields of a pattern. Only provided fields are updated;
+    omitted fields retain their current values.
+    
+    Args:
+        pattern_id (int): The pattern ID
+        patch (PatternUpdate): Fields to update (all optional)
+    
+    Returns:
+        dict: Updated pattern object
+    
+    Raises:
+        404: Pattern not found
+        422: Invalid request body
+    """
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
@@ -244,11 +402,24 @@ async def update_pattern(pattern_id: int, patch: PatternUpdate):
             pattern_id
         )
         if not row:
-            return {"error": f"Pattern {pattern_id} not found"}
+            raise HTTPException(status_code=404, detail=f"Pattern {pattern_id} not found")
         return dict(row)
-# Delete pattern
+
 @app.delete("/patterns/{pattern_id}", tags=["Patterns"])
 async def delete_pattern(pattern_id: int):
+    """Delete a pattern.
+    
+    Permanently deletes a pattern and all associated data.
+    
+    Args:
+        pattern_id (int): The pattern ID
+    
+    Returns:
+        dict: Confirmation with deleted_id
+    
+    Raises:
+        404: Pattern not found
+    """
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         result = await conn.execute(
@@ -256,7 +427,7 @@ async def delete_pattern(pattern_id: int):
         )
         # asyncpg returns: "DELETE 1" or "DELETE 0"
         if result == "DELETE 0":
-            return {"error": f"Pattern {pattern_id} not found"}
+            raise HTTPException(status_code=404, detail=f"Pattern {pattern_id} not found")
     return {"status": "ok", "deleted_id": pattern_id}
 
 # -------------------------------------------------------------------------
@@ -1344,16 +1515,37 @@ async def delete_countermeasure(countermeasure_id: int):
 # -------------------------------------------------------------------------
 # GET /views  (Mode-aware view registry)
 # -------------------------------------------------------------------------
-@app.get("/views")
-async def get_views(mode: str = 'explore', limit: int = 200):
-    """
-    Get views filtered by mode.
+@app.get("/views", tags=["Views"])
+async def get_views(
+    mode: str = Query('explore', description="Filter views by mode: 'explore' or 'model'"),
+    limit: int = Query(200, description="Maximum number of views to return")
+):
+    """Get all registered views filtered by application mode.
     
-    Parameters:
-        mode: 'explore' or 'model' (default: 'explore')
-        limit: Maximum number of views to return (default: 200)
+    Returns metadata about materialized views from the views_registry table.
+    Views are organized by mode to support different application workflows:
+    - **explore**: Views for pattern analysis and data exploration
+    - **model**: Views for threat modeling and risk analysis
     
-    Returns list of views from views_registry where mode matches the requested mode.
+    Args:
+        mode (str): Filter views by mode ('explore' or 'model', default: 'explore')
+        limit (int): Maximum number of views to return (default: 200)
+    
+    Returns:
+        List[dict]: Array of view metadata objects with fields:
+            - id: View ID in registry
+            - name: Human-readable view name
+            - table_name: SQL table/view name for use with /query endpoint
+            - mode: Application mode ('explore' or 'model')
+            - created_at: Creation timestamp
+            - updated_at: Last update timestamp
+    
+    Raises:
+        400: If mode is not 'explore' or 'model'
+    
+    Example:
+        GET /views?mode=explore&limit=50
+        Returns: [{"id": 1, "name": "List Organizations", "table_name": "LIST_ORGS", "mode": "explore", ...}]
     """
     if mode not in ['explore', 'model']:
         raise HTTPException(status_code=400, detail="Invalid mode. Must be 'explore' or 'model'")
@@ -1376,35 +1568,134 @@ async def get_views(mode: str = 'explore', limit: int = 200):
 # -------------------------------------------------------------------------
 # GET /query/{table}  (Universal table reader)
 # -------------------------------------------------------------------------
-@app.get("/query/{table}")
-async def query_table(table: str, limit: int = 200):
-    """
-    Generic SQL reader for any table.
+@app.get("/query/{table}", tags=["Query"])
+async def query_table(
+    table: str,
+    limit: int = Query(200, description="Maximum number of rows to return")
+):
+    """Execute a universal query against any table or view.
     
-    For registered views, table name is the YAML rule_code (e.g., LIST_ORGS).
-    For other tables, queries directly.
+    Dynamically queries any table or registered view by name. This endpoint
+    provides flexible access to materialized views and database tables without
+    requiring specific API endpoints for each view.
+    
+    Registered views can be discovered via the /views endpoint. Common examples:
+    - LIST_ORGS: All organizations
+    - LIST_PATTERNS: All patterns
+    - THRIM: Threat impact and risk mitigation data
+    - WCRT: Threats in specific models
+    
+    Args:
+        table (str): Table or view name (alphanumeric and underscore only)
+            - For registered views: use the table_name from /views response
+            - For system tables: use the table name directly (e.g., 'patterns', 'threats')
+        limit (int): Maximum number of rows to return (default: 200)
+    
+    Returns:
+        List[dict]: Array of row objects from the query with all columns
+    
+    Raises:
+        400: If table name is invalid (contains SQL injection characters) or query fails
+    
+    Security Notes:
+        - Table names are validated to contain only alphanumeric characters and underscores
+        - LIMIT clause is enforced server-side to prevent large result sets
+        - All queries use prepared statements via asyncpg
+    
+    Examples:
+        GET /query/LIST_ORGS?limit=50
+        Returns: [{"id": 1, "name": "Acme Corp", ...}, ...]
+        
+        GET /query/patterns?limit=100
+        Returns: [{"id": 1, "name": "Circuit Breaker", "kind": "pattern", ...}, ...]
     """
     pool = get_pg_pool()
 
     # Basic sanitization to block SQL injection
     if not table.replace("_", "").isalnum():
-        raise HTTPException(status_code=400, detail="Invalid table name")
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid table name - must contain only alphanumeric characters and underscores"
+        )
 
     async with pool.acquire() as conn:
         try:
             # Query the table/view directly by name
-            # View names are rule_codes (e.g., LIST_ORGS)
+            # View names are rule_codes (e.g., LIST_ORGS, THRIM)
             rows = await conn.fetch(f'SELECT * FROM "{table}" LIMIT {limit}')
         except Exception as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            raise HTTPException(
+                status_code=400,
+                detail=f"Query failed: {str(e)}. Verify table/view exists: {table}"
+            )
 
     return [dict(r) for r in rows]
 
 # -------------------------------------------------------------------------
-# WebSocket → Pitboss
+# WebSocket → Pitboss (Real-time Communication)
 # -------------------------------------------------------------------------
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+    """WebSocket endpoint for real-time Pitboss supervisor communication.
+    
+    Provides bidirectional communication for LLM-driven rule execution and
+    agent coordination. Supports both modern Message Protocol v1.1 (envelope-based)
+    and legacy run_rule format for backwards compatibility.
+    
+    **Message Protocol v1.1 (Recommended)**
+    
+    Request format:
+    ```json
+    {
+        "type": "request",
+        "version": "1.1",
+        "session_id": "sess-...",
+        "request_id": "req-...",
+        "verb": "RULE" | "CONTENT" | "GENERIC",
+        "nextAgent": "agent-name",
+        "decision": "yes" | "no" | null,
+        "confidence": 0.0-1.0,
+        "reason": "explanation",
+        "messageBody": { ... }
+    }
+    ```
+    
+    Response format:
+    ```json
+    {
+        "type": "response",
+        "version": "1.1",
+        "session_id": "sess-...",
+        "request_id": "req-...",
+        "verb": "...",
+        "nextAgent": "next-agent-name",
+        "decision": "...",
+        "confidence": 0.0-1.0,
+        "returnCode": 0 | 1 | -1,
+        "messageBody": { ... }
+    }
+    ```
+    
+    **Legacy Format (Backwards Compatible)**
+    
+    Request:
+    ```json
+    {
+        "type": "run_rule",
+        "rule_code": "RULE_NAME",
+        "rule_id": "123"
+    }
+    ```
+    
+    Features:
+    - **HITL (Human-In-The-Loop)**: When decision="no", frontend handles approval loop
+    - **Stateless**: Put-and-take message pattern enables distributed execution
+    - **Mode Switching**: Supports workflow transitions between agents
+    - **Error Handling**: Structured error responses with returnCode=-1
+    
+    Returns:
+        WebSocket connection that echoes structured JSON messages
+    """
     await websocket.accept()
     logger.info("🔌 WebSocket connected")
 
@@ -1440,10 +1731,31 @@ async def websocket_endpoint(websocket: WebSocket):
             pass
 
 # -------------------------------------------------------------------------
-# POST /log
+# POST /log (System Logging & Diagnostics)
 # -------------------------------------------------------------------------
-@app.post("/log")
-async def write_log(event: str, context: dict = {}):
+@app.post("/log", tags=["System"])
+async def write_log(
+    event: str,
+    context: dict = Query({}, description="Optional JSON context object")
+):
+    """Record a system event to the audit log.
+    
+    Writes an event to the system_log table for auditing, debugging, and monitoring.
+    Each log entry includes the event name, optional context data, and a server-side timestamp.
+    
+    Args:
+        event (str): Human-readable event description (e.g., "pattern_created", "model_activated")
+        context (dict): Optional JSON object with event-specific metadata (default: {})
+    
+    Returns:
+        dict: Confirmation with fields:
+            - status: "ok"
+            - event: The logged event name
+    
+    Example:
+        POST /log?event=user_action&context={"action": "export_pdf", "user_id": 42}
+        Returns: {"status": "ok", "event": "user_action"}
+    """
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         await conn.execute(
