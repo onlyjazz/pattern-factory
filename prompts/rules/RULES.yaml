@@ -109,3 +109,9 @@ RULES:
     description: "Threats countermeasures"
     logic: |
       select * from threat.threat_countermeasures
+
+  - rule_code: THREAT-VULN
+    name: "Threats and Vulnerabilities"
+    description: "Threats and their associated vulnerabilities"
+    logic: |
+      show threat name, mitigation_level and vulnerability name where threat_id = vulnerability_threat_id

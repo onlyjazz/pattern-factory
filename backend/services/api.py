@@ -1586,7 +1586,7 @@ async def query_table(
     - WCRT: Threats in specific models
     
     Args:
-        table (str): Table or view name (alphanumeric and underscore only)
+        table (str): Table or view name (alphanumeric, underscore, and hyphen allowed)
             - For registered views: use the table_name from /views response
             - For system tables: use the table name directly (e.g., 'patterns', 'threats')
         limit (int): Maximum number of rows to return (default: 200)
@@ -1598,7 +1598,7 @@ async def query_table(
         400: If table name is invalid (contains SQL injection characters) or query fails
     
     Security Notes:
-        - Table names are validated to contain only alphanumeric characters and underscores
+        - Table names are validated to contain only alphanumeric characters, underscores, and hyphens
         - LIMIT clause is enforced server-side to prevent large result sets
         - All queries use prepared statements via asyncpg
     
@@ -1612,10 +1612,11 @@ async def query_table(
     pool = get_pg_pool()
 
     # Basic sanitization to block SQL injection
-    if not table.replace("_", "").isalnum():
+    # Allow alphanumeric, underscores, and hyphens
+    if not table.replace("_", "").replace("-", "").isalnum():
         raise HTTPException(
             status_code=400,
-            detail="Invalid table name - must contain only alphanumeric characters and underscores"
+            detail="Invalid table name - must contain only alphanumeric characters, underscores, and hyphens"
         )
 
     async with pool.acquire() as conn:
