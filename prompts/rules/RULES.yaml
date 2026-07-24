@@ -115,3 +115,5 @@ RULES:
     description: "Threats and their associated vulnerabilities"
     logic: |
       show threat name, mitigation_level and vulnerability name where threat_id = vulnerability_threat_id
+      and model_id = (select model_id from active_models limit 1)
+      order by threat name, vulnerability name

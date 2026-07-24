@@ -262,23 +262,23 @@ import { API_BASE } from '$lib/config';
 		<!-- <button class="button button_green" onclick={() => (showAddModal = true)}>
 			Add Risk
 		</button> -->
-		<h1 class="heading heading_1">Risks</h1>
+		<h1 class="heading heading_1">Threats</h1>
 	</div>
 
 	<div class="grid-row">
 		<!-- FULL WIDTH TABLE -->
 		<div class="grid-col grid-col_24">
 			<div class="studies card">
-				<div class="card-header">
-			<div class="heading heading_3">Model risks</div>
+			<div class="card-header">
+			<div class="heading heading_3">Model threats</div>
 				</div>
 
-				{#if loading}
-					<div class="message">Loading risks...</div>
+		{#if loading}
+					<div class="message">Loading threats...</div>
 				{:else if error}
 					<div class="message message-error">Error: {error}</div>
 				{:else if filteredThreats.length === 0}
-					<div class="message">No risks found</div>
+					<div class="message">No threats found</div>
 				{:else}
 					<div class="table">
 						<table>
@@ -344,7 +344,7 @@ import { API_BASE } from '$lib/config';
 	<div class="modal-overlay" onclick={closeAddModal} onkeydown={(e) => e.key === 'Escape' && closeAddModal()} role="presentation">
 		<div class="modal-content" role="dialog" aria-labelledby="add-modal-title" tabindex="0" onclick={(e) => e.stopPropagation()}>
 			<div class="modal-header">
-				<h2 id="add-modal-title" class="heading heading_2">Add Risk</h2>
+				<h2 id="add-modal-title" class="heading heading_2">Add Threat</h2>
 				<button
 					type="button"
 					class="modal-close"
