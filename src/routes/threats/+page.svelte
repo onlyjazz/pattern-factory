@@ -48,6 +48,8 @@ import { API_BASE } from '$lib/config';
 	
 	const apiBase = API_BASE;
 	
+	$: filteredThreats = updateFilteredThreats(threats, $globalSearch, sortField, sortDirection);
+	
 onMount(async () => {
 	const unsubscribe = modeStore.subscribe((state) => {
 		activeModelId = state.activeModel;
@@ -67,21 +69,34 @@ onMount(async () => {
 	return unsubscribe;
 });
 	
-function doFilterThreats(items: Threat[], search: string): Threat[] {
-		if (search.trim() === '') return items;
-		const term = search.toLowerCase();
-		return items.filter(t => {
-			return (
-				(t.tag || '').toLowerCase().includes(term) ||
-				(t.name || '').toLowerCase().includes(term) ||
-				(t.description || '').toLowerCase().includes(term) ||
-				(t.domain || '').toLowerCase().includes(term) ||
-				String(t.probability || '').toLowerCase().includes(term) ||
-				(t.mitigation_level || '').toLowerCase().includes(term) ||
-				(t.damage_description || '').toLowerCase().includes(term) ||
-				String(t.disabled).toLowerCase().includes(term)
-			);
-		});
+function updateFilteredThreats(items: Threat[], search: string, field: keyof Threat | null, dir: 'asc' | 'desc'): Threat[] {
+		let result = items;
+		
+		if (search.trim() !== '') {
+			const term = search;
+			result = result.filter(t => {
+				const tag = (t.tag || '');
+				const name = (t.name || '').toLowerCase();
+				const description = (t.description || '');
+				const domain = (t.domain || '');
+				const probability = String(t.probability || '');
+				const mitigationLevel = String(t.mitigation_level || '');
+				const damageDescription = (t.damage_description || '');
+				const disabled = String(t.disabled);
+				return tag.includes(term) || name.includes(term.toLowerCase()) || description.includes(term) || domain.includes(term) || probability.includes(term) || mitigationLevel.includes(term) || damageDescription.includes(term) || disabled.includes(term);
+			});
+		}
+		
+		if (field) {
+			result = [...result].sort((a, b) => {
+				const aVal = a[field] || '';
+				const bVal = b[field] || '';
+				const comparison = String(aVal).localeCompare(String(bVal));
+				return dir === 'asc' ? comparison : -comparison;
+			});
+		}
+		
+		return result;
 	}
 	
 	function sortThreats() {
@@ -104,19 +119,6 @@ function doFilterThreats(items: Threat[], search: string): Threat[] {
 		sortThreats();
 	}
 	
-
-$: filteredThreats = (() => {
-	let result = doFilterThreats(threats, $globalSearch);
-	if (sortField) {
-		result = [...result].sort((a, b) => {
-			const aVal = a[sortField] || '';
-			const bVal = b[sortField] || '';
-			const comparison = String(aVal).localeCompare(String(bVal));
-			return sortDirection === 'asc' ? comparison : -comparison;
-		});
-	}
-	return result;
-})()
 
 async function searchCards(query: string, isEdit: boolean = false) {
 		if (!query.trim()) {
@@ -216,7 +218,6 @@ async function searchCards(query: string, isEdit: boolean = false) {
 		if (!response.ok) throw new Error('Failed to create threat');
 		const created = await response.json();
 		threats = [...threats, { ...created, id: String(created.id) }];
-			filterThreats();
 			closeAddModal();
 		} catch (e) {
 			addModalError = e instanceof Error ? e.message : 'Failed to create threat';
@@ -248,7 +249,6 @@ async function searchCards(query: string, isEdit: boolean = false) {
 			if (!response.ok) throw new Error('Failed to update threat');
 		const updated = await response.json();
 		threats = threats.map(t => t.id === String(updated.id) ? { ...updated, id: String(updated.id) } : t);
-			filterThreats();
 			closeEditModal();
 		} catch (e) {
 			editModalError = e instanceof Error ? e.message : 'Failed to save threat';
@@ -264,9 +264,8 @@ async function searchCards(query: string, isEdit: boolean = false) {
 				method: 'DELETE'
 			});
 			
-			if (!response.ok) throw new Error('Failed to delete threat');
-			threats = threats.filter(t => t.id !== threatId);
-			filterThreats();
+		if (!response.ok) throw new Error('Failed to delete threat');
+		threats = threats.filter(t => t.id !== threatId);
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to delete threat';
 		}
