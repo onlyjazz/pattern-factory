@@ -47,13 +47,15 @@ import { API_BASE } from '$lib/config';
 	function filterAndSortVulnerabilities(items: Vulnerability[], search: string, field: keyof Vulnerability | string | null, direction: 'asc' | 'desc'): Vulnerability[] {
 		let result = items;
 		
-		// Apply search filter
+	// Apply search filter
 		if (search.trim() !== '') {
 			const term = search.toLowerCase();
 			result = result.filter(v => {
+				const tag = (v.tag || '').toLowerCase();
 				const name = (v.name || '').toLowerCase();
 				const description = (v.description || '').toLowerCase();
-				return name.includes(term) || description.includes(term);
+				const disabled = String(v.disabled).toLowerCase();
+				return tag.includes(term) || name.includes(term) || description.includes(term) || disabled.includes(term);
 			});
 		}
 		

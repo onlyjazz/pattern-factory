@@ -52,13 +52,17 @@ import { API_BASE } from '$lib/config';
 	function filterAndSortCountermeasures(items: Countermeasure[], search: string, field: keyof Countermeasure | string | null, direction: 'asc' | 'desc'): Countermeasure[] {
 		let result = items;
 		
-		// Apply search filter
+	// Apply search filter
 		if (search.trim() !== '') {
 			const term = search.toLowerCase();
 			result = result.filter(c => {
+				const tag = (c.tag || '').toLowerCase();
 				const name = (c.name || '').toLowerCase();
 				const description = (c.description || '').toLowerCase();
-				return name.includes(term) || description.includes(term);
+				const yearlyCost = String(c.yearly_cost || '').toLowerCase();
+				const implemented = String(c.implemented).toLowerCase();
+				const disabled = String(c.disabled).toLowerCase();
+				return tag.includes(term) || name.includes(term) || description.includes(term) || yearlyCost.includes(term) || implemented.includes(term) || disabled.includes(term);
 			});
 		}
 		

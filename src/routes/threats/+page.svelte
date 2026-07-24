@@ -70,8 +70,16 @@ import { API_BASE } from '$lib/config';
 	
 	function filterThreats() {
 		filteredThreats = threats.filter(t => {
-			const matchesSearch = t.name.toLowerCase().includes($globalSearch.toLowerCase()) ||
-				t.description.toLowerCase().includes($globalSearch.toLowerCase());
+			const searchTerm = $globalSearch.toLowerCase();
+			const matchesSearch = 
+				(t.tag || '').toLowerCase().includes(searchTerm) ||
+				(t.name || '').toLowerCase().includes(searchTerm) ||
+				(t.description || '').toLowerCase().includes(searchTerm) ||
+				(t.domain || '').toLowerCase().includes(searchTerm) ||
+				String(t.probability || '').toLowerCase().includes(searchTerm) ||
+				(t.mitigation_level || '').toLowerCase().includes(searchTerm) ||
+				(t.damage_description || '').toLowerCase().includes(searchTerm) ||
+				String(t.disabled).toLowerCase().includes(searchTerm);
 			return matchesSearch;
 		});
 		sortThreats();

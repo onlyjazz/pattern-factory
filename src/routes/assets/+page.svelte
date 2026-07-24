@@ -45,8 +45,13 @@ import { API_BASE } from '$lib/config';
 	
 	function filterAssets() {
 		filteredAssets = assets.filter(a => {
-			const matchesSearch = a.name.toLowerCase().includes($globalSearch.toLowerCase()) ||
-				a.description.toLowerCase().includes($globalSearch.toLowerCase());
+			const searchTerm = $globalSearch.toLowerCase();
+			const matchesSearch = 
+				(a.tag || '').toLowerCase().includes(searchTerm) ||
+				(a.name || '').toLowerCase().includes(searchTerm) ||
+				(a.description || '').toLowerCase().includes(searchTerm) ||
+				String(a.yearly_value || '').toLowerCase().includes(searchTerm) ||
+				String(a.disabled).toLowerCase().includes(searchTerm);
 			return matchesSearch;
 		});
 		sortAssets();
