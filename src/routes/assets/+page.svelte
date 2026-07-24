@@ -23,25 +23,32 @@ import { API_BASE } from '$lib/config';
 	
 	const apiBase = API_BASE;
 	
-	onMount(async () => {
-		const unsubscribe = modeStore.subscribe((state) => {
-			activeModelId = state.activeModel;
-		});
-		
-		try {
-			const response = await fetch(`${apiBase}/assets`);
-			if (!response.ok) throw new Error('Failed to fetch assets');
-			const data = await response.json();
-			assets = data.map((a: any) => ({ ...a, id: String(a.id) }));
-			filterAssets();
-		} catch (e) {
-			error = e instanceof Error ? e.message : 'Unknown error';
-		} finally {
-			loading = false;
-		}
-		
-		return unsubscribe;
+onMount(async () => {
+	const unsubscribeModeStore = modeStore.subscribe((state) => {
+		activeModelId = state.activeModel;
 	});
+	
+	const unsubscribeGlobalSearch = globalSearch.subscribe(() => {
+		filterAssets();
+	});
+	
+	try {
+		const response = await fetch(`${apiBase}/assets`);
+		if (!response.ok) throw new Error('Failed to fetch assets');
+		const data = await response.json();
+		assets = data.map((a: any) => ({ ...a, id: String(a.id) }));
+		filterAssets();
+	} catch (e) {
+		error = e instanceof Error ? e.message : 'Unknown error';
+	} finally {
+		loading = false;
+	}
+	
+	return () => {
+		unsubscribeModeStore?.();
+		unsubscribeGlobalSearch?.();
+	};
+});
 	
 	function filterAssets() {
 		filteredAssets = assets.filter(a => {
@@ -95,7 +102,6 @@ import { API_BASE } from '$lib/config';
 	}
 	
 	$: if (assets) filterAssets();
-	$: if ($globalSearch !== undefined) filterAssets();
 	
 	function closeAddModal() {
 		showAddModal = false;

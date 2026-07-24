@@ -48,25 +48,32 @@ import { API_BASE } from '$lib/config';
 	
 	const apiBase = API_BASE;
 	
-	onMount(async () => {
-		const unsubscribe = modeStore.subscribe((state) => {
-			activeModelId = state.activeModel;
-		});
-		
-		try {
-			const response = await fetch(`${apiBase}/threats`);
-			if (!response.ok) throw new Error('Failed to fetch threats');
-			const data = await response.json();
-			threats = data.map((t: any) => ({ ...t, id: String(t.id) }));
-			filterThreats();
-		} catch (e) {
-			error = e instanceof Error ? e.message : 'Unknown error';
-		} finally {
-			loading = false;
-		}
-		
-		return unsubscribe;
+onMount(async () => {
+	const unsubscribeModeStore = modeStore.subscribe((state) => {
+		activeModelId = state.activeModel;
 	});
+	
+	const unsubscribeGlobalSearch = globalSearch.subscribe(() => {
+		filterThreats();
+	});
+	
+	try {
+		const response = await fetch(`${apiBase}/threats`);
+		if (!response.ok) throw new Error('Failed to fetch threats');
+		const data = await response.json();
+		threats = data.map((t: any) => ({ ...t, id: String(t.id) }));
+		filterThreats();
+	} catch (e) {
+		error = e instanceof Error ? e.message : 'Unknown error';
+	} finally {
+		loading = false;
+	}
+	
+	return () => {
+		unsubscribeModeStore?.();
+		unsubscribeGlobalSearch?.();
+	};
+});
 	
 	function filterThreats() {
 		filteredThreats = threats.filter(t => {
@@ -106,7 +113,6 @@ import { API_BASE } from '$lib/config';
 	}
 	
 	$: if (threats) filterThreats();
-	$: if ($globalSearch !== undefined) filterThreats();
 	
 	async function searchCards(query: string, isEdit: boolean = false) {
 		if (!query.trim()) {
