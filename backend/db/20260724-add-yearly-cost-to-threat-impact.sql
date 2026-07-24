@@ -92,7 +92,8 @@ threat_details AS (
       AND a.disabled = false
       AND t.model_id = (SELECT model_id FROM public.active_models LIMIT 1)
     
-    GROUP BY t.id, t.model_id, t.tag, t.name, t.probability, tm.residual_risk_multiplier, tm.total_yearly_cost
+    GROUP BY t.id, t.model_id, t.tag, t.name, t.probability, tm.residual_risk_multiplier, tm.total_yearly_cost 
+    ORDER BY residual_risk_pct DESC
 )
 -- Individual threats
 SELECT * FROM threat_details
@@ -130,12 +131,12 @@ SELECT
     threat_tag,
     threat_name,
     probability,
+    mitigation_level,
+    yearly_cost as "Cost of mitigation",
     var_before_mitigation,
     var_after_mitigation,
-    mitigation_level,
     residual_risk_pct,
-    residual_risk_level,
-    yearly_cost
+    residual_risk_level
 FROM threat.threat_impact;
 
 COMMIT;

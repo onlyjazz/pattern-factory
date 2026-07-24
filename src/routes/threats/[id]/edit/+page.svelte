@@ -62,6 +62,7 @@ import { API_BASE } from '$lib/config';
 					description: threat.description,
 					domain: threat.domain || null,
 					tag: threat.tag || null,
+					probability: threat.probability || null,
 					damage_description: threat.damage_description || null,
 					spoofing: threat.spoofing || false,
 					tampering: threat.tampering || false,

@@ -267,6 +267,7 @@ DATA:
           - threat_tag
           - threat_name
           - probability
+          - yearly_cost
           - var_before_mitigation
           - var_after_mitigation
           - mitigation_level

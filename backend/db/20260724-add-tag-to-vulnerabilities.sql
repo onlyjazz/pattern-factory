@@ -7,13 +7,14 @@
 
 BEGIN;
 
--- Add tag column to vulnerabilities table
+-- Add tag column to vulnerabilities table with DEFAULT value
 ALTER TABLE threat.vulnerabilities
-ADD COLUMN tag VARCHAR(50);
+ADD COLUMN tag VARCHAR(50) DEFAULT ('V' || id);
 
--- Populate tag with V+id format (e.g., V255 for id=255)
+-- Populate tag with V+id format for existing rows (e.g., V255 for id=255)
 UPDATE threat.vulnerabilities
-SET tag = 'V' || id;
+SET tag = 'V' || id
+WHERE tag IS NULL;
 
 -- Add NOT NULL constraint
 ALTER TABLE threat.vulnerabilities

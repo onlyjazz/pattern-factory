@@ -24,7 +24,7 @@
 	{error}
 	{isEditing}
 	entityName="Threat"
-	pageTitle="Risks"
+	pageTitle="Threats"
 	entity={threat}
 	{saveError}
 	{isSaving}
@@ -83,8 +83,18 @@
 				<h3>Threat Metrics</h3>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Probability</label>
-						<p>{threat.probability || '-'}</p>
+						<label>Probability (%)</label>
+						<div class="input">
+							<input
+								id="threat-probability"
+								type="number"
+								min="0"
+								max="100"
+								bind:value={threat.probability}
+								class="input__text"
+								class:input__text_changed={threat.probability && threat.probability > 0}
+							/>
+						</div>
 					</div>
 					<div class="detail-field">
 						<label>Mitigation Level</label>

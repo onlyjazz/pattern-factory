@@ -96,7 +96,9 @@ RULES:
     name: "Residual Risk"
     description: "Threat Impact after applying countermeasures"
     logic: |
-      select * from threat.threat_impact
+      select threat_tag, threat_name, probability, mitigation_level, yearly_cost as 'Cost of mitigation', var_before_mitigation, var_after_mitigation,
+      residual_risk_level as 'Residual Risk'
+      from threat.threat_impact;
 
   - rule_code: VULNEXPLOIT
     name: "Exploitability"
@@ -114,6 +116,15 @@ RULES:
     name: "Threats and Vulnerabilities"
     description: "Threats and their associated vulnerabilities"
     logic: |
-      show threat name, mitigation_level and vulnerability name where threat_id = vulnerability_threat_id
+        show threat tag threat name vulnerability name
+        where model_id = (select model_id from active_models limit 1)
+      
+      
+  - rule_code: THREAT-CM
+    name: "Threats and Countermeasures"
+    description: "Threats and their associated countermeasures"
+    logic: |
+      show threat tag threat name, mitigation_level, countermeasure name, countermeasure yearly_cost 
+      where threat_id = countermeasure_threat_id
       and model_id = (select model_id from active_models limit 1)
-      order by threat name, vulnerability name
+      order by threat name, countermeasure name
