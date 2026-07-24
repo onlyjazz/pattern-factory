@@ -25,24 +25,33 @@ import { API_BASE } from '$lib/config';
 	
 	const apiBase = API_BASE;
 	
-	onMount(async () => {
-		const unsubscribe = modeStore.subscribe((state) => {
-			activeModelId = state.activeModel;
-		});
-		
-		try {
-			const response = await fetch(`${apiBase}/vulnerabilities`);
-			if (!response.ok) throw new Error('Failed to fetch vulnerabilities');
-			const data = await response.json();
-			vulnerabilities = data.map((v: any) => ({ ...v, id: String(v.id) }));
-		} catch (e) {
-			error = e instanceof Error ? e.message : 'Unknown error';
-		} finally {
-			loading = false;
-		}
-		
-		return unsubscribe;
+onMount(async () => {
+	const unsubscribeModeStore = modeStore.subscribe((state) => {
+		activeModelId = state.activeModel;
 	});
+	
+	const unsubscribeGlobalSearch = globalSearch.subscribe(() => {
+		// Force reactivity by reassigning
+		filteredVulnerabilities = filterAndSortVulnerabilities(vulnerabilities, $globalSearch, sortField, sortDirection);
+	});
+	
+	try {
+		const response = await fetch(`${apiBase}/vulnerabilities`);
+		if (!response.ok) throw new Error('Failed to fetch vulnerabilities');
+		const data = await response.json();
+		vulnerabilities = data.map((v: any) => ({ ...v, id: String(v.id) }));
+		filteredVulnerabilities = filterAndSortVulnerabilities(vulnerabilities, $globalSearch, sortField, sortDirection);
+	} catch (e) {
+		error = e instanceof Error ? e.message : 'Unknown error';
+	} finally {
+		loading = false;
+	}
+	
+	return () => {
+		unsubscribeModeStore?.();
+		unsubscribeGlobalSearch?.();
+	};
+});
 	
 	function filterAndSortVulnerabilities(items: Vulnerability[], search: string, field: keyof Vulnerability | string | null, direction: 'asc' | 'desc'): Vulnerability[] {
 		let result = items;
@@ -81,7 +90,6 @@ import { API_BASE } from '$lib/config';
 		}
 	}
 	
-	$: filteredVulnerabilities = filterAndSortVulnerabilities(vulnerabilities, $globalSearch, sortField, sortDirection);
 	
 	function closeAddModal() {
 		showAddModal = false;

@@ -6,6 +6,8 @@ export interface Threat {
     id: ID;
     name: string;
     description: string;
+    tag?: string | null;
+    domain?: string | null;
     probability?: number | null;
     damage_description?: string | null;
     spoofing: boolean;
@@ -14,9 +16,10 @@ export interface Threat {
     information_disclosure: boolean;
     denial_of_service: boolean;
     elevation_of_privilege: boolean;
-    mitigation_level: number;
+    mitigation_level?: number | null;
     disabled: boolean;
     model_id: number;
+    version?: number;
     card_id?: string | null;
     card?: Card | null;
     created_at?: string;
@@ -60,6 +63,7 @@ export interface Vulnerability {
     id: ID;
     name: string;
     description: string;
+    tag?: string | null;
     version?: number;
     disabled: boolean;
     model_id: number;
@@ -71,6 +75,7 @@ export interface Countermeasure {
     id: ID;
     name: string;
     description: string;
+    tag?: string | null;
     version?: number;
     yearly_cost: number;
     fixed_implementation_cost: number;

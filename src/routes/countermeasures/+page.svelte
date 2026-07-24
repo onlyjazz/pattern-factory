@@ -30,24 +30,33 @@ import { API_BASE } from '$lib/config';
 	
 	const apiBase = API_BASE;
 	
-	onMount(async () => {
-		const unsubscribe = modeStore.subscribe((state) => {
-			activeModelId = state.activeModel;
-		});
-		
-		try {
-			const response = await fetch(`${apiBase}/countermeasures`);
-			if (!response.ok) throw new Error('Failed to fetch countermeasures');
-			const data = await response.json();
-			countermeasures = data.map((c: any) => ({ ...c, id: String(c.id) }));
-		} catch (e) {
-			error = e instanceof Error ? e.message : 'Unknown error';
-		} finally {
-			loading = false;
-		}
-		
-		return unsubscribe;
+onMount(async () => {
+	const unsubscribeModeStore = modeStore.subscribe((state) => {
+		activeModelId = state.activeModel;
 	});
+	
+	const unsubscribeGlobalSearch = globalSearch.subscribe(() => {
+		// Force reactivity by reassigning
+		filteredCountermeasures = filterAndSortCountermeasures(countermeasures, $globalSearch, sortField, sortDirection);
+	});
+	
+	try {
+		const response = await fetch(`${apiBase}/countermeasures`);
+		if (!response.ok) throw new Error('Failed to fetch countermeasures');
+		const data = await response.json();
+		countermeasures = data.map((c: any) => ({ ...c, id: String(c.id) }));
+		filteredCountermeasures = filterAndSortCountermeasures(countermeasures, $globalSearch, sortField, sortDirection);
+	} catch (e) {
+		error = e instanceof Error ? e.message : 'Unknown error';
+	} finally {
+		loading = false;
+	}
+	
+	return () => {
+		unsubscribeModeStore?.();
+		unsubscribeGlobalSearch?.();
+	};
+});
 	
 	function filterAndSortCountermeasures(items: Countermeasure[], search: string, field: keyof Countermeasure | string | null, direction: 'asc' | 'desc'): Countermeasure[] {
 		let result = items;
@@ -88,7 +97,6 @@ import { API_BASE } from '$lib/config';
 		}
 	}
 	
-	$: filteredCountermeasures = filterAndSortCountermeasures(countermeasures, $globalSearch, sortField, sortDirection);
 	
 	function closeAddModal() {
 		showAddModal = false;
