@@ -26,13 +26,8 @@ import { API_BASE } from '$lib/config';
 	const apiBase = API_BASE;
 	
 onMount(async () => {
-	const unsubscribeModeStore = modeStore.subscribe((state) => {
+	const unsubscribe = modeStore.subscribe((state) => {
 		activeModelId = state.activeModel;
-	});
-	
-	const unsubscribeGlobalSearch = globalSearch.subscribe(() => {
-		// Force reactivity by reassigning
-		filteredVulnerabilities = filterAndSortVulnerabilities(vulnerabilities, $globalSearch, sortField, sortDirection);
 	});
 	
 	try {
@@ -40,18 +35,37 @@ onMount(async () => {
 		if (!response.ok) throw new Error('Failed to fetch vulnerabilities');
 		const data = await response.json();
 		vulnerabilities = data.map((v: any) => ({ ...v, id: String(v.id) }));
-		filteredVulnerabilities = filterAndSortVulnerabilities(vulnerabilities, $globalSearch, sortField, sortDirection);
 	} catch (e) {
 		error = e instanceof Error ? e.message : 'Unknown error';
 	} finally {
 		loading = false;
 	}
 	
-	return () => {
-		unsubscribeModeStore?.();
-		unsubscribeGlobalSearch?.();
-	};
+	return unsubscribe;
 });
+
+$: filteredVulnerabilities = (() => {
+	let result = vulnerabilities;
+	if ($globalSearch.trim() !== '') {
+		const term = $globalSearch.toLowerCase();
+		result = result.filter(v => {
+			const tag = (v.tag || '').toLowerCase();
+			const name = (v.name || '').toLowerCase();
+			const description = (v.description || '').toLowerCase();
+			const disabled = String(v.disabled).toLowerCase();
+			return tag.includes(term) || name.includes(term) || description.includes(term) || disabled.includes(term);
+		});
+	}
+	if (sortField) {
+		result = [...result].sort((a, b) => {
+			const aVal = a[sortField as keyof Vulnerability] || '';
+			const bVal = b[sortField as keyof Vulnerability] || '';
+			const comparison = String(aVal).localeCompare(String(bVal));
+			return sortDirection === 'asc' ? comparison : -comparison;
+		});
+	}
+	return result;
+})()
 	
 	function filterAndSortVulnerabilities(items: Vulnerability[], search: string, field: keyof Vulnerability | string | null, direction: 'asc' | 'desc'): Vulnerability[] {
 		let result = items;

@@ -49,12 +49,8 @@ import { API_BASE } from '$lib/config';
 	const apiBase = API_BASE;
 	
 onMount(async () => {
-	const unsubscribeModeStore = modeStore.subscribe((state) => {
+	const unsubscribe = modeStore.subscribe((state) => {
 		activeModelId = state.activeModel;
-	});
-	
-	const unsubscribeGlobalSearch = globalSearch.subscribe(() => {
-		filterThreats();
 	});
 	
 	try {
@@ -62,34 +58,30 @@ onMount(async () => {
 		if (!response.ok) throw new Error('Failed to fetch threats');
 		const data = await response.json();
 		threats = data.map((t: any) => ({ ...t, id: String(t.id) }));
-		filterThreats();
 	} catch (e) {
 		error = e instanceof Error ? e.message : 'Unknown error';
 	} finally {
 		loading = false;
 	}
 	
-	return () => {
-		unsubscribeModeStore?.();
-		unsubscribeGlobalSearch?.();
-	};
+	return unsubscribe;
 });
 	
-	function filterThreats() {
-		filteredThreats = threats.filter(t => {
-			const searchTerm = $globalSearch.toLowerCase();
-			const matchesSearch = 
-				(t.tag || '').toLowerCase().includes(searchTerm) ||
-				(t.name || '').toLowerCase().includes(searchTerm) ||
-				(t.description || '').toLowerCase().includes(searchTerm) ||
-				(t.domain || '').toLowerCase().includes(searchTerm) ||
-				String(t.probability || '').toLowerCase().includes(searchTerm) ||
-				(t.mitigation_level || '').toLowerCase().includes(searchTerm) ||
-				(t.damage_description || '').toLowerCase().includes(searchTerm) ||
-				String(t.disabled).toLowerCase().includes(searchTerm);
-			return matchesSearch;
+function doFilterThreats(items: Threat[], search: string): Threat[] {
+		if (search.trim() === '') return items;
+		const term = search.toLowerCase();
+		return items.filter(t => {
+			return (
+				(t.tag || '').toLowerCase().includes(term) ||
+				(t.name || '').toLowerCase().includes(term) ||
+				(t.description || '').toLowerCase().includes(term) ||
+				(t.domain || '').toLowerCase().includes(term) ||
+				String(t.probability || '').toLowerCase().includes(term) ||
+				(t.mitigation_level || '').toLowerCase().includes(term) ||
+				(t.damage_description || '').toLowerCase().includes(term) ||
+				String(t.disabled).toLowerCase().includes(term)
+			);
 		});
-		sortThreats();
 	}
 	
 	function sortThreats() {
@@ -112,9 +104,21 @@ onMount(async () => {
 		sortThreats();
 	}
 	
-	$: if (threats) filterThreats();
-	
-	async function searchCards(query: string, isEdit: boolean = false) {
+
+$: filteredThreats = (() => {
+	let result = doFilterThreats(threats, $globalSearch);
+	if (sortField) {
+		result = [...result].sort((a, b) => {
+			const aVal = a[sortField] || '';
+			const bVal = b[sortField] || '';
+			const comparison = String(aVal).localeCompare(String(bVal));
+			return sortDirection === 'asc' ? comparison : -comparison;
+		});
+	}
+	return result;
+})()
+
+async function searchCards(query: string, isEdit: boolean = false) {
 		if (!query.trim()) {
 			if (isEdit) {
 				editCardSearchResults = [];

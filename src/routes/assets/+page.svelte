@@ -24,12 +24,8 @@ import { API_BASE } from '$lib/config';
 	const apiBase = API_BASE;
 	
 onMount(async () => {
-	const unsubscribeModeStore = modeStore.subscribe((state) => {
+	const unsubscribe = modeStore.subscribe((state) => {
 		activeModelId = state.activeModel;
-	});
-	
-	const unsubscribeGlobalSearch = globalSearch.subscribe(() => {
-		filterAssets();
 	});
 	
 	try {
@@ -37,31 +33,27 @@ onMount(async () => {
 		if (!response.ok) throw new Error('Failed to fetch assets');
 		const data = await response.json();
 		assets = data.map((a: any) => ({ ...a, id: String(a.id) }));
-		filterAssets();
 	} catch (e) {
 		error = e instanceof Error ? e.message : 'Unknown error';
 	} finally {
 		loading = false;
 	}
 	
-	return () => {
-		unsubscribeModeStore?.();
-		unsubscribeGlobalSearch?.();
-	};
+	return unsubscribe;
 });
 	
-	function filterAssets() {
-		filteredAssets = assets.filter(a => {
-			const searchTerm = $globalSearch.toLowerCase();
-			const matchesSearch = 
-				(a.tag || '').toLowerCase().includes(searchTerm) ||
-				(a.name || '').toLowerCase().includes(searchTerm) ||
-				(a.description || '').toLowerCase().includes(searchTerm) ||
-				String(a.yearly_value || '').toLowerCase().includes(searchTerm) ||
-				String(a.disabled).toLowerCase().includes(searchTerm);
-			return matchesSearch;
+function doFilterAssets(items: Asset[], search: string): Asset[] {
+		if (search.trim() === '') return items;
+		const term = search.toLowerCase();
+		return items.filter(a => {
+			return (
+				(a.tag || '').toLowerCase().includes(term) ||
+				(a.name || '').toLowerCase().includes(term) ||
+				(a.description || '').toLowerCase().includes(term) ||
+				String(a.yearly_value || '').toLowerCase().includes(term) ||
+				String(a.disabled).toLowerCase().includes(term)
+			);
 		});
-		sortAssets();
 	}
 	
 	function sortAssets() {
@@ -101,9 +93,29 @@ onMount(async () => {
 		sortAssets();
 	}
 	
-	$: if (assets) filterAssets();
-	
-	function closeAddModal() {
+
+$: {
+	const filtered = doFilterAssets(assets, $globalSearch);
+	if (sortField) {
+		const aVal = assets.find(a => a[sortField!] !== undefined)?.[sortField!];
+		const isTag = sortField === 'tag' || (aVal && /^[a-zA-Z]+\d+$/.test(String(aVal)));
+		filteredAssets = [...filtered].sort((a, b) => {
+			const av = a[sortField!] || '';
+			const bv = b[sortField!] || '';
+			if (isTag) {
+				const aNum = parseInt(String(av).replace(/[^0-9]/g, '')) || 0;
+				const bNum = parseInt(String(bv).replace(/[^0-9]/g, '')) || 0;
+				return sortDirection === 'asc' ? aNum - bNum : bNum - aNum;
+			}
+			const comparison = String(av).localeCompare(String(bv));
+			return sortDirection === 'asc' ? comparison : -comparison;
+		});
+	} else {
+		filteredAssets = filtered;
+	}
+}
+
+function closeAddModal() {
 		showAddModal = false;
 		newAsset = { 
 			name: '', 

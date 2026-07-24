@@ -31,13 +31,8 @@ import { API_BASE } from '$lib/config';
 	const apiBase = API_BASE;
 	
 onMount(async () => {
-	const unsubscribeModeStore = modeStore.subscribe((state) => {
+	const unsubscribe = modeStore.subscribe((state) => {
 		activeModelId = state.activeModel;
-	});
-	
-	const unsubscribeGlobalSearch = globalSearch.subscribe(() => {
-		// Force reactivity by reassigning
-		filteredCountermeasures = filterAndSortCountermeasures(countermeasures, $globalSearch, sortField, sortDirection);
 	});
 	
 	try {
@@ -45,18 +40,39 @@ onMount(async () => {
 		if (!response.ok) throw new Error('Failed to fetch countermeasures');
 		const data = await response.json();
 		countermeasures = data.map((c: any) => ({ ...c, id: String(c.id) }));
-		filteredCountermeasures = filterAndSortCountermeasures(countermeasures, $globalSearch, sortField, sortDirection);
 	} catch (e) {
 		error = e instanceof Error ? e.message : 'Unknown error';
 	} finally {
 		loading = false;
 	}
 	
-	return () => {
-		unsubscribeModeStore?.();
-		unsubscribeGlobalSearch?.();
-	};
+	return unsubscribe;
 });
+
+$: filteredCountermeasures = (() => {
+	let result = countermeasures;
+	if ($globalSearch.trim() !== '') {
+		const term = $globalSearch.toLowerCase();
+		result = result.filter(c => {
+			const tag = (c.tag || '').toLowerCase();
+			const name = (c.name || '').toLowerCase();
+			const description = (c.description || '').toLowerCase();
+			const yearlyCost = String(c.yearly_cost || '').toLowerCase();
+			const implemented = String(c.implemented).toLowerCase();
+			const disabled = String(c.disabled).toLowerCase();
+			return tag.includes(term) || name.includes(term) || description.includes(term) || yearlyCost.includes(term) || implemented.includes(term) || disabled.includes(term);
+		});
+	}
+	if (sortField) {
+		result = [...result].sort((a, b) => {
+			const aVal = a[sortField as keyof Countermeasure] || '';
+			const bVal = b[sortField as keyof Countermeasure] || '';
+			const comparison = String(aVal).localeCompare(String(bVal));
+			return sortDirection === 'asc' ? comparison : -comparison;
+		});
+	}
+	return result;
+})()
 	
 	function filterAndSortCountermeasures(items: Countermeasure[], search: string, field: keyof Countermeasure | string | null, direction: 'asc' | 'desc'): Countermeasure[] {
 		let result = items;
