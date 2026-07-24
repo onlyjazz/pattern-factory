@@ -232,6 +232,19 @@ import { API_BASE } from '$lib/config';
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   }
+
+  function downloadJSON() {
+    const jsonData = JSON.stringify(filteredData, null, 2);
+    const blob = new Blob([jsonData], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${viewName || 'export'}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
 </script>
 
 <div id="application-content-area">
@@ -254,6 +267,9 @@ import { API_BASE } from '$lib/config';
         {:else}
           <div class="results-info">
             <ExportCSV {data} fileName="{viewName || 'export'}.csv" />
+            <button class="button button_secondary" onclick={downloadJSON}>
+              ⬇ JSON
+            </button>
             <span class="search-results">{filteredData.length} of {data.length} results</span>
           </div>
           
@@ -264,7 +280,7 @@ import { API_BASE } from '$lib/config';
                   {#each columns as col}
                     <th
                       class="tal sortable"
-                      on:click={() => handleColumnSort(col)}
+                      onclick={() => handleColumnSort(col)}
                       aria-sort={sortColumn === col ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
                     >
                       {formatColumnName(col)}
