@@ -84,7 +84,8 @@ RULES:
     name: "List assets"
     description: " List of assets"
     logic: |
-      list asset tag, asset name, asset fixed_value, asset recurring_value asset yearly_value where model_id = (select model_id from active_models limit 1)
+      list asset tag, asset name, asset yearly_value 
+      where model_id = (select model_id from active_models limit 1)
 
   - rule_code: CLIST
     name: "List countermeasures"
@@ -128,3 +129,14 @@ RULES:
       where threat_id = countermeasure_threat_id
       and model_id = (select model_id from active_models limit 1)
       order by threat name, countermeasure name
+
+  - rule_code: ASSET-EXPLOITS
+    name: "Assets and Exploits"
+    description: "Assets threats to asset vulnerabilities exploited by threat countermeasures mitigating threat"
+    logic: |
+      show asset tag asset name, asset value, threat tag threat name threat damage to asset, vulnerability tag vulnerability name 
+      countermeasure name countermeasure yearly_cost countermeasure_threat mitigation level
+      and model_id = (select model_id from active_models limit 1)
+      order by asset name, vulnerability name
+
+  
