@@ -9,27 +9,10 @@ import { API_BASE } from '$lib/config';
 	let cards: Card[] = [];
 	let loading = true;
 	let error: string | null = null;
-	let addModalError: string | null = null;
 	let editModalError: string | null = null;
 	
 	let filteredThreats: Threat[] = [];
-	let showAddModal = false;
 	let activeModelId: number | null = null;
-	let newThreat: Partial<Threat> = { 
-		name: '', 
-		description: '',
-		probability: 0,
-		damage_description: '',
-		spoofing: false,
-		tampering: false,
-		repudiation: false,
-		information_disclosure: false,
-		denial_of_service: false,
-		elevation_of_privilege: false,
-		disabled: false,
-		model_id: 1,
-		card_id: null
-	};
 	
 	let sortField: keyof Threat | null = 'tag';
 	let sortDirection: 'asc' | 'desc' = 'asc';
@@ -164,66 +147,6 @@ async function searchCards(query: string, isEdit: boolean = false) {
 		}
 	}
 	
-	
-	function closeAddModal() {
-		showAddModal = false;
-		newThreat = { 
-			name: '', 
-			description: '',
-			probability: 0,
-			damage_description: '',
-			spoofing: false,
-			tampering: false,
-			repudiation: false,
-			information_disclosure: false,
-			denial_of_service: false,
-			elevation_of_privilege: false,
-			disabled: false,
-			model_id: 1,
-			card_id: null
-		};
-		selectedCardId = null;
-		cardSearchQuery = '';
-		cardSearchResults = [];
-		addModalError = null;
-	}
-	
-	
-	async function handleCreate() {
-		try {
-			addModalError = null;
-			if (!newThreat.name || !newThreat.description) {
-				addModalError = 'Please fill in all required fields';
-				return;
-			}
-		const response = await fetch(`${apiBase}/threats`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				name: newThreat.name,
-				description: newThreat.description,
-				probability: newThreat.probability || null,
-				damage_description: newThreat.damage_description || null,
-				spoofing: newThreat.spoofing || false,
-				tampering: newThreat.tampering || false,
-				repudiation: newThreat.repudiation || false,
-				information_disclosure: newThreat.information_disclosure || false,
-				denial_of_service: newThreat.denial_of_service || false,
-				elevation_of_privilege: newThreat.elevation_of_privilege || false,
-			disabled: newThreat.disabled || false,
-			model_id: activeModelId || 1,
-			card_id: selectedCardId || null
-			})
-		});
-		if (!response.ok) throw new Error('Failed to create threat');
-		const created = await response.json();
-		threats = [...threats, { ...created, id: String(created.id) }];
-			closeAddModal();
-		} catch (e) {
-			addModalError = e instanceof Error ? e.message : 'Failed to create threat';
-		}
-	}
-	
 	async function handleSave(updatedThreat: Threat) {
 		try {
 			editModalError = null;
@@ -276,9 +199,6 @@ async function searchCards(query: string, isEdit: boolean = false) {
 <!-- PAGE HEADER -->
 <div id="application-content-area">
 	<div class="page-title">
-		<!-- <button class="button button_green" onclick={() => (showAddModal = true)}>
-			Add Risk
-		</button> -->
 		<h1 class="heading heading_1">Threats</h1>
 	</div>
 
@@ -346,7 +266,7 @@ async function searchCards(query: string, isEdit: boolean = false) {
 										</button>
 									</td>
 								</tr>
-								{/each}
+{/each}
 							</tbody>
 						</table>
 					</div>
@@ -355,140 +275,6 @@ async function searchCards(query: string, isEdit: boolean = false) {
 		</div>
 	</div>
 </div> <!-- end application-content-area -->
-
-<!-- ADD MODAL -->
-{#if showAddModal}
-	<div class="modal-overlay" onclick={closeAddModal} onkeydown={(e) => e.key === 'Escape' && closeAddModal()} role="presentation">
-		<div class="modal-content" role="dialog" aria-labelledby="add-modal-title" tabindex="0" onclick={(e) => e.stopPropagation()}>
-			<div class="modal-header">
-				<h2 id="add-modal-title" class="heading heading_2">Add Threat</h2>
-				<button
-					type="button"
-					class="modal-close"
-					onclick={closeAddModal}
-					title="Close"
-				>
-					×
-				</button>
-			</div>
-
-			<div class="modal-body">
-          {#if addModalError}
-            <div class="message message-error error-margin">Error: {addModalError}</div>
-          {/if}
-				<form onsubmit={(e) => {
-					e.preventDefault();
-					handleCreate();
-				}}>
-					<div class="input">
-						<input
-							id="add-name"
-							type="text"
-							bind:value={newThreat.name}
-							class="input__text"
-							class:input__text_changed={newThreat.name && newThreat.name.length > 0}
-							placeholder=""
-							required
-						/>
-						<label for="add-name" class="input__label">Name</label>
-					</div>
-
-					<div class="input">
-						<input
-							id="add-description"
-							type="text"
-							bind:value={newThreat.description}
-							class="input__text"
-							class:input__text_changed={newThreat.description && newThreat.description.length > 0}
-							placeholder=""
-							required
-						/>
-						<label for="add-description" class="input__label">Description</label>
-					</div>
-
-					<div class="input">
-						<input
-							id="add-probability"
-							type="number"
-							bind:value={newThreat.probability}
-							class="input__text"
-						/>
-						<label for="add-probability" class="input__label">Probability</label>
-					</div>
-
-					<div class="input">
-						<input
-							id="add-damage-description"
-							type="text"
-							bind:value={newThreat.damage_description}
-							class="input__text"
-							class:input__text_changed={newThreat.damage_description && newThreat.damage_description.length > 0}
-						/>
-						<label for="add-damage-description" class="input__label">Damage Description</label>
-					</div>
-
-					<div class="stride-checkboxes">
-						<label class="checkbox-label">
-							<input
-								type="checkbox"
-								bind:checked={newThreat.spoofing}
-							/>
-							Spoofing
-						</label>
-						<label class="checkbox-label">
-							<input
-								type="checkbox"
-								bind:checked={newThreat.tampering}
-							/>
-							Tampering
-						</label>
-						<label class="checkbox-label">
-							<input
-								type="checkbox"
-								bind:checked={newThreat.repudiation}
-							/>
-							Repudiation
-						</label>
-						<label class="checkbox-label">
-							<input
-								type="checkbox"
-								bind:checked={newThreat.information_disclosure}
-							/>
-							Information Disclosure
-						</label>
-						<label class="checkbox-label">
-							<input
-								type="checkbox"
-								bind:checked={newThreat.denial_of_service}
-							/>
-							Denial of Service
-						</label>
-						<label class="checkbox-label">
-							<input
-								type="checkbox"
-								bind:checked={newThreat.elevation_of_privilege}
-							/>
-							Elevation of Privilege
-						</label>
-					</div>
-
-					<div class="modal-footer">
-						<button
-							type="button"
-							class="button button_secondary"
-							onclick={closeAddModal}
-						>
-							Cancel
-						</button>
-						<button type="submit" class="button button_green">
-							Create
-						</button>
-					</div>
-				</form>
-			</div>
-		</div>
-	</div>
-{/if}
 
 
 <style>

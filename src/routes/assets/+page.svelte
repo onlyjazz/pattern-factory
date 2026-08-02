@@ -8,15 +8,9 @@ import { API_BASE } from '$lib/config';
 	let assets: Asset[] = [];
 	let loading = true;
 	let error: string | null = null;
-	let addModalError: string | null = null;
 	
 	let filteredAssets: Asset[] = [];
-	let showAddModal = false;
 	let activeModelId: number | null = null;
-	let newAsset: Partial<Asset> = { 
-		name: '', 
-		description: ''
-	};
 	
 	let sortField: keyof Asset | null = 'tag';
 	let sortDirection: 'asc' | 'desc' = 'asc';
@@ -113,43 +107,6 @@ $: {
 	} else {
 		filteredAssets = filtered;
 	}
-}
-
-function closeAddModal() {
-		showAddModal = false;
-		newAsset = { 
-			name: '', 
-			description: ''
-		};
-		addModalError = null;
-	}
-	
-	async function handleCreate() {
-		try {
-			addModalError = null;
-			if (!newAsset.name || !newAsset.description) {
-				addModalError = 'Please fill in all required fields';
-				return;
-			}
-			const response = await fetch(`${apiBase}/assets`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					name: newAsset.name,
-					description: newAsset.description,
-					fixed_value: newAsset.fixed_value || 0,
-					disabled: newAsset.disabled || false,
-					model_id: activeModelId || 1,
-				})
-			});
-			if (!response.ok) throw new Error('Failed to create asset');
-			const created = await response.json();
-			assets = [...assets, { ...created, id: String(created.id) }];
-			filterAssets();
-			closeAddModal();
-		} catch (e) {
-			addModalError = e instanceof Error ? e.message : 'Failed to create asset';
-		}
 	}
 	
 	async function handleDelete(assetId: string) {
@@ -173,9 +130,6 @@ function closeAddModal() {
 <!-- PAGE HEADER -->
 <div id="application-content-area">
 	<div class="page-title">
-		<!-- <button class="button button_green" onclick={() => (showAddModal = true)}>
-			Add Asset
-		</button> -->
 		<h1 class="heading heading_1">Assets</h1>
 	</div>
 
@@ -248,73 +202,6 @@ function closeAddModal() {
 		</div>
 	</div>
 </div> <!-- end application-content-area -->
-
-<!-- ADD MODAL -->
-{#if showAddModal}
-	<div class="modal-overlay" onclick={closeAddModal} onkeydown={(e) => e.key === 'Escape' && closeAddModal()} role="presentation">
-		<div class="modal-content" role="dialog" aria-labelledby="add-modal-title" tabindex="0" onclick={(e) => e.stopPropagation()}>
-			<div class="modal-header">
-				<h2 id="add-modal-title" class="heading heading_2">Add Asset</h2>
-				<button
-					class="modal-close"
-					onclick={closeAddModal}
-					title="Close"
-				>
-					×
-				</button>
-			</div>
-
-			<div class="modal-body">
-				{#if addModalError}
-					<div class="message message-error error-margin">Error: {addModalError}</div>
-				{/if}
-				<form onsubmit={(e) => {
-					e.preventDefault();
-					handleCreate();
-				}}>
-					<div class="input">
-						<input
-							id="add-name"
-							type="text"
-							bind:value={newAsset.name}
-							class="input__text"
-							class:input__text_changed={newAsset.name && newAsset.name.length > 0}
-							placeholder=""
-							required
-						/>
-						<label for="add-name" class="input__label">Name</label>
-					</div>
-
-					<div class="input">
-						<input
-							id="add-description"
-							type="text"
-							bind:value={newAsset.description}
-							class="input__text"
-							class:input__text_changed={newAsset.description && newAsset.description.length > 0}
-							placeholder=""
-							required
-						/>
-						<label for="add-description" class="input__label">Description</label>
-					</div>
-
-					<div class="modal-footer">
-						<button
-							type="button"
-							class="button button_secondary"
-							onclick={closeAddModal}
-						>
-							Cancel
-						</button>
-						<button type="submit" class="button button_green">
-							Create
-						</button>
-					</div>
-				</form>
-			</div>
-		</div>
-	</div>
-{/if}
 
 
 <style>
