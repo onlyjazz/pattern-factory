@@ -14,7 +14,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: deploy
-    wave: 1
     parallel_group: c5-targeting
     reviewer: Danny
     review_required: full
@@ -68,7 +67,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: engineering
-    wave: 2
     parallel_group: c5-targeting
     reviewer: Danny
     review_required: full
@@ -126,7 +124,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: engineering
-    wave: 4
     parallel_group: c5-production
     reviewer: Danny
     review_required: full
@@ -182,7 +179,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: engineering
-    wave: 6
     parallel_group: c5-launch
     reviewer: Danny
     review_required: full
@@ -237,7 +233,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: deploy
-    wave: 7
     parallel_group: c5-launch
     reviewer: Danny
     review_required: full
@@ -293,7 +288,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: engineering
-    wave: 8
     parallel_group: c5-response
     reviewer: Danny
     review_required: full
@@ -347,7 +341,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: validate
-    wave: 9
     parallel_group: c5-response
     reviewer: Danny
     review_required: full
@@ -400,7 +393,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: validate
-    wave: 11
     parallel_group: c5-gate
     reviewer: Danny
     review_required: full

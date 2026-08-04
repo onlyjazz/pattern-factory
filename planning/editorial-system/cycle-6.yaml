@@ -14,7 +14,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: engineering
-    wave: 3
     parallel_group: c6-scale
     reviewer: Danny
     review_required: full

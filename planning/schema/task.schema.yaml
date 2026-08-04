@@ -32,7 +32,5 @@ task:
       - none
       - sample
       - full
-      wave: Positive integer
-      parallel_group: String
     depends_on: List of plan keys
     run_with: List of plan keys safe to launch in parallel

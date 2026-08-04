@@ -14,7 +14,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: engineering
-    wave: 1
     parallel_group: c3-schema
     reviewer: Danny
     review_required: full
@@ -69,7 +68,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: engineering
-    wave: 2
     parallel_group: c3-schema
     reviewer: Danny
     review_required: full
@@ -124,7 +122,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: engineering
-    wave: 2
     parallel_group: c3-events
     reviewer: Danny
     review_required: full
@@ -178,7 +175,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: engineering
-    wave: 3
     parallel_group: c3-events
     reviewer: Danny
     review_required: full
@@ -238,7 +234,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: engineering
-    wave: 4
     parallel_group: c3-web
     reviewer: Danny
     review_required: full
@@ -298,7 +293,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: engineering
-    wave: 5
     parallel_group: c3-web
     reviewer: Danny
     review_required: full
@@ -352,7 +346,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: engineering
-    wave: 4
     parallel_group: c3-web
     reviewer: Danny
     review_required: full
@@ -411,7 +404,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: engineering
-    wave: 3
     parallel_group: c3-crm
     reviewer: Danny
     review_required: full
@@ -468,7 +460,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: engineering
-    wave: 4
     parallel_group: c3-crm
     reviewer: Danny
     review_required: full
@@ -527,7 +518,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: engineering
-    wave: 4
     parallel_group: c3-email
     reviewer: Danny
     review_required: full
@@ -586,7 +576,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: engineering
-    wave: 3
     parallel_group: c3-social
     reviewer: Danny
     review_required: full
@@ -642,7 +631,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: engineering
-    wave: 6
     parallel_group: c3-analytics
     reviewer: Danny
     review_required: full
@@ -701,7 +689,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: engineering
-    wave: 7
     parallel_group: c3-analytics
     reviewer: Danny
     review_required: full
@@ -755,7 +742,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: engineering
-    wave: 8
     parallel_group: c3-gate
     reviewer: Danny
     review_required: full

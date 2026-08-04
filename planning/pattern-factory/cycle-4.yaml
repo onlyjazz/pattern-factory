@@ -16,7 +16,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: engineering
-    wave: 1
     parallel_group: c4-prep
     reviewer: Danny
     review_required: full
@@ -27,7 +26,7 @@ tasks:
   - FDA device corpus
   - Company/device metadata
   outputs:
-  - Frozen 100–200 device input set with category tags.
+  - Frozen 100 - 200 device input set with category tags.
   requirements:
   - Include imaging, monitoring, decision support and software-only products
   - Record missing-data cases
@@ -68,7 +67,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: validate
-    wave: 2
     parallel_group: c4-run
     reviewer: Danny
     review_required: full
@@ -83,7 +81,7 @@ tasks:
   - Dry-run corpus
   - Qualified generation pipeline
   outputs:
-  - 100–200 generated report runs with complete logs.
+  - 100 - 200 generated report runs with complete logs.
   requirements:
   - Run unattended
   - Do not patch individual records during execution
@@ -127,7 +125,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: validate
-    wave: 3
     parallel_group: c4-repair
     reviewer: Danny
     review_required: full
@@ -183,7 +180,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: validate
-    wave: 4
     parallel_group: c4-repair
     reviewer: Danny
     review_required: full

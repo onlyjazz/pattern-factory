@@ -1,98 +1,11 @@
 cycle: cycle-1
 name: Cycle 1 — Production Pipeline
-goal: Generate production-quality reports end to end and qualify 50 unattended runs.
+goal: Generate production-quality reports end to end and qualify 3 unattended runs.
 timebox_hours: 24
 execution_policy:
   start_unblocked_groups_in_parallel: true
   stop_on_failed_gate: true
   human_review_at_cycle_gate: true
-waves:
-- wave: 1
-  groups:
-  - parallel_group: c1-audit
-    tasks:
-    - PF-101
-    max_concurrency: 1
-  gate: all tasks complete or explicitly blocked
-- wave: 2
-  groups:
-  - parallel_group: c1-schema
-    tasks:
-    - PF-102
-    max_concurrency: 1
-  gate: all tasks complete or explicitly blocked
-- wave: 3
-  groups:
-  - parallel_group: c1-schema
-    tasks:
-    - PF-103
-    max_concurrency: 1
-  gate: all tasks complete or explicitly blocked
-- wave: 4
-  groups:
-  - parallel_group: c1-platform
-    tasks:
-    - PF-104
-    max_concurrency: 1
-  - parallel_group: c1-research
-    tasks:
-    - PF-108
-    max_concurrency: 1
-  gate: all tasks complete or explicitly blocked
-- wave: 5
-  groups:
-  - parallel_group: c1-platform
-    tasks:
-    - PF-105
-    - PF-106
-    max_concurrency: 2
-  gate: all tasks complete or explicitly blocked
-- wave: 6
-  groups:
-  - parallel_group: c1-generation
-    tasks:
-    - PF-107
-    max_concurrency: 1
-  - parallel_group: c1-research
-    tasks:
-    - PF-109
-    max_concurrency: 1
-  gate: all tasks complete or explicitly blocked
-- wave: 7
-  groups:
-  - parallel_group: c1-writing
-    tasks:
-    - PF-110
-    max_concurrency: 1
-  gate: all tasks complete or explicitly blocked
-- wave: 8
-  groups:
-  - parallel_group: c1-writing
-    tasks:
-    - PF-111
-    max_concurrency: 1
-  gate: all tasks complete or explicitly blocked
-- wave: 9
-  groups:
-  - parallel_group: c1-generation
-    tasks:
-    - PF-112
-    max_concurrency: 1
-  gate: all tasks complete or explicitly blocked
-- wave: 10
-  groups:
-  - parallel_group: c1-publishing
-    tasks:
-    - PF-113
-    max_concurrency: 1
-  gate: all tasks complete or explicitly blocked
-- wave: 11
-  groups:
-  - parallel_group: c1-gate
-    tasks:
-    - PF-114
-    max_concurrency: 1
-  gate: all tasks complete or explicitly blocked
 cycle_gate:
   reviewer: Danny
   criteria:

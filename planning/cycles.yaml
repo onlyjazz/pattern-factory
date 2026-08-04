@@ -4,7 +4,7 @@ cycles:
   name: Cycle 1 — Production Pipeline
   starts_at: '2026-08-02'
   ends_at: '2026-08-08'
-  goal: Generate production-quality reports end to end and qualify 50 unattended runs.
+  goal: Generate production-quality reports end to end and do 3 unattended runs.
 - number: 2
   key: cycle-2
   name: Cycle 2 — Editorial System

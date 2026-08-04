@@ -6,12 +6,79 @@
 
 Implement the first production version of the OpenCRO Planning Compiler.
 
+The selected cycle is a logical compilation unit. Task definitions may be distributed across project folders. The compiler loads all project-specific files for the selected cycle and compiles them as one plan.
 The compiler transforms the declarative planning repository into:
 
 1.  A synchronized Linear workspace.
 2.  A single Warp execution manifest (`generated/warp-cycle-<n>.yaml`).
 
 The compiler must **not** execute Warp. It prepares work for Warp.
+
+The compiler should process a cycle, not a single project file.
+
+cycle-1 is spread across multiple project folders, so the compiler must aggregate all matching files:
+
+planning/pattern-factory/cycle-1.yaml
+planning/editorial-system/cycle-1.yaml
+planning/experiment-platform/cycle-1.yaml
+planning/gtm-engine/cycle-1.yaml
+
+Some files may not exist for a given cycle. That is fine.
+
+The correct flow is:
+
+--cycle 1
+   ↓
+Find every */cycle-1.yaml under planning/
+   ↓
+Load all tasks
+   ↓
+Validate them together
+   ↓
+Build one cross-project DAG
+   ↓
+Sync all Cycle 1 issues to Linear
+   ↓
+Generate one warp-cycle-1.yaml
+
+So the compiler input is not:
+
+pattern-factory/cycle-1.yaml
+
+It is:
+
+all project-specific cycle-1.yaml files
+
+The files stay organized by project for maintainability, but compilation is cycle-centric.
+
+A clean rule would be:
+
+For --cycle N, discover and load every file matching planning/*/cycle-N.yaml, excluding reserved folders such as architecture, prompts, execution, schema, compiler, and generated.
+
+Even better, do not rely on a wildcard alone. Load the project list from projects.yaml, then resolve:
+
+planning/<project-folder>/cycle-N.yaml
+
+for each declared project.
+
+That avoids accidentally loading unrelated YAML.
+
+So:
+
+projects.yaml
+   ↓
+pattern-factory
+editorial-system
+experiment-platform
+gtm-engine
+   ↓
+load each existing cycle-1.yaml
+
+Then validate dependencies across the combined task set. A Pattern Factory task can therefore depend on an Experiment Platform task in the same cycle.
+
+The execution file under:
+
+planning/execution/cycle-1.yaml
 
 ------------------------------------------------------------------------
 

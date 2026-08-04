@@ -15,7 +15,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: generate
-    wave: 2
     parallel_group: c5-production
     reviewer: Danny
     review_required: full

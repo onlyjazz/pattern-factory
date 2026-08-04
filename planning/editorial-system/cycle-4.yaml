@@ -15,7 +15,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: validate
-    wave: 3
     parallel_group: c4-review
     reviewer: Danny
     review_required: full

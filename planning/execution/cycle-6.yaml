@@ -6,61 +6,6 @@ execution_policy:
   start_unblocked_groups_in_parallel: true
   stop_on_failed_gate: true
   human_review_at_cycle_gate: true
-waves:
-- wave: 1
-  groups:
-  - parallel_group: c6-defaults
-    tasks:
-    - LN-601
-    - LN-602
-    max_concurrency: 2
-  - parallel_group: c6-scale
-    tasks:
-    - LN-603
-    max_concurrency: 1
-  - parallel_group: c6-operating
-    tasks:
-    - LN-608
-    max_concurrency: 1
-  gate: all tasks complete or explicitly blocked
-- wave: 2
-  groups:
-  - parallel_group: c6-scale
-    tasks:
-    - LN-604
-    max_concurrency: 1
-  - parallel_group: c6-operating
-    tasks:
-    - LN-609
-    max_concurrency: 1
-  gate: all tasks complete or explicitly blocked
-- wave: 3
-  groups:
-  - parallel_group: c6-scale
-    tasks:
-    - LN-605
-    max_concurrency: 1
-  - parallel_group: c6-ops
-    tasks:
-    - LN-610
-    - LN-611
-    max_concurrency: 2
-  gate: all tasks complete or explicitly blocked
-- wave: 4
-  groups:
-  - parallel_group: c6-launch
-    tasks:
-    - LN-606
-    - LN-607
-    max_concurrency: 2
-  gate: all tasks complete or explicitly blocked
-- wave: 5
-  groups:
-  - parallel_group: c6-gate
-    tasks:
-    - LN-612
-    max_concurrency: 1
-  gate: all tasks complete or explicitly blocked
 cycle_gate:
   reviewer: Danny
   criteria:

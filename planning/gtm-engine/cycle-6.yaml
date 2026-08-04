@@ -14,7 +14,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: engineering
-    wave: 1
     parallel_group: c6-defaults
     reviewer: Danny
     review_required: full
@@ -72,7 +71,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: engineering
-    wave: 4
     parallel_group: c6-launch
     reviewer: Danny
     review_required: full
@@ -132,7 +130,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: deploy
-    wave: 4
     parallel_group: c6-launch
     reviewer: Danny
     review_required: full
@@ -189,7 +186,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: engineering
-    wave: 3
     parallel_group: c6-ops
     reviewer: Danny
     review_required: full
@@ -245,7 +241,6 @@ tasks:
   execution:
     executor: warp-agent
     agent_template: engineering
-    wave: 5
     parallel_group: c6-gate
     reviewer: Danny
     review_required: full
