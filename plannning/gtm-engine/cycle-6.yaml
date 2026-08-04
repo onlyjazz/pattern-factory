@@ -1,0 +1,290 @@
+project: gtm-engine
+cycle: cycle-6
+tasks:
+- plan_key: LN-602
+  title: Promote winning email and CTA defaults
+  type: implement
+  project: gtm-engine
+  cycle: cycle-6
+  priority: urgent
+  estimate: 3
+  labels:
+  - agent-ready
+  - gtm
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 1
+    parallel_group: c6-defaults
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - GT-512
+  objective: Update outbound templates and report CTAs.
+  context: The GTM system should encode the pilot decisions.
+  inputs:
+  - Pilot decision log
+  - Close sequences
+  - Report templates
+  outputs:
+  - Production email/CTA configuration.
+  requirements:
+  - Retain experiment IDs
+  - Version changes
+  - Do not overwrite historical campaign data
+  acceptance_criteria:
+  - New campaign uses approved defaults
+  - Old campaigns remain queryable
+  validation:
+  - Run internal test
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - LN-601
+  - LN-603
+  - LN-608
+- plan_key: LN-606
+  title: Scale outbound campaign
+  type: operate
+  project: gtm-engine
+  cycle: cycle-6
+  priority: urgent
+  estimate: 8
+  labels:
+  - gtm
+  - human
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 4
+    parallel_group: c6-launch
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - LN-602
+  - LN-604
+  - LN-605
+  objective: Expand beyond 25 companies while preserving attribution.
+  context: Volume should increase only after learning and measurement are stable.
+  inputs:
+  - Production reports
+  - Promoted defaults
+  - Verified contacts
+  - Capacity limits
+  outputs:
+  - Larger tracked outbound campaign.
+  requirements:
+  - Keep experiment metadata
+  - Monitor deliverability and response workload
+  - Pause on threshold breach
+  acceptance_criteria:
+  - Every send is attributable
+  - Delivery and reply metrics visible
+  validation:
+  - Reconcile campaign and events
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - LN-607
+- plan_key: LN-607
+  title: Launch sustainable publishing cadence
+  type: deploy
+  project: gtm-engine
+  cycle: cycle-6
+  priority: high
+  estimate: 8
+  labels:
+  - agent-ready
+  - gtm
+  - publishing
+  execution:
+    executor: warp-agent
+    agent_template: deploy
+    wave: 4
+    parallel_group: c6-launch
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - LN-604
+  - LN-605
+  objective: Begin regular website, LinkedIn, X, Substack and Notes publishing.
+  context: Publishing turns the report corpus into a distribution engine.
+  inputs:
+  - Approved production reports
+  - Channel generators
+  - Attribution
+  outputs:
+  - Operational publishing queue and first live cadence.
+  requirements:
+  - Start below theoretical maximum
+  - Preserve report source IDs
+  - Optimize for qualified meetings and learning
+  acceptance_criteria:
+  - Every item is attributable
+  - Cadence is executable without ad hoc assembly
+  validation:
+  - Audit first week of posts
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - LN-606
+- plan_key: LN-610
+  title: Create strategic-account FedEx workflow
+  type: implement
+  project: gtm-engine
+  cycle: cycle-6
+  priority: medium
+  estimate: 5
+  labels:
+  - agent-ready
+  - gtm
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 3
+    parallel_group: c6-ops
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - LN-604
+  objective: Operationalize personalized reports/books for 5–10 strategic accounts.
+  context: Strategic accounts need a distinct high-touch motion.
+  inputs:
+  - Strategic account criteria
+  - Report corpus
+  - Shipping process
+  outputs:
+  - Documented workflow from selection to signed delivery and follow-up.
+  requirements:
+  - Include personalized frontispiece, handwritten note, signature required and follow-up trigger
+  - Track costs and status
+  acceptance_criteria:
+  - One dry-run package completed
+  - Every handoff and field defined
+  validation:
+  - Walk through with test account
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - LN-605
+  - LN-611
+- plan_key: LN-612
+  title: Set operating capacity and escalation thresholds
+  type: design
+  project: gtm-engine
+  cycle: cycle-6
+  priority: urgent
+  estimate: 3
+  labels:
+  - gtm
+  - human
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 5
+    parallel_group: c6-gate
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - LN-603
+  - LN-605
+  - LN-606
+  objective: Define when volume, calls or review load exceeds capacity.
+  context: Danny needs explicit limits before becoming the bottleneck.
+  inputs:
+  - Generation throughput
+  - Editorial timing
+  - Campaign response rates
+  - Calendar capacity
+  outputs:
+  - Capacity table and escalation rules.
+  requirements:
+  - Cover reports/day, editorial queue, qualification calls/week, strategic accounts and failed jobs
+  - Name pause/delegate triggers
+  acceptance_criteria:
+  - Thresholds are measurable
+  - Each breach has action
+  validation:
+  - Simulate high-response scenario
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.

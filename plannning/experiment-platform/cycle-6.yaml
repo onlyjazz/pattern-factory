@@ -1,0 +1,115 @@
+project: experiment-platform
+cycle: cycle-6
+tasks:
+- plan_key: LN-608
+  title: Implement weekly experiment review view
+  type: implement
+  project: experiment-platform
+  cycle: cycle-6
+  priority: high
+  estimate: 5
+  labels:
+  - agent-ready
+  - analytics
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 1
+    parallel_group: c6-operating
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - GT-512
+  - XP-313
+  objective: Create the operating view for Sunday decisions.
+  context: The learning loop needs a repeatable review surface.
+  inputs:
+  - Dashboard
+  - Decision workflow
+  - Current experiments
+  outputs:
+  - View/report showing hypotheses, sample, result, confidence and decision status.
+  requirements:
+  - Include business, editorial, engineering and unit-economic context
+  - Highlight overdue decisions
+  acceptance_criteria:
+  - Sunday agenda can run from one view
+  - Metrics reconcile
+  validation:
+  - Dry-run a retrospective
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - LN-601
+  - LN-602
+  - LN-603
+- plan_key: LN-609
+  title: Add learning velocity KPIs
+  type: implement
+  project: experiment-platform
+  cycle: cycle-6
+  priority: high
+  estimate: 3
+  labels:
+  - agent-ready
+  - analytics
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 2
+    parallel_group: c6-operating
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - LN-608
+  objective: Track how quickly uncertainty is reduced.
+  context: Revenue is the scoreboard; learning velocity measures the engine.
+  inputs:
+  - Experiment history
+  - Decision timestamps
+  outputs:
+  - KPIs for completed, promoted, continued, retired and time-to-decision.
+  requirements:
+  - Calculate weekly and rolling trends
+  - Exclude invalid experiments explicitly
+  acceptance_criteria:
+  - Metrics match manual sample
+  - Definitions documented
+  validation:
+  - Cross-check 10 experiments
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - LN-604

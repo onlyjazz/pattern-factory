@@ -1,0 +1,853 @@
+project: pattern-factory
+cycle: cycle-1
+tasks:
+- plan_key: PF-101
+  title: Audit current Pattern Factory pipeline
+  type: inspect
+  project: pattern-factory
+  cycle: cycle-1
+  priority: urgent
+  estimate: 3
+  labels:
+  - agent-ready
+  - ai
+  - data
+  execution:
+    executor: warp-agent
+    agent_template: inspect
+    wave: 1
+    parallel_group: c1-audit
+    reviewer: Danny
+    review_required: full
+  depends_on: []
+  objective: Document the current report-generation flow and identify reliability gaps.
+  context: This establishes the baseline before changing schemas or orchestration.
+  inputs:
+  - Current repository
+  - Generation entry points
+  - Database schema
+  - Prompt YAML directory
+  outputs:
+  - A concise architecture map and prioritized defect list.
+  requirements:
+  - Trace data from source record through persistence and publishing
+  - Identify every external dependency and failure boundary
+  - Do not modify production code
+  acceptance_criteria:
+  - Architecture map names all stages
+  - Defects are ranked by severity and blocking impact
+  - Unknowns are explicitly listed
+  validation:
+  - Run the current pipeline once
+  - Capture logs and outputs
+  - Confirm the map against code
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+- plan_key: PF-102
+  title: Freeze report entity schema
+  type: design
+  project: pattern-factory
+  cycle: cycle-1
+  priority: urgent
+  estimate: 5
+  labels:
+  - agent-ready
+  - ai
+  - data
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 2
+    parallel_group: c1-schema
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - PF-101
+  objective: Define the stable entities and fields required for production reports.
+  context: The existing model must support unattended generation and later attribution.
+  inputs:
+  - Current schema
+  - Canonical threat-story format
+  - Six-page report requirements
+  outputs:
+  - Versioned schema specification plus migration plan.
+  requirements:
+  - Define required versus optional fields
+  - Allow long narrative fields
+  - Specify identifiers and relationships
+  - Preserve existing data
+  acceptance_criteria:
+  - Schema covers company, device, assets, threats, countermeasures and report artifacts
+  - No required field is ambiguous
+  - Backward compatibility plan exists
+  validation:
+  - Validate against at least five existing reports
+  - Review max lengths and null behavior
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+- plan_key: PF-103
+  title: Implement schema migration
+  type: implement
+  project: pattern-factory
+  cycle: cycle-1
+  priority: urgent
+  estimate: 5
+  labels:
+  - agent-ready
+  - ai
+  - data
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 3
+    parallel_group: c1-schema
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - PF-102
+  objective: Apply the frozen report schema to the database.
+  context: Production runs require the stable schema defined in PF-102.
+  inputs:
+  - Approved schema
+  - Migration framework
+  - Existing database
+  outputs:
+  - Reversible database migration and updated models.
+  requirements:
+  - Use repository migration conventions
+  - Handle existing rows safely
+  - Do not delete data
+  - Include rollback
+  acceptance_criteria:
+  - Migration succeeds on clean and populated databases
+  - Rollback succeeds
+  - Models match schema
+  - Tests pass
+  validation:
+  - Run migrate up/down on test DB
+  - Run model tests
+  - Inspect representative rows
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+- plan_key: PF-104
+  title: Add stable artifact IDs
+  type: implement
+  project: pattern-factory
+  cycle: cycle-1
+  priority: urgent
+  estimate: 3
+  labels:
+  - agent-ready
+  - ai
+  - data
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 4
+    parallel_group: c1-platform
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - PF-103
+  objective: Create stable identifiers for each generation artifact.
+  context: Every report and downstream event must be traceable.
+  inputs:
+  - Report schema
+  - Existing ID conventions
+  - Generation pipeline
+  outputs:
+  - Persistent IDs for research package, report, generation run, prompt invocation and template.
+  requirements:
+  - Use immutable IDs
+  - Prevent duplicate creation on retries
+  - Expose IDs in logs and outputs
+  acceptance_criteria:
+  - IDs persist across retries
+  - Relationships are queryable
+  - No collision in test batch
+  validation:
+  - Generate 100 artifacts
+  - Retry failed jobs
+  - Verify referential integrity
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - PF-108
+- plan_key: PF-105
+  title: Persist prompt Git provenance
+  type: implement
+  project: pattern-factory
+  cycle: cycle-1
+  priority: urgent
+  estimate: 5
+  labels:
+  - agent-ready
+  - ai
+  - data
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 5
+    parallel_group: c1-platform
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - PF-104
+  objective: Record the exact YAML prompt source and Git revision used for every generation.
+  context: Prompts are stored in version-controlled YAML; runtime provenance must point to that source rather than
+    add a redundant content hash.
+  inputs:
+  - Prompt YAML repository
+  - Git metadata
+  - Generation run model
+  outputs:
+  - Stored prompt file path, YAML key, Git commit SHA, repository dirty state, model and parameters.
+  requirements:
+  - Read Git commit at runtime
+  - Record dirty working-tree state
+  - Persist metadata for success and failure
+  - Warn or fail according to configuration when dirty
+  acceptance_criteria:
+  - Every generation run records provenance
+  - Failed runs retain metadata
+  - Clean and dirty states are distinguishable
+  - Existing reports remain readable
+  validation:
+  - Generate from clean checkout
+  - Generate with uncommitted YAML edit
+  - Force API failure
+  - Run tests
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - PF-106
+- plan_key: PF-106
+  title: Add structured generation logging
+  type: implement
+  project: pattern-factory
+  cycle: cycle-1
+  priority: high
+  estimate: 3
+  labels:
+  - agent-ready
+  - ai
+  - data
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 5
+    parallel_group: c1-platform
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - PF-104
+  objective: Make every stage observable with machine-readable logs.
+  context: Warp agents need reliable failure information and downstream tasks need run metrics.
+  inputs:
+  - Pipeline stages
+  - Artifact IDs
+  - Logging framework
+  outputs:
+  - Structured logs keyed by generation-run and report IDs.
+  requirements:
+  - Log stage start/end, duration, status and error
+  - Avoid sensitive payload dumping
+  - Use consistent event names
+  acceptance_criteria:
+  - Every stage emits start/end events
+  - Failures include actionable error context
+  - Logs can reconstruct a run
+  validation:
+  - Run successful and failed generations
+  - Query logs by run ID
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - PF-105
+- plan_key: PF-107
+  title: Implement retry-safe orchestration
+  type: implement
+  project: pattern-factory
+  cycle: cycle-1
+  priority: urgent
+  estimate: 8
+  labels:
+  - agent-ready
+  - ai
+  - data
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 6
+    parallel_group: c1-generation
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - PF-104
+  - PF-106
+  objective: Make report generation idempotent and recoverable.
+  context: Unattended batches must resume without duplicate artifacts.
+  inputs:
+  - Current job runner
+  - Artifact IDs
+  - Persistence layer
+  outputs:
+  - Retry-safe orchestration with stage checkpoints.
+  requirements:
+  - Checkpoint completed stages
+  - Reuse existing artifacts
+  - Classify retryable and terminal errors
+  - Cap retries
+  acceptance_criteria:
+  - Retry does not duplicate entities
+  - Terminal failures stop cleanly
+  - Interrupted run resumes
+  validation:
+  - Kill a run mid-stage
+  - Retry API timeout
+  - Retry validation failure
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - PF-109
+- plan_key: PF-108
+  title: Implement competitive research brief schema
+  type: implement
+  project: pattern-factory
+  cycle: cycle-1
+  priority: high
+  estimate: 5
+  labels:
+  - agent-ready
+  - ai
+  - data
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 4
+    parallel_group: c1-research
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - PF-103
+  objective: Create the structured evidence package used before writing an opener.
+  context: The opener must be grounded in documented evidence.
+  inputs:
+  - Company/device source data
+  - Competitive brief structure from roadmap
+  - Report schema
+  outputs:
+  - Validated structured brief containing comparison set, strengths, differences, evidence, confidence and review
+    flags.
+  requirements:
+  - Use only supplied evidence
+  - Mark unsupported claims
+  - Support multiple competitors
+  - Version the brief
+  acceptance_criteria:
+  - Brief validates against schema
+  - Every claim has evidence and confidence
+  - Missing evidence is explicit
+  validation:
+  - Generate briefs for five device types
+  - Test incomplete source data
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - PF-104
+- plan_key: PF-109
+  title: Implement competitive research agent
+  type: implement
+  project: pattern-factory
+  cycle: cycle-1
+  priority: urgent
+  estimate: 8
+  labels:
+  - agent-ready
+  - ai
+  - data
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 6
+    parallel_group: c1-research
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - PF-108
+  - PF-105
+  objective: Generate the structured competitive brief automatically.
+  context: This agent supplies bounded evidence to the opener agent.
+  inputs:
+  - Research brief schema
+  - Public-source ingestion already available
+  - Prompt YAML
+  outputs:
+  - Agent that produces valid briefs from supplied evidence.
+  requirements:
+  - Do not invent competitors or superiority claims
+  - Return schema-valid output
+  - Mark claims requiring review
+  - Log sources used
+  acceptance_criteria:
+  - Five sample briefs pass validation
+  - No unsupported factual claim in review sample
+  - Failures are explicit
+  validation:
+  - Run on imaging, monitoring and software-only devices
+  - Review output manually
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - PF-107
+- plan_key: PF-110
+  title: Implement opener treatment prompts
+  type: implement
+  project: pattern-factory
+  cycle: cycle-1
+  priority: high
+  estimate: 5
+  labels:
+  - agent-ready
+  - ai
+  - data
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 7
+    parallel_group: c1-writing
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - PF-109
+  - PF-105
+  objective: Create YAML prompts for four opening treatments.
+  context: The experiment platform will compare materially different emotional openings.
+  inputs:
+  - Competitive brief
+  - Existing prompt YAML conventions
+  - Editorial constraints
+  outputs:
+  - Version-controlled YAML prompts for positive comparison, positioning, value created and direct value-at-risk.
+  requirements:
+  - 120–180 words before editing
+  - Use only evidence
+  - Mark [VERIFY] sentences
+  - Avoid generic praise
+  - Do not discuss vulnerabilities yet
+  acceptance_criteria:
+  - Each treatment is materially distinct
+  - Prompts load by key
+  - Outputs obey length and evidence rules
+  validation:
+  - Generate three variants per treatment on three devices
+  - Review for convergence
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+- plan_key: PF-111
+  title: Implement opener agent
+  type: implement
+  project: pattern-factory
+  cycle: cycle-1
+  priority: urgent
+  estimate: 5
+  labels:
+  - agent-ready
+  - ai
+  - data
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 8
+    parallel_group: c1-writing
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - PF-110
+  - PF-107
+  objective: Generate three variants for an assigned opener treatment.
+  context: The report needs a reproducible opener generation stage.
+  inputs:
+  - Opener YAML prompts
+  - Competitive brief
+  - Generation orchestration
+  outputs:
+  - Opener agent returning variants, treatment ID and review flags.
+  requirements:
+  - Preserve assigned treatment
+  - Do not silently switch style
+  - Persist provenance
+  - Return structured output
+  acceptance_criteria:
+  - Three variants produced
+  - Treatment ID persists
+  - Invalid evidence blocks generation
+  - Tests pass
+  validation:
+  - Run all four treatments
+  - Force missing brief
+  - Review provenance
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+- plan_key: PF-112
+  title: Implement six-page report assembler
+  type: implement
+  project: pattern-factory
+  cycle: cycle-1
+  priority: urgent
+  estimate: 8
+  labels:
+  - agent-ready
+  - ai
+  - data
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 9
+    parallel_group: c1-generation
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - PF-103
+  - PF-111
+  objective: Assemble research, opener, valuation, threats and countermeasures into the production report structure.
+  context: The report is the main customer-facing artifact.
+  inputs:
+  - Existing generation outputs
+  - Six-page structure
+  - Report schema
+  outputs:
+  - Structured report document ready for HTML/PDF rendering.
+  requirements:
+  - Keep sections stable
+  - Include provenance IDs
+  - Do not fabricate missing sections
+  - Fail validation on missing required content
+  acceptance_criteria:
+  - Complete report assembles from sample inputs
+  - Required sections always present
+  - Errors identify missing stage
+  validation:
+  - Assemble five reports
+  - Test missing opener and missing valuation
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+- plan_key: PF-113
+  title: Implement static HTML report renderer
+  type: implement
+  project: pattern-factory
+  cycle: cycle-1
+  priority: high
+  estimate: 5
+  labels:
+  - agent-ready
+  - ai
+  - data
+  - publishing
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 10
+    parallel_group: c1-publishing
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - PF-112
+  objective: Render the assembled report as publishable static HTML.
+  context: Reports must be publishable on OpenCRO and measurable later.
+  inputs:
+  - Assembled report
+  - Current website styles
+  - SEO requirements
+  outputs:
+  - Responsive static HTML page with metadata and stable URL.
+  requirements:
+  - Escape untrusted content
+  - Add canonical metadata
+  - Expose report ID in markup
+  - Support noindex switch
+  acceptance_criteria:
+  - HTML validates
+  - Mobile layout is usable
+  - All sections render
+  - Report ID is present
+  validation:
+  - Render five reports
+  - Run HTML validation
+  - Check mobile viewport
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+- plan_key: PF-114
+  title: Run 50-report unattended qualification
+  type: validate
+  project: pattern-factory
+  cycle: cycle-1
+  priority: urgent
+  estimate: 8
+  labels:
+  - agent-ready
+  - ai
+  - data
+  - qa
+  - validation
+  execution:
+    executor: warp-agent
+    agent_template: validate
+    wave: 11
+    parallel_group: c1-gate
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - PF-107
+  - PF-109
+  - PF-111
+  - PF-112
+  - PF-113
+  objective: Prove the Cycle 1 pipeline can generate 50 reports without manual intervention.
+  context: This is the Cycle 1 exit gate.
+  inputs:
+  - Completed pipeline
+  - 50-device test set
+  - Logging and metrics
+  outputs:
+  - Qualification report with pass rate, failures, runtimes and defect list.
+  requirements:
+  - Run unattended
+  - Do not repair individual reports during run
+  - Classify every failure
+  - Link defects to run IDs
+  acceptance_criteria:
+  - 50 jobs attempted
+  - Success rate and stage metrics reported
+  - All failures reproducible
+  - No silent data loss
+  validation:
+  - Execute batch
+  - Sample 10 outputs
+  - Verify logs and provenance
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.

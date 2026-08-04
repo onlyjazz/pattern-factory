@@ -1,0 +1,238 @@
+project: pattern-factory
+cycle: cycle-6
+tasks:
+- plan_key: LN-601
+  title: Promote winning prompt configuration
+  type: implement
+  project: pattern-factory
+  cycle: cycle-6
+  priority: urgent
+  estimate: 3
+  labels:
+  - agent-ready
+  - ai
+  - data
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 1
+    parallel_group: c6-defaults
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - GT-512
+  objective: Make approved pilot treatments the production defaults.
+  context: Production should reflect evidence from Cycle 5.
+  inputs:
+  - Pilot decision log
+  - Prompt YAML
+  - Configuration
+  outputs:
+  - Committed prompt/config changes with release note.
+  requirements:
+  - Change only promoted defaults
+  - Retain retired treatments for reproducibility
+  - Record Git commit
+  acceptance_criteria:
+  - New runs use promoted default
+  - Historic runs remain reproducible
+  validation:
+  - Generate regression sample
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - LN-602
+  - LN-603
+  - LN-608
+- plan_key: LN-603
+  title: Define production batch capacity
+  type: design
+  project: pattern-factory
+  cycle: cycle-6
+  priority: high
+  estimate: 5
+  labels:
+  - agent-ready
+  - ai
+  - data
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 1
+    parallel_group: c6-scale
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - DR-409
+  - GT-512
+  objective: Set safe generation limits from observed throughput.
+  context: Scaling must respect failure and editorial capacity.
+  inputs:
+  - Dry-run metrics
+  - Pilot metrics
+  - Editorial cycle time
+  outputs:
+  - Documented batch-size, concurrency and retry limits.
+  requirements:
+  - Include alert thresholds
+  - Account for API cost and rate limits
+  - Define rollback trigger
+  acceptance_criteria:
+  - Limits trace to measured data
+  - Operational settings are configurable
+  validation:
+  - Run load test at proposed limit
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - LN-601
+  - LN-602
+  - LN-608
+- plan_key: LN-604
+  title: Scale report generation
+  type: validate
+  project: pattern-factory
+  cycle: cycle-6
+  priority: urgent
+  estimate: 8
+  labels:
+  - agent-ready
+  - ai
+  - data
+  execution:
+    executor: warp-agent
+    agent_template: validate
+    wave: 2
+    parallel_group: c6-scale
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - LN-601
+  - LN-603
+  objective: Run the first production-volume batch under limits.
+  context: This moves the factory beyond the pilot.
+  inputs:
+  - Capacity settings
+  - Production defaults
+  - Target company queue
+  outputs:
+  - Production batch with monitored results.
+  requirements:
+  - Respect concurrency limits
+  - Stop on critical threshold
+  - Retain failures
+  acceptance_criteria:
+  - Batch completes within expected envelope
+  - No critical attribution loss
+  validation:
+  - Review metrics and sample outputs
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - LN-609
+- plan_key: LN-611
+  title: Create monthly corpus maintenance workflow
+  type: design
+  project: pattern-factory
+  cycle: cycle-6
+  priority: medium
+  estimate: 5
+  labels:
+  - agent-ready
+  - ai
+  - data
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 3
+    parallel_group: c6-ops
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - LN-604
+  objective: Define how newly cleared and materially changed devices enter the system.
+  context: After the initial build, the corpus becomes a maintained asset.
+  inputs:
+  - FDA source cadence
+  - Report pipeline
+  - Versioning
+  outputs:
+  - Automated or documented monthly refresh workflow.
+  requirements:
+  - Detect new devices
+  - Flag major guidance/product changes
+  - Preserve report history
+  acceptance_criteria:
+  - New and changed records produce queued tasks
+  - No silent overwrite
+  validation:
+  - Run against prior month snapshot
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - LN-605
+  - LN-610

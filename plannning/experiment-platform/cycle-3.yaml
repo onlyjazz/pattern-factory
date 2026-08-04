@@ -1,0 +1,798 @@
+project: experiment-platform
+cycle: cycle-3
+tasks:
+- plan_key: XP-301
+  title: Define hypothesis-centered experiment schema
+  type: design
+  project: experiment-platform
+  cycle: cycle-3
+  priority: urgent
+  estimate: 5
+  labels:
+  - agent-ready
+  - analytics
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 1
+    parallel_group: c3-schema
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - PF-104
+  objective: Model experiments around hypotheses rather than campaigns.
+  context: The company is accumulating validated knowledge.
+  inputs:
+  - Roadmap experiment fields
+  - Current database
+  - Artifact IDs
+  outputs:
+  - Versioned schema for experiments, treatments, metrics, confidence and decisions.
+  requirements:
+  - Support A/B/C treatments
+  - Store primary value proposition
+  - Separate primary/secondary metrics
+  - Use promote/continue/retire
+  acceptance_criteria:
+  - Schema answers which hypothesis, audience and treatment produced an outcome
+  - Migration plan exists
+  validation:
+  - Model five sample experiments
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+- plan_key: XP-302
+  title: Implement experiment schema migration
+  type: implement
+  project: experiment-platform
+  cycle: cycle-3
+  priority: urgent
+  estimate: 5
+  labels:
+  - agent-ready
+  - analytics
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 2
+    parallel_group: c3-schema
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - XP-301
+  objective: Create experiment persistence in the database.
+  context: Instrumentation depends on stable experiment entities.
+  inputs:
+  - Approved schema
+  - Migration framework
+  outputs:
+  - Database migration and models.
+  requirements:
+  - Preserve existing data
+  - Enforce required references
+  - Support future channels
+  acceptance_criteria:
+  - Migration and rollback pass
+  - CRUD tests pass
+  validation:
+  - Run on clean/populated DB
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - XP-303
+- plan_key: XP-303
+  title: Define unified event taxonomy
+  type: design
+  project: experiment-platform
+  cycle: cycle-3
+  priority: urgent
+  estimate: 5
+  labels:
+  - agent-ready
+  - analytics
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 2
+    parallel_group: c3-events
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - XP-301
+  objective: Specify the events from content through revenue.
+  context: All channels must speak the same analytical language.
+  inputs:
+  - Roadmap event chain
+  - Website/email/CRM workflows
+  outputs:
+  - Versioned event catalogue and payload schemas.
+  requirements:
+  - Cover sent, opened, clicked, viewed, scrolled, downloaded, booked, qualified, proposal, won, lost
+  - Include timestamps and artifact/treatment IDs
+  acceptance_criteria:
+  - Every desired KPI derives from events
+  - Payloads have validation rules
+  validation:
+  - Walk through three synthetic journeys
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - XP-302
+- plan_key: XP-304
+  title: Implement event ingestion endpoint
+  type: implement
+  project: experiment-platform
+  cycle: cycle-3
+  priority: urgent
+  estimate: 8
+  labels:
+  - agent-ready
+  - analytics
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 3
+    parallel_group: c3-events
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - XP-302
+  - XP-303
+  objective: Persist validated events idempotently.
+  context: Channels need a common ingestion path.
+  inputs:
+  - Event taxonomy
+  - Database
+  - Authentication conventions
+  outputs:
+  - Event ingestion API/service.
+  requirements:
+  - Validate schema
+  - Deduplicate retries
+  - Reject unknown IDs
+  - Log failures
+  acceptance_criteria:
+  - Duplicate event does not double count
+  - Invalid payload rejected
+  - Latency acceptable
+  validation:
+  - Load test and retry test
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - XP-308
+  - XP-311
+- plan_key: XP-305
+  title: Instrument report page views
+  type: implement
+  project: experiment-platform
+  cycle: cycle-3
+  priority: high
+  estimate: 3
+  labels:
+  - agent-ready
+  - analytics
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 4
+    parallel_group: c3-web
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - XP-304
+  - PF-113
+  objective: Track report engagement by artifact and treatment.
+  context: Time on page and scroll depth are opening-style metrics.
+  inputs:
+  - Static HTML reports
+  - Event endpoint
+  - Artifact IDs
+  outputs:
+  - Client-side or server-side page-view instrumentation.
+  requirements:
+  - Capture report ID, treatment, session and timestamp
+  - Respect privacy design
+  - Avoid collecting unnecessary personal data
+  acceptance_criteria:
+  - View event appears once per defined session rule
+  - Unknown IDs fail visibly
+  validation:
+  - Open five report pages
+  - Inspect events
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - XP-307
+  - XP-309
+  - XP-310
+- plan_key: XP-306
+  title: Instrument scroll depth and time on page
+  type: implement
+  project: experiment-platform
+  cycle: cycle-3
+  priority: high
+  estimate: 5
+  labels:
+  - agent-ready
+  - analytics
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 5
+    parallel_group: c3-web
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - XP-305
+  objective: Measure whether readers engage beyond the opener.
+  context: These metrics test the first 30 seconds.
+  inputs:
+  - Report page
+  - Event endpoint
+  outputs:
+  - Scroll and engaged-time events.
+  requirements:
+  - Define thresholds
+  - Throttle events
+  - Handle tab inactivity
+  acceptance_criteria:
+  - Metrics are reproducible
+  - No event flood
+  - Report and treatment IDs persist
+  validation:
+  - Simulate scroll patterns and inactive tabs
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+- plan_key: XP-307
+  title: Instrument CTA clicks and bookings
+  type: implement
+  project: experiment-platform
+  cycle: cycle-3
+  priority: urgent
+  estimate: 5
+  labels:
+  - agent-ready
+  - analytics
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 4
+    parallel_group: c3-web
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - XP-304
+  - PF-113
+  objective: Trace CTAs through qualification-call booking.
+  context: CTA experiments need downstream attribution.
+  inputs:
+  - Report CTAs
+  - Booking link flow
+  - Event endpoint
+  outputs:
+  - Click and booked-call events linked to experiment treatment.
+  requirements:
+  - Persist CTA ID
+  - Carry attribution token
+  - Handle cross-domain booking where possible
+  acceptance_criteria:
+  - Click maps to CTA and report
+  - Booked call maps to originating treatment or is flagged unattributed
+  validation:
+  - Run synthetic booking
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - XP-305
+  - XP-309
+  - XP-310
+- plan_key: XP-308
+  title: Define Close CRM field mapping
+  type: design
+  project: experiment-platform
+  cycle: cycle-3
+  priority: high
+  estimate: 3
+  labels:
+  - agent-ready
+  - analytics
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 3
+    parallel_group: c3-crm
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - XP-303
+  objective: Specify CRM fields required for attribution and learning.
+  context: Close must store report, experiment, treatment and structured outcome data.
+  inputs:
+  - Current Close setup
+  - Event taxonomy
+  - Sales stages
+  outputs:
+  - Field mapping and lifecycle specification.
+  requirements:
+  - Include contact/company/report/campaign/treatment IDs
+  - Include loss reason and perceived value proposition
+  acceptance_criteria:
+  - Every CRM stage maps to an event
+  - No required attribution field is missing
+  validation:
+  - Map three sample leads
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - XP-304
+  - XP-311
+- plan_key: XP-309
+  title: Implement Close event synchronization
+  type: implement
+  project: experiment-platform
+  cycle: cycle-3
+  priority: urgent
+  estimate: 8
+  labels:
+  - agent-ready
+  - analytics
+  - integration
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 4
+    parallel_group: c3-crm
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - XP-304
+  - XP-308
+  objective: Send CRM lifecycle events into the unified model.
+  context: Calls, opportunities and revenue must join to content.
+  inputs:
+  - Close API/webhooks
+  - Field mapping
+  - Event endpoint
+  outputs:
+  - Reliable sync for reply, qualified, proposal, won and lost events.
+  requirements:
+  - Idempotent sync
+  - Backfill support
+  - Structured error handling
+  acceptance_criteria:
+  - Sample lifecycle produces complete event chain
+  - Retries do not duplicate
+  validation:
+  - Run synthetic lead through stages
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - XP-305
+  - XP-307
+  - XP-310
+- plan_key: XP-310
+  title: Instrument outbound email events
+  type: implement
+  project: experiment-platform
+  cycle: cycle-3
+  priority: urgent
+  estimate: 8
+  labels:
+  - agent-ready
+  - analytics
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 4
+    parallel_group: c3-email
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - XP-304
+  - XP-308
+  objective: Capture sends, opens, clicks and replies by variant.
+  context: Email is expected to generate most meetings.
+  inputs:
+  - Email provider/Close sequence
+  - Campaign IDs
+  - Event endpoint
+  outputs:
+  - Email event integration.
+  requirements:
+  - Persist subject/body/CTA variant IDs
+  - Handle privacy and provider limitations
+  - Deduplicate provider retries
+  acceptance_criteria:
+  - Events join to contact, report and experiment
+  - Unattributed events are visible
+  validation:
+  - Send internal test sequence
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - XP-305
+  - XP-307
+  - XP-309
+- plan_key: XP-311
+  title: Instrument publishing channel metadata
+  type: implement
+  project: experiment-platform
+  cycle: cycle-3
+  priority: high
+  estimate: 5
+  labels:
+  - agent-ready
+  - analytics
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 3
+    parallel_group: c3-social
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - XP-302
+  - XP-303
+  objective: Store LinkedIn, X, Substack article and Note treatments.
+  context: Cross-channel experiments need comparable metadata.
+  inputs:
+  - Content generation outputs
+  - Experiment schema
+  outputs:
+  - Publishing artifact records and event hooks.
+  requirements:
+  - Store channel, hook, length, CTA, time and report source
+  - Support manual metric ingestion initially
+  acceptance_criteria:
+  - Every published variant has unique artifact ID
+  - Metrics can attach later
+  validation:
+  - Create sample records for all channels
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - XP-304
+  - XP-308
+- plan_key: XP-312
+  title: Build unified funnel queries
+  type: implement
+  project: experiment-platform
+  cycle: cycle-3
+  priority: urgent
+  estimate: 8
+  labels:
+  - agent-ready
+  - analytics
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 6
+    parallel_group: c3-analytics
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - XP-305
+  - XP-306
+  - XP-307
+  - XP-309
+  - XP-310
+  - XP-311
+  objective: Create reliable queries from content to revenue.
+  context: Dashboards should use one canonical analytical layer.
+  inputs:
+  - Unified events
+  - Experiment entities
+  - CRM events
+  outputs:
+  - Documented queries/views for funnel stages and conversion rates.
+  requirements:
+  - Handle missing attribution
+  - Avoid double counting
+  - Support slicing by treatment and value proposition
+  acceptance_criteria:
+  - Query totals reconcile to raw events
+  - Sample experiment metrics are correct
+  validation:
+  - Test on synthetic journeys
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+- plan_key: XP-313
+  title: Build dashboard v1
+  type: implement
+  project: experiment-platform
+  cycle: cycle-3
+  priority: high
+  estimate: 8
+  labels:
+  - agent-ready
+  - analytics
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 7
+    parallel_group: c3-analytics
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - XP-312
+  objective: Display the unified funnel and experiment results.
+  context: The dashboard is the operational view for Sunday decisions.
+  inputs:
+  - Canonical funnel queries
+  - Experiment decisions
+  outputs:
+  - Dashboard with KPIs and treatment comparisons.
+  requirements:
+  - Show impressions/traffic, replies, calls, opportunities, revenue and learning velocity
+  - Allow project/cycle/channel filters
+  acceptance_criteria:
+  - Numbers reconcile to queries
+  - Empty states are clear
+  - Dashboard loads reliably
+  validation:
+  - Validate against synthetic dataset
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+- plan_key: XP-314
+  title: Prove end-to-end attribution
+  type: implement
+  project: experiment-platform
+  cycle: cycle-3
+  priority: urgent
+  estimate: 5
+  labels:
+  - agent-ready
+  - analytics
+  - qa
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 8
+    parallel_group: c3-gate
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - XP-313
+  objective: Demonstrate every synthetic journey is traceable.
+  context: This is the Cycle 3 exit gate.
+  inputs:
+  - All instrumentation
+  - Dashboard
+  - Synthetic test data
+  outputs:
+  - Attribution qualification report.
+  requirements:
+  - Test email and report-page journeys
+  - Include won and lost paths
+  - Document gaps
+  acceptance_criteria:
+  - Every required event traces to exact report and treatment
+  - Known unattributed cases are quantified
+  validation:
+  - Run at least 10 synthetic journeys
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.

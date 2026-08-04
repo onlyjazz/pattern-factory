@@ -1,0 +1,59 @@
+project: editorial-system
+cycle: cycle-5
+tasks:
+- plan_key: GT-504
+  title: Review and approve pilot reports
+  type: review
+  project: editorial-system
+  cycle: cycle-5
+  priority: urgent
+  estimate: 8
+  labels:
+  - editorial
+  - human
+  execution:
+    executor: warp-agent
+    agent_template: review
+    wave: 3
+    parallel_group: c5-production
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - GT-503
+  - ED-212
+  objective: Ensure every sent report is credible and human-quality.
+  context: External outreach requires full editorial approval.
+  inputs:
+  - 25 reports
+  - Evidence briefs
+  - Rubric
+  - Editor
+  outputs:
+  - Approved, revised or rejected decision for every report.
+  requirements:
+  - Resolve all [VERIFY] flags
+  - Preserve treatment assignment
+  - Escalate disputed premise
+  acceptance_criteria:
+  - No unreviewed report is publishable
+  - Approved reports meet rubric
+  validation:
+  - Danny samples all strategic or uncertain reports
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.

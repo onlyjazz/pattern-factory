@@ -1,0 +1,49 @@
+labels:
+- key: agent-ready
+  name: agent-ready
+  color: '#5E6AD2'
+  description: Ready for autonomous Warp execution.
+- key: human
+  name: human
+  color: '#F2C94C'
+  description: Requires human execution.
+- key: integration
+  name: integration
+  color: '#27AE60'
+  description: Integrates outputs from multiple tasks.
+- key: validation
+  name: validation
+  color: '#EB5757'
+  description: Tests or validates a subsystem or cycle gate.
+- key: backend
+  name: backend
+  color: '#2F80ED'
+  description: Backend code, services, or persistence.
+- key: ai
+  name: ai
+  color: '#9B51E0'
+  description: Model, prompt, or agent behavior.
+- key: data
+  name: data
+  color: '#56CCF2'
+  description: Schemas, data quality, or data pipelines.
+- key: publishing
+  name: publishing
+  color: '#F2994A'
+  description: Website, report, or content publishing.
+- key: analytics
+  name: analytics
+  color: '#219653'
+  description: Instrumentation, attribution, or dashboards.
+- key: editorial
+  name: editorial
+  color: '#BB6BD9'
+  description: Editorial workflow, quality, or style.
+- key: gtm
+  name: gtm
+  color: '#6FCF97'
+  description: Outbound, sales, content distribution, or CRM.
+- key: qa
+  name: qa
+  color: '#EB5757'
+  description: Quality assurance and failure analysis.

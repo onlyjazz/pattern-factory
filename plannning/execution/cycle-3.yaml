@@ -1,0 +1,93 @@
+cycle: cycle-3
+name: Cycle 3 — Experiment Platform
+goal: Trace every market event to the exact artifact, hypothesis, and treatment.
+timebox_hours: 24
+execution_policy:
+  start_unblocked_groups_in_parallel: true
+  stop_on_failed_gate: true
+  human_review_at_cycle_gate: true
+waves:
+- wave: 1
+  groups:
+  - parallel_group: c3-schema
+    tasks:
+    - XP-301
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 2
+  groups:
+  - parallel_group: c3-schema
+    tasks:
+    - XP-302
+    max_concurrency: 1
+  - parallel_group: c3-events
+    tasks:
+    - XP-303
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 3
+  groups:
+  - parallel_group: c3-events
+    tasks:
+    - XP-304
+    max_concurrency: 1
+  - parallel_group: c3-crm
+    tasks:
+    - XP-308
+    max_concurrency: 1
+  - parallel_group: c3-social
+    tasks:
+    - XP-311
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 4
+  groups:
+  - parallel_group: c3-web
+    tasks:
+    - XP-305
+    - XP-307
+    max_concurrency: 2
+  - parallel_group: c3-crm
+    tasks:
+    - XP-309
+    max_concurrency: 1
+  - parallel_group: c3-email
+    tasks:
+    - XP-310
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 5
+  groups:
+  - parallel_group: c3-web
+    tasks:
+    - XP-306
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 6
+  groups:
+  - parallel_group: c3-analytics
+    tasks:
+    - XP-312
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 7
+  groups:
+  - parallel_group: c3-analytics
+    tasks:
+    - XP-313
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 8
+  groups:
+  - parallel_group: c3-gate
+    tasks:
+    - XP-314
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+cycle_gate:
+  reviewer: Danny
+  criteria:
+  - All blocking tasks completed
+  - Validation evidence attached
+  - Remaining blockers explicitly accepted or moved
+  - Next cycle dependencies unblocked

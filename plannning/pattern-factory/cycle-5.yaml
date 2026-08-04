@@ -1,0 +1,61 @@
+project: pattern-factory
+cycle: cycle-5
+tasks:
+- plan_key: GT-503
+  title: Generate final pilot reports
+  type: generate
+  project: pattern-factory
+  cycle: cycle-5
+  priority: urgent
+  estimate: 5
+  labels:
+  - agent-ready
+  - ai
+  - data
+  execution:
+    executor: warp-agent
+    agent_template: generate
+    wave: 2
+    parallel_group: c5-production
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - GT-501
+  - DR-410
+  objective: Produce the report artifact for each pilot company.
+  context: Pilot outreach is report-led.
+  inputs:
+  - 25 companies
+  - Production pipeline
+  - Current prompts
+  outputs:
+  - 25 generated reports with complete provenance.
+  requirements:
+  - Use frozen production configuration
+  - Do not hand-edit before editorial stage
+  - Record all failures
+  acceptance_criteria:
+  - 25 attempts completed
+  - Every report has IDs and provenance
+  validation:
+  - Audit logs and outputs
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - GT-502

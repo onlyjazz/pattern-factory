@@ -1,0 +1,681 @@
+project: editorial-system
+cycle: cycle-2
+tasks:
+- plan_key: ED-201
+  title: Draft Editorial Research Assistant role
+  type: design
+  project: editorial-system
+  cycle: cycle-2
+  priority: medium
+  estimate: 2
+  labels:
+  - editorial
+  - human
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 1
+    parallel_group: c2-hiring
+    reviewer: Danny
+    review_required: full
+  depends_on: []
+  objective: Define the initial human editorial role and operating expectations.
+  context: One strong editor will help build repeatable judgment before scaling.
+  inputs:
+  - Roadmap role concept
+  - Report examples
+  - Expected weekly volume
+  outputs:
+  - Publishable role description and scorecard.
+  requirements:
+  - Emphasize judgment over proofreading
+  - Include AI medical-device context
+  - Define hours, workflow and deliverables
+  acceptance_criteria:
+  - Role attracts journalism/communications candidates
+  - Responsibilities and evaluation are clear
+  validation:
+  - Review against roadmap
+  - Check for unrealistic requirements
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - ED-203
+- plan_key: ED-202
+  title: Create paid candidate exercise
+  type: implement
+  project: editorial-system
+  cycle: cycle-2
+  priority: high
+  estimate: 3
+  labels:
+  - agent-ready
+  - editorial
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 2
+    parallel_group: c2-hiring
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - ED-201
+  objective: Build a bounded test of editorial judgment.
+  context: The exercise should detect unsupported claims and synthetic praise.
+  inputs:
+  - One competitive brief
+  - Three opener variants
+  - Evaluation goals
+  outputs:
+  - Candidate packet, instructions and scoring key.
+  requirements:
+  - Limit to 45–60 minutes
+  - Require selection and rewrite
+  - Ask candidate to flag unsupported claims
+  acceptance_criteria:
+  - Scoring is repeatable
+  - Exercise exposes judgment differences
+  - Answer key explains tradeoffs
+  validation:
+  - Pilot with one internal reviewer
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - ED-204
+- plan_key: ED-203
+  title: Create Editorial Guide v1
+  type: implement
+  project: editorial-system
+  cycle: cycle-2
+  priority: urgent
+  estimate: 5
+  labels:
+  - agent-ready
+  - editorial
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 1
+    parallel_group: c2-system
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - PF-114
+  objective: Codify the initial OpenCRO editorial standard.
+  context: Repeated human corrections must become system rules.
+  inputs:
+  - Roadmap editorial principles
+  - Existing report samples
+  - Opener treatments
+  outputs:
+  - Versioned editorial guide.
+  requirements:
+  - Define earned praise, commercial relevance, evidence rules, technical-detail threshold, transitions and forbidden
+    phrases
+  - Keep treatment distinctions intact
+  acceptance_criteria:
+  - Guide supports publish/revise/reject decisions
+  - Examples cover good and bad language
+  - No rule depends on tacit knowledge
+  validation:
+  - Apply guide to 10 openers
+  - Record ambiguous cases
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - ED-201
+- plan_key: ED-204
+  title: Create editorial review rubric
+  type: implement
+  project: editorial-system
+  cycle: cycle-2
+  priority: urgent
+  estimate: 3
+  labels:
+  - agent-ready
+  - editorial
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 2
+    parallel_group: c2-system
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - ED-203
+  objective: Make report review measurable.
+  context: Warp and human reviewers need consistent pass/fail dimensions.
+  inputs:
+  - Editorial Guide v1
+  - Report structure
+  - Experiment treatments
+  outputs:
+  - Scored rubric for factual support, specificity, business meaning, natural English and transition quality.
+  requirements:
+  - Use observable criteria
+  - Include hard-fail conditions
+  - Separate factual and stylistic concerns
+  acceptance_criteria:
+  - Two reviewers can score same report within agreed tolerance
+  - Hard fails are unambiguous
+  validation:
+  - Score five reports independently
+  - Compare variance
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - ED-202
+- plan_key: ED-205
+  title: Implement review-state data model
+  type: implement
+  project: editorial-system
+  cycle: cycle-2
+  priority: high
+  estimate: 5
+  labels:
+  - agent-ready
+  - editorial
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 3
+    parallel_group: c2-platform
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - PF-104
+  - ED-204
+  objective: Persist editorial state and decisions for each artifact.
+  context: The pipeline must know whether a report is draft, revised, approved or rejected.
+  inputs:
+  - Artifact IDs
+  - Editorial rubric
+  - Database schema
+  outputs:
+  - Review-state tables/models and migration.
+  requirements:
+  - Store reviewer, timestamps, treatment, score, decision and notes
+  - Preserve edit history
+  acceptance_criteria:
+  - Every report has traceable review state
+  - Multiple review rounds are supported
+  - Migration passes
+  validation:
+  - Create, revise, approve and reject sample reports
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+- plan_key: ED-206
+  title: Build editorial review form
+  type: implement
+  project: editorial-system
+  cycle: cycle-2
+  priority: urgent
+  estimate: 5
+  labels:
+  - agent-ready
+  - editorial
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 4
+    parallel_group: c2-platform
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - ED-205
+  - PF-111
+  objective: Provide a bounded interface or structured form for review.
+  context: The editor should receive evidence, variants and clear actions.
+  inputs:
+  - Competitive brief
+  - Generated opener variants
+  - Rubric
+  - Review-state model
+  outputs:
+  - Usable review form/workflow.
+  requirements:
+  - Show evidence beside claims
+  - Allow edit and flags
+  - Require publish/revise/reject
+  - Capture repeated-edit category
+  acceptance_criteria:
+  - Reviewer can complete full review without external notes
+  - All decisions persist
+  validation:
+  - Review five reports end-to-end
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+- plan_key: ED-207
+  title: Add repeated-edit taxonomy
+  type: implement
+  project: editorial-system
+  cycle: cycle-2
+  priority: high
+  estimate: 3
+  labels:
+  - agent-ready
+  - editorial
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 5
+    parallel_group: c2-system
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - ED-206
+  objective: Classify recurring editorial corrections.
+  context: Recurring edits should feed prompts, guide and evaluation criteria.
+  inputs:
+  - Initial reviews
+  - Editorial Guide
+  - Review form
+  outputs:
+  - Taxonomy and selectable categories.
+  requirements:
+  - Include generic praise, unsupported comparison, overclaim, repetition, slow opening, weak business relevance
+    and awkward transition
+  - Allow new category
+  acceptance_criteria:
+  - At least 90% of observed edits fit a category
+  - New categories are traceable
+  validation:
+  - Classify edits from 10 reports
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - ED-208
+- plan_key: ED-208
+  title: Recruit and onboard editor
+  type: human
+  project: editorial-system
+  cycle: cycle-2
+  priority: urgent
+  estimate: 5
+  labels:
+  - editorial
+  - human
+  execution:
+    executor: warp-agent
+    agent_template: human
+    wave: 5
+    parallel_group: c2-hiring
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - ED-202
+  - ED-203
+  - ED-206
+  objective: Select one editor and train them on the bounded workflow.
+  context: Cycle 2 requires real human judgment, not only automation.
+  inputs:
+  - Role description
+  - Paid exercise
+  - Editorial Guide
+  - Review form
+  outputs:
+  - Onboarded editor able to review independently.
+  requirements:
+  - Run paid exercise
+  - Review disagreements
+  - Train on evidence constraints and treatments
+  acceptance_criteria:
+  - Editor completes three acceptable reviews
+  - Escalation rules understood
+  validation:
+  - Compare editor and Danny decisions
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - ED-207
+- plan_key: ED-209
+  title: Create approved opener example library
+  type: implement
+  project: editorial-system
+  cycle: cycle-2
+  priority: high
+  estimate: 5
+  labels:
+  - agent-ready
+  - editorial
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 6
+    parallel_group: c2-learning
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - ED-208
+  - ED-207
+  objective: Build examples by experimental treatment.
+  context: The agent needs strong examples without collapsing treatments.
+  inputs:
+  - Approved edited openers
+  - Treatment IDs
+  - Prompt YAML structure
+  outputs:
+  - Versioned example library keyed by treatment.
+  requirements:
+  - Store source report and rationale
+  - Keep treatments distinct
+  - Exclude unsupported claims
+  acceptance_criteria:
+  - At least five approved examples per active treatment
+  - Examples load from YAML
+  validation:
+  - Generate with and without examples
+  - Check treatment separation
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+- plan_key: ED-210
+  title: Feed editorial rules into opener prompts
+  type: implement
+  project: editorial-system
+  cycle: cycle-2
+  priority: urgent
+  estimate: 5
+  labels:
+  - agent-ready
+  - editorial
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 7
+    parallel_group: c2-learning
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - ED-207
+  - ED-209
+  objective: Update YAML prompts from repeated human corrections.
+  context: The first feedback loop should improve generation quality.
+  inputs:
+  - Repeated-edit taxonomy
+  - Approved examples
+  - Current opener YAML
+  outputs:
+  - Revised prompt YAML and change log.
+  requirements:
+  - Make only evidence-backed changes
+  - Record Git commit and rationale
+  - Do not erase treatment differences
+  acceptance_criteria:
+  - Targeted failure modes decrease in regression set
+  - All prompts still validate
+  validation:
+  - Run before/after regression on 20 briefs
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+- plan_key: ED-211
+  title: Edit first 30–50 reports
+  type: implement
+  project: editorial-system
+  cycle: cycle-2
+  priority: urgent
+  estimate: 8
+  labels:
+  - editorial
+  - human
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 8
+    parallel_group: c2-production
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - ED-208
+  - ED-210
+  objective: Create the first gold-standard corpus.
+  context: This corpus trains judgment and qualifies the workflow.
+  inputs:
+  - Generated reports
+  - Review form
+  - Editor
+  - Rubric
+  outputs:
+  - 30–50 approved or explicitly rejected reviewed reports.
+  requirements:
+  - Preserve treatment assignment
+  - Record all edits and decisions
+  - Escalate factual uncertainty
+  acceptance_criteria:
+  - Every report has complete review metadata
+  - No unreviewed [VERIFY] remains in approved reports
+  validation:
+  - Audit 10 reports
+  - Compare reviewer consistency
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+- plan_key: ED-212
+  title: Measure editorial cycle time and consistency
+  type: analyze
+  project: editorial-system
+  cycle: cycle-2
+  priority: high
+  estimate: 3
+  labels:
+  - agent-ready
+  - editorial
+  execution:
+    executor: warp-agent
+    agent_template: analyze
+    wave: 9
+    parallel_group: c2-gate
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - ED-211
+  objective: Establish the editorial production baseline.
+  context: Scaling decisions require time and agreement data.
+  inputs:
+  - Review-state data
+  - 30–50 reviewed reports
+  - Rubric scores
+  outputs:
+  - Metrics report for review time, edit categories and reviewer agreement.
+  requirements:
+  - Separate first-pass and rework time
+  - Report by treatment
+  - Identify bottlenecks
+  acceptance_criteria:
+  - Median and distribution reported
+  - Agreement metric computed
+  - Top repeated edits identified
+  validation:
+  - Reconcile metrics with raw records
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.

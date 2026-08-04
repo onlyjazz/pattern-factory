@@ -1,0 +1,238 @@
+project: gtm-engine
+cycle: cycle-4
+tasks:
+- plan_key: DR-405
+  title: Generate pilot email variants
+  type: implement
+  project: gtm-engine
+  cycle: cycle-4
+  priority: high
+  estimate: 5
+  labels:
+  - agent-ready
+  - gtm
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 4
+    parallel_group: c4-content
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - DR-404
+  - XP-314
+  objective: Create bounded outbound treatments from reports.
+  context: Cycle 5 needs ready, attributable campaign assets.
+  inputs:
+  - Approved reports
+  - Experiment schema
+  - Email principles
+  outputs:
+  - Email variants with subject, preview, body and CTA IDs.
+  requirements:
+  - Use two subject treatments, two opener treatments and two CTAs
+  - Keep other variables frozen
+  acceptance_criteria:
+  - Every variant validates and has treatment metadata
+  - No unsupported claims
+  validation:
+  - Review sample of 20 emails
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - DR-406
+  - DR-407
+  - DR-409
+  - DR-410
+- plan_key: DR-406
+  title: Generate LinkedIn and X variants
+  type: implement
+  project: gtm-engine
+  cycle: cycle-4
+  priority: medium
+  estimate: 5
+  labels:
+  - agent-ready
+  - gtm
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 4
+    parallel_group: c4-content
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - DR-404
+  - XP-311
+  objective: Create channel-specific report-derived content.
+  context: The dry run tests the content engine without publishing.
+  inputs:
+  - Approved reports
+  - Experiment metadata
+  outputs:
+  - LinkedIn and X variants with hook, format, CTA and timing metadata.
+  requirements:
+  - Avoid direct copy across channels
+  - Preserve source report ID
+  - Generate image/no-image flag
+  acceptance_criteria:
+  - Variants exist for sample corpus
+  - Metadata complete
+  validation:
+  - Review 20 paired variants
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - DR-405
+  - DR-407
+  - DR-409
+  - DR-410
+- plan_key: DR-407
+  title: Generate Substack articles and Notes
+  type: implement
+  project: gtm-engine
+  cycle: cycle-4
+  priority: medium
+  estimate: 5
+  labels:
+  - agent-ready
+  - gtm
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 4
+    parallel_group: c4-content
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - DR-404
+  - XP-311
+  objective: Create long-form and short-form derivatives from reports.
+  context: Substack supports authority and fast experimentation.
+  inputs:
+  - Approved reports
+  - Substack format
+  - Experiment metadata
+  outputs:
+  - Articles and Notes linked to source reports.
+  requirements:
+  - One article can produce multiple Notes
+  - Vary hook, length, CTA and timing
+  - Avoid unsupported synthesis
+  acceptance_criteria:
+  - Artifacts have IDs and source links
+  - Editorial sample passes
+  validation:
+  - Review five articles and 20 Notes
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - DR-405
+  - DR-406
+  - DR-409
+  - DR-410
+- plan_key: DR-412
+  title: Freeze controlled-pilot design
+  type: design
+  project: gtm-engine
+  cycle: cycle-4
+  priority: urgent
+  estimate: 3
+  labels:
+  - gtm
+  - human
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 7
+    parallel_group: c4-gate
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - DR-405
+  - DR-411
+  - DR-409
+  objective: Define the 25-company experiment matrix.
+  context: The pilot optimizes learning, not volume.
+  inputs:
+  - Ready assets
+  - Attribution qualification
+  - Available sample size
+  outputs:
+  - Frozen pilot plan with company criteria, treatments, allocation and success metrics.
+  requirements:
+  - Use a small number of hypotheses
+  - Freeze non-tested variables
+  - Define stop conditions
+  acceptance_criteria:
+  - Every company has assigned treatment
+  - Primary metric and decision rule defined
+  - Plan is executable
+  validation:
+  - Review balance and dependencies
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.

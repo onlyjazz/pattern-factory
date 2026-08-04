@@ -1,0 +1,97 @@
+cycle: cycle-5
+name: Cycle 5 — Controlled Pilot
+goal: Run a controlled 25-company pilot optimized for learning, not volume.
+timebox_hours: 24
+execution_policy:
+  start_unblocked_groups_in_parallel: true
+  stop_on_failed_gate: true
+  human_review_at_cycle_gate: true
+waves:
+- wave: 1
+  groups:
+  - parallel_group: c5-targeting
+    tasks:
+    - GT-501
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 2
+  groups:
+  - parallel_group: c5-targeting
+    tasks:
+    - GT-502
+    max_concurrency: 1
+  - parallel_group: c5-production
+    tasks:
+    - GT-503
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 3
+  groups:
+  - parallel_group: c5-production
+    tasks:
+    - GT-504
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 4
+  groups:
+  - parallel_group: c5-production
+    tasks:
+    - GT-505
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 5
+  groups:
+  - parallel_group: c5-launch
+    tasks:
+    - GT-506
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 6
+  groups:
+  - parallel_group: c5-launch
+    tasks:
+    - GT-507
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 7
+  groups:
+  - parallel_group: c5-launch
+    tasks:
+    - GT-508
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 8
+  groups:
+  - parallel_group: c5-response
+    tasks:
+    - GT-509
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 9
+  groups:
+  - parallel_group: c5-response
+    tasks:
+    - GT-510
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 10
+  groups:
+  - parallel_group: c5-review
+    tasks:
+    - GT-511
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 11
+  groups:
+  - parallel_group: c5-gate
+    tasks:
+    - GT-512
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+cycle_gate:
+  reviewer: Danny
+  criteria:
+  - All blocking tasks completed
+  - Validation evidence attached
+  - Remaining blockers explicitly accepted or moved
+  - Next cycle dependencies unblocked

@@ -1,0 +1,79 @@
+cycle: cycle-4
+name: Cycle 4 — Internal Dry Run
+goal: Stress-test the complete machine without sending live outreach.
+timebox_hours: 24
+execution_policy:
+  start_unblocked_groups_in_parallel: true
+  stop_on_failed_gate: true
+  human_review_at_cycle_gate: true
+waves:
+- wave: 1
+  groups:
+  - parallel_group: c4-prep
+    tasks:
+    - DR-401
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 2
+  groups:
+  - parallel_group: c4-run
+    tasks:
+    - DR-402
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 3
+  groups:
+  - parallel_group: c4-repair
+    tasks:
+    - DR-403
+    max_concurrency: 1
+  - parallel_group: c4-review
+    tasks:
+    - DR-404
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 4
+  groups:
+  - parallel_group: c4-content
+    tasks:
+    - DR-405
+    - DR-406
+    - DR-407
+    max_concurrency: 3
+  - parallel_group: c4-analytics
+    tasks:
+    - DR-409
+    max_concurrency: 1
+  - parallel_group: c4-repair
+    tasks:
+    - DR-410
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 5
+  groups:
+  - parallel_group: c4-test
+    tasks:
+    - DR-408
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 6
+  groups:
+  - parallel_group: c4-gate
+    tasks:
+    - DR-411
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 7
+  groups:
+  - parallel_group: c4-gate
+    tasks:
+    - DR-412
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+cycle_gate:
+  reviewer: Danny
+  criteria:
+  - All blocking tasks completed
+  - Validation evidence attached
+  - Remaining blockers explicitly accepted or moved
+  - Next cycle dependencies unblocked

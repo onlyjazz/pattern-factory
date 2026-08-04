@@ -1,0 +1,175 @@
+project: experiment-platform
+cycle: cycle-4
+tasks:
+- plan_key: DR-408
+  title: Run synthetic multichannel campaigns
+  type: validate
+  project: experiment-platform
+  cycle: cycle-4
+  priority: urgent
+  estimate: 8
+  labels:
+  - agent-ready
+  - analytics
+  execution:
+    executor: warp-agent
+    agent_template: validate
+    wave: 5
+    parallel_group: c4-test
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - DR-405
+  - DR-406
+  - DR-407
+  - XP-314
+  objective: Exercise the entire pipeline without external outreach.
+  context: This finds attribution and orchestration gaps before launch.
+  inputs:
+  - Email/social/Substack variants
+  - Unified event platform
+  - CRM test records
+  outputs:
+  - Synthetic campaigns with complete event chains.
+  requirements:
+  - Simulate sends, clicks, views, bookings, qualification, proposal, win and loss
+  - Include failures and retries
+  acceptance_criteria:
+  - All events appear in dashboard
+  - No manual merge required
+  validation:
+  - Run at least 20 journeys
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+- plan_key: DR-409
+  title: Measure report unit economics
+  type: analyze
+  project: experiment-platform
+  cycle: cycle-4
+  priority: high
+  estimate: 5
+  labels:
+  - agent-ready
+  - analytics
+  execution:
+    executor: warp-agent
+    agent_template: analyze
+    wave: 4
+    parallel_group: c4-analytics
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - DR-402
+  - DR-404
+  objective: Calculate cost and time per report.
+  context: Volume decisions need true production economics.
+  inputs:
+  - API usage
+  - Editorial timing
+  - Enrichment, CRM, hosting and publishing costs
+  outputs:
+  - Per-report and per-approved-report cost model.
+  requirements:
+  - Separate fixed and variable costs
+  - Report by stage
+  - Flag missing inputs
+  acceptance_criteria:
+  - Cost reconciles to source totals
+  - Median and range reported
+  validation:
+  - Cross-check 20 reports
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - DR-405
+  - DR-406
+  - DR-407
+  - DR-410
+- plan_key: DR-411
+  title: Re-run attribution qualification
+  type: validate
+  project: experiment-platform
+  cycle: cycle-4
+  priority: urgent
+  estimate: 5
+  labels:
+  - agent-ready
+  - analytics
+  - qa
+  - validation
+  execution:
+    executor: warp-agent
+    agent_template: validate
+    wave: 6
+    parallel_group: c4-gate
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - DR-408
+  - DR-410
+  objective: Confirm repairs did not break traceability.
+  context: The pilot must begin with verified measurement.
+  inputs:
+  - Repaired pipeline
+  - Synthetic journeys
+  outputs:
+  - Updated attribution report.
+  requirements:
+  - Repeat critical paths
+  - Compare before/after
+  - Document residual gaps
+  acceptance_criteria:
+  - Required paths remain traceable
+  - No new critical regression
+  validation:
+  - Run synthetic suite
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.

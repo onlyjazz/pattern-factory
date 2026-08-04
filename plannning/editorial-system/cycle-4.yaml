@@ -1,0 +1,61 @@
+project: editorial-system
+cycle: cycle-4
+tasks:
+- plan_key: DR-404
+  title: Review dry-run quality sample
+  type: validate
+  project: editorial-system
+  cycle: cycle-4
+  priority: urgent
+  estimate: 5
+  labels:
+  - editorial
+  - human
+  - qa
+  execution:
+    executor: warp-agent
+    agent_template: validate
+    wave: 3
+    parallel_group: c4-review
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - DR-402
+  - ED-212
+  objective: Measure quality across the production batch.
+  context: Generation success alone does not prove executive usefulness.
+  inputs:
+  - Dry-run reports
+  - Rubric
+  - Editor
+  outputs:
+  - Scored sample across treatments and categories.
+  requirements:
+  - Use stratified sample
+  - Record hard fails and repeated edits
+  - Do not change assigned treatment
+  acceptance_criteria:
+  - At least 30 reports reviewed
+  - Quality distribution reported
+  validation:
+  - Audit scores and decisions
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - DR-403

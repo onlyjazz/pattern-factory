@@ -1,0 +1,21 @@
+projects:
+- key: pattern-factory
+  name: Pattern Factory
+  summary: AI generation pipeline for evidence-based OpenCRO executive risk reports.
+  description: Generate, version, validate, render, and publish production-quality
+    reports for AI-enabled medical devices.
+- key: editorial-system
+  name: Editorial System
+  summary: Human review, factual control, and house style.
+  description: Build the human-in-the-loop process that turns machine output into
+    credible, concise writing for MedTech CEOs.
+- key: experiment-platform
+  name: Experiment Platform
+  summary: Cross-channel experimentation, attribution, and learning.
+  description: Trace every artifact and market response to a hypothesis, treatment,
+    audience, and value proposition.
+- key: gtm-engine
+  name: GTM Engine
+  summary: Outbound, publishing, CRM, sales, and strategic accounts.
+  description: Distribute reports, capture commercial signals, run qualification,
+    and scale winning acquisition treatments.

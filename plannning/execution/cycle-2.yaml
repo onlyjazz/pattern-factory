@@ -1,0 +1,91 @@
+cycle: cycle-2
+name: Cycle 2 — Editorial System
+goal: Build a consistent human review workflow and approved editorial corpus.
+timebox_hours: 24
+execution_policy:
+  start_unblocked_groups_in_parallel: true
+  stop_on_failed_gate: true
+  human_review_at_cycle_gate: true
+waves:
+- wave: 1
+  groups:
+  - parallel_group: c2-hiring
+    tasks:
+    - ED-201
+    max_concurrency: 1
+  - parallel_group: c2-system
+    tasks:
+    - ED-203
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 2
+  groups:
+  - parallel_group: c2-hiring
+    tasks:
+    - ED-202
+    max_concurrency: 1
+  - parallel_group: c2-system
+    tasks:
+    - ED-204
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 3
+  groups:
+  - parallel_group: c2-platform
+    tasks:
+    - ED-205
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 4
+  groups:
+  - parallel_group: c2-platform
+    tasks:
+    - ED-206
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 5
+  groups:
+  - parallel_group: c2-system
+    tasks:
+    - ED-207
+    max_concurrency: 1
+  - parallel_group: c2-hiring
+    tasks:
+    - ED-208
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 6
+  groups:
+  - parallel_group: c2-learning
+    tasks:
+    - ED-209
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 7
+  groups:
+  - parallel_group: c2-learning
+    tasks:
+    - ED-210
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 8
+  groups:
+  - parallel_group: c2-production
+    tasks:
+    - ED-211
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+- wave: 9
+  groups:
+  - parallel_group: c2-gate
+    tasks:
+    - ED-212
+    max_concurrency: 1
+  gate: all tasks complete or explicitly blocked
+cycle_gate:
+  reviewer: Danny
+  criteria:
+  - All blocking tasks completed
+  - Validation evidence attached
+  - Remaining blockers explicitly accepted or moved
+  - Next cycle dependencies unblocked

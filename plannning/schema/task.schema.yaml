@@ -1,0 +1,38 @@
+task:
+  required:
+  - plan_key
+  - title
+  - type
+  - project
+  - cycle
+  - priority
+  - estimate
+  - execution
+  - objective
+  - acceptance_criteria
+  fields:
+    plan_key: Stable external identifier; never replaced by Linear issue ID
+    type:
+    - inspect
+    - design
+    - implement
+    - integrate
+    - generate
+    - validate
+    - deploy
+    - review
+    - human
+    - analyze
+    - operate
+    execution:
+      executor:
+      - warp-agent
+      - human
+      review_required:
+      - none
+      - sample
+      - full
+      wave: Positive integer
+      parallel_group: String
+    depends_on: List of plan keys
+    run_with: List of plan keys safe to launch in parallel

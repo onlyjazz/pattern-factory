@@ -1,0 +1,230 @@
+project: pattern-factory
+cycle: cycle-4
+tasks:
+- plan_key: DR-401
+  title: Prepare 200-device dry-run corpus
+  type: implement
+  project: pattern-factory
+  cycle: cycle-4
+  priority: high
+  estimate: 3
+  labels:
+  - agent-ready
+  - ai
+  - data
+  - qa
+  execution:
+    executor: warp-agent
+    agent_template: engineering
+    wave: 1
+    parallel_group: c4-prep
+    reviewer: Danny
+    review_required: full
+  depends_on: []
+  objective: Create a representative production test set.
+  context: The dry run must cover varied device categories and data quality.
+  inputs:
+  - FDA device corpus
+  - Company/device metadata
+  outputs:
+  - Frozen 100–200 device input set with category tags.
+  requirements:
+  - Include imaging, monitoring, decision support and software-only products
+  - Record missing-data cases
+  acceptance_criteria:
+  - Corpus size and composition documented
+  - Inputs are reproducible
+  validation:
+  - Sample 20 records
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+- plan_key: DR-402
+  title: Run production-scale report batch
+  type: validate
+  project: pattern-factory
+  cycle: cycle-4
+  priority: urgent
+  estimate: 8
+  labels:
+  - agent-ready
+  - ai
+  - data
+  execution:
+    executor: warp-agent
+    agent_template: validate
+    wave: 2
+    parallel_group: c4-run
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - DR-401
+  - PF-114
+  - ED-212
+  - XP-314
+  objective: Generate reports for the dry-run corpus.
+  context: This stress-tests throughput and reliability.
+  inputs:
+  - Dry-run corpus
+  - Qualified generation pipeline
+  outputs:
+  - 100–200 generated report runs with complete logs.
+  requirements:
+  - Run unattended
+  - Do not patch individual records during execution
+  - Retain failed artifacts
+  acceptance_criteria:
+  - All inputs attempted
+  - Success/failure classified
+  - Provenance complete
+  validation:
+  - Audit 20 outputs
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+- plan_key: DR-403
+  title: Classify generation failures
+  type: validate
+  project: pattern-factory
+  cycle: cycle-4
+  priority: urgent
+  estimate: 3
+  labels:
+  - agent-ready
+  - ai
+  - data
+  - qa
+  execution:
+    executor: warp-agent
+    agent_template: validate
+    wave: 3
+    parallel_group: c4-repair
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - DR-402
+  objective: Turn dry-run failures into actionable defect classes.
+  context: Agents need bounded repair work rather than anecdotal debugging.
+  inputs:
+  - Batch logs
+  - Failed artifacts
+  outputs:
+  - Failure taxonomy and ranked defect backlog.
+  requirements:
+  - Group by root cause
+  - Separate data, prompt, model, code and publishing failures
+  - Link run IDs
+  acceptance_criteria:
+  - Every failure assigned one root cause or explicit unknown
+  - Top blockers ranked
+  validation:
+  - Reproduce top five failures
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - DR-404
+- plan_key: DR-410
+  title: Repair top dry-run blockers
+  type: validate
+  project: pattern-factory
+  cycle: cycle-4
+  priority: urgent
+  estimate: 8
+  labels:
+  - agent-ready
+  - ai
+  - data
+  execution:
+    executor: warp-agent
+    agent_template: validate
+    wave: 4
+    parallel_group: c4-repair
+    reviewer: Danny
+    review_required: full
+  depends_on:
+  - DR-403
+  objective: Fix the highest-impact pipeline defects.
+  context: Cycle 5 should not inherit known critical failures.
+  inputs:
+  - Ranked defect backlog
+  - Reproduction cases
+  outputs:
+  - Code/prompt/schema fixes with tests.
+  requirements:
+  - Prioritize blockers to pilot
+  - Avoid unrelated refactors
+  - Add regression tests
+  acceptance_criteria:
+  - Selected defects no longer reproduce
+  - Full relevant suite passes
+  validation:
+  - Re-run failed cases
+  artifacts:
+  - The required output described above
+  - Tests or validation evidence
+  - A completion report tied to every acceptance criterion
+  - Updated documentation where behavior, schema, prompts, or operations change
+  constraints:
+  - Keep scope limited to this task; do not refactor unrelated components.
+  - Report blockers rather than inventing missing interfaces, credentials, data, or business rules.
+  - Preserve backward compatibility unless this task explicitly requires a breaking change.
+  - Do not mark complete while any acceptance criterion is unmet.
+  warp:
+    completion_report:
+    - State complete, blocked, or partially complete.
+    - Summarize files, schemas, prompts, configurations, records, or workflows changed.
+    - List tests and validation commands with results.
+    - Map evidence to every acceptance criterion.
+    - Report assumptions, unresolved risks, manual steps, and downstream tasks unblocked.
+    - Include artifact paths, commit SHA, run IDs, or query results where relevant.
+  run_with:
+  - DR-405
+  - DR-406
+  - DR-407
+  - DR-409
