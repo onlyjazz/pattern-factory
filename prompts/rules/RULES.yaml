@@ -25,11 +25,11 @@ RULES:
     logic: |
       show me the orgs with name, description, date founded, date funded, funding stage
 
-  - rule_code: PATTERNS_BY_GUEST
-    name: "Patterns by Guest"
-    description: "List all patterns associated with each guest and where those patterns appear."
+  - rule_code: PATTERNS_BY_PEOPLE
+    name: "Patterns by people"
+    description: "List all patterns associated with each person and where those patterns appear."
     logic: |
-      show me the patterns connected to guests, including the guest name, job description, 
+      show me the patterns connected to people, including the person name, job description, 
       the pattern kind, and the relevant episodes or posts if available
       Use the content_source field to determine if the pattern is from an episode or post.
 
@@ -42,9 +42,9 @@ RULES:
 
   - rule_code: TOP_PATTERNS_BY_FREQUENCY
     name: "Top 10 Patterns by Frequency"
-    description: "Rank patterns by how many times they appear across guests, episodes, posts, or orgs."
+    description: "Rank patterns by how many times they appear across people, episodes, posts, or orgs."
     logic: |
-      show me the top 10 patterns by how frequently they appear in podcast episodes, guests, posts, 
+      show me the top 10 patterns by how frequently they appear in podcast episodes, people, posts, 
       or organizations. Use the content_source field to determine if the pattern is from an episode or post.
 
   - rule_code: EPISODES_WITH_MOST_PATTERNS
@@ -54,12 +54,12 @@ RULES:
       show me the episodes with the most patterns, including the pattern count, 
       the episode title, and the episode URL
 
-  - rule_code: GUESTS_DISCUSSING_SAME_PATTERN
-    name: "Guests Discussing the Same Pattern"
-    description: "Find groups of guests who discuss the same pattern."
+  - rule_code: PEOPLE_DISCUSSING_SAME_PATTERN
+    name: "People Discussing the Same Pattern"
+    description: "Find groups of people who discuss the same pattern."
     logic: |
-      show me guests who discuss the same pattern, including the pattern name 
-      and the list of guests associated with that pattern
+      show me people who discuss the same pattern, including the pattern name 
+      and the list of people associated with that pattern
 
   - rule_code: PATTERNS_BY_ORG_FUNDING_STAGE
     name: "Patterns Related to Funding Stage"
@@ -72,7 +72,7 @@ RULES:
     name: "Time to Funding After Founding"
     description: "Compute time from founding date to funding date for organizations."
     logic: |
-     show name, stage, and the number of years from date_founded to date_funded for all orgs
+     show name, stage, funding, sales, and the number of years from date_founded to date_funded for all orgs
      
   - rule_code: WCRT
     name: "Cards in Baseline"

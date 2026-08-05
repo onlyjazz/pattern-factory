@@ -1,20 +1,20 @@
 --
 -- Logical views for reporting
--- Pattern-Guest relationships
-DROP VIEW IF EXISTS pattern_guests;
-CREATE OR REPLACE VIEW pattern_guests AS
+-- Pattern-People relationships
+DROP VIEW IF EXISTS pattern_people;
+CREATE OR REPLACE VIEW pattern_people AS
 SELECT
     p.name AS pattern_name,
     p.kind,
     p.content_source,
-    g.name AS guest_name,
-    g.job_description
+    pe.name AS person_name,
+    pe.job_description
 FROM patterns p
-JOIN pattern_guest_link pgl ON p.id = pgl.pattern_id
-JOIN guests g ON pgl.guest_id = g.id
-WHERE p.deleted_at IS NULL AND g.deleted_at IS NULL;
+JOIN pattern_people_link ppl ON p.id = ppl.pattern_id
+JOIN people pe ON ppl.people_id = pe.id
+WHERE p.deleted_at IS NULL AND pe.deleted_at IS NULL;
 insert into views_registry (name, table_name, sql) 
-values ('Patterns from guests', 'pattern_guests', 'select * from pattern_guests');
+values ('Patterns from people', 'pattern_people', 'select * from pattern_people');
 
 -- Pattern-Org relationships
 DROP VIEW IF EXISTS pattern_orgs;

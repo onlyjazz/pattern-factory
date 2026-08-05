@@ -603,6 +603,453 @@ async def get_pattern_cards(pattern_id: int):
     return [dict(r) for r in rows]
 
 # -------------------------------------------------------------------------
+# Organizations CRUD
+# -------------------------------------------------------------------------
+class OrgCreate(BaseModel):
+    """Organization creation request body."""
+    name: str
+    description: str | None = None
+    stage: str | None = None
+    funding: float | None = None
+    date_funded: str | None = None
+    date_founded: str | None = None
+    linkedin_company_url: str | None = None
+    keywords: list[str] | None = None
+    content_source: str | None = None
+    post_id: int | None = None
+    category_id: int | None = None
+    estimated_annual_sales: float | None = None
+
+class OrgUpdate(BaseModel):
+    """Organization update request body (all fields optional)."""
+    name: str | None = None
+    description: str | None = None
+    stage: str | None = None
+    funding: float | None = None
+    date_funded: str | None = None
+    date_founded: str | None = None
+    linkedin_company_url: str | None = None
+    keywords: list[str] | None = None
+    content_source: str | None = None
+    post_id: int | None = None
+    category_id: int | None = None
+    estimated_annual_sales: float | None = None
+
+@app.get("/orgs", tags=["Organizations"])
+async def get_orgs():
+    """Retrieve all organizations.
+    
+    Returns a list of all organizations ordered by creation date (newest first).
+    Each organization includes name, description, stage, funding, and estimated annual sales.
+    
+    Returns:
+        List[dict]: Array of organization objects with all fields
+    """
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT id, name, description, stage, funding, date_funded, date_founded, 
+                   linkedin_company_url, keywords, content_source, post_id, category_id, 
+                   estimated_annual_sales, created_at, updated_at
+            FROM orgs
+            ORDER BY created_at DESC
+        """)
+    return [dict(r) for r in rows]
+
+@app.get("/orgs/search", tags=["Organizations"])
+async def search_orgs(q: str = Query("", description="Search query - matches org name or description")):
+    """Search organizations by name or description.
+    
+    Performs a case-insensitive wildcard search on organization names and descriptions.
+    Useful for autocomplete functionality in the frontend.
+    
+    Args:
+        q (str): Search query string
+    
+    Returns:
+        List[dict]: Matching organizations (max 50) with key fields
+    """
+    pool = get_pg_pool()
+    search_term = f"%{q}%"
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT id, name, description, stage, funding, estimated_annual_sales
+            FROM orgs
+            WHERE name ILIKE $1 OR description ILIKE $1
+            ORDER BY name ASC
+            LIMIT 50
+        """, search_term)
+    return [dict(r) for r in rows]
+
+@app.get("/orgs/{org_id}", tags=["Organizations"])
+async def get_org(org_id: int):
+    """Retrieve a single organization by ID.
+    
+    Returns the complete organization definition including all fields.
+    
+    Args:
+        org_id (int): The organization ID
+    
+    Returns:
+        dict: Organization object with all fields
+    
+    Raises:
+        404: If organization not found
+    """
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT id, name, description, stage, funding, date_funded, date_founded, 
+                   linkedin_company_url, keywords, content_source, post_id, category_id, 
+                   estimated_annual_sales, created_at, updated_at
+            FROM orgs
+            WHERE id = $1
+            """,
+            org_id
+        )
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Organization {org_id} not found")
+    return dict(row)
+
+@app.post("/orgs", tags=["Organizations"])
+async def create_org(org: OrgCreate):
+    """Create a new organization.
+    
+    Creates a new organization with name and optional fields for stage, funding, and sales data.
+    
+    Args:
+        org (OrgCreate): Organization data with required field: name
+    
+    Returns:
+        dict: Created organization object with generated id and timestamps
+    
+    Raises:
+        422: Invalid request body
+    """
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            INSERT INTO orgs (name, description, stage, funding, date_funded, date_founded, 
+                            linkedin_company_url, keywords, content_source, post_id, category_id, 
+                            estimated_annual_sales)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            RETURNING id, name, description, stage, funding, date_funded, date_founded, 
+                      linkedin_company_url, keywords, content_source, post_id, category_id, 
+                      estimated_annual_sales, created_at, updated_at
+            """,
+            org.name,
+            org.description,
+            org.stage,
+            org.funding,
+            org.date_funded,
+            org.date_founded,
+            org.linkedin_company_url,
+            org.keywords,
+            org.content_source,
+            org.post_id,
+            org.category_id,
+            org.estimated_annual_sales
+        )
+    return dict(row)
+
+@app.put("/orgs/{org_id}", tags=["Organizations"])
+async def update_org(org_id: int, patch: OrgUpdate):
+    """Update an existing organization.
+    
+    Updates one or more fields of an organization. Only provided fields are updated;
+    omitted fields retain their current values.
+    
+    Args:
+        org_id (int): The organization ID
+        patch (OrgUpdate): Fields to update (all optional)
+    
+    Returns:
+        dict: Updated organization object
+    
+    Raises:
+        404: Organization not found
+        422: Invalid request body
+    """
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            UPDATE orgs
+            SET 
+                name = COALESCE($1, name),
+                description = COALESCE($2, description),
+                stage = COALESCE($3, stage),
+                funding = COALESCE($4, funding),
+                date_funded = COALESCE($5, date_funded),
+                date_founded = COALESCE($6, date_founded),
+                linkedin_company_url = COALESCE($7, linkedin_company_url),
+                keywords = COALESCE($8, keywords),
+                content_source = COALESCE($9, content_source),
+                post_id = COALESCE($10, post_id),
+                category_id = COALESCE($11, category_id),
+                estimated_annual_sales = COALESCE($12, estimated_annual_sales),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $13
+            RETURNING id, name, description, stage, funding, date_funded, date_founded, 
+                      linkedin_company_url, keywords, content_source, post_id, category_id, 
+                      estimated_annual_sales, created_at, updated_at
+            """,
+            patch.name,
+            patch.description,
+            patch.stage,
+            patch.funding,
+            patch.date_funded,
+            patch.date_founded,
+            patch.linkedin_company_url,
+            patch.keywords,
+            patch.content_source,
+            patch.post_id,
+            patch.category_id,
+            patch.estimated_annual_sales,
+            org_id
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail=f"Organization {org_id} not found")
+        return dict(row)
+
+@app.delete("/orgs/{org_id}", tags=["Organizations"])
+async def delete_org(org_id: int):
+    """Delete an organization.
+    
+    Permanently deletes an organization.
+    
+    Args:
+        org_id (int): The organization ID
+    
+    Returns:
+        dict: Confirmation with deleted_id
+    
+    Raises:
+        404: Organization not found
+    """
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        result = await conn.execute(
+            "DELETE FROM orgs WHERE id = $1", org_id
+        )
+        if result == "DELETE 0":
+            raise HTTPException(status_code=404, detail=f"Organization {org_id} not found")
+    return {"status": "ok", "deleted_id": org_id}
+
+# -------------------------------------------------------------------------
+# People CRUD
+# -------------------------------------------------------------------------
+class PersonCreate(BaseModel):
+    """Person creation request body."""
+    name: str
+    description: str | None = None
+    linkedin_url: str | None = None
+    job_description: str | None = None
+    keywords: list[str] | None = None
+    content_source: str | None = None
+    org_id: int | None = None
+    post_id: int | None = None
+
+class PersonUpdate(BaseModel):
+    """Person update request body (all fields optional)."""
+    name: str | None = None
+    description: str | None = None
+    linkedin_url: str | None = None
+    job_description: str | None = None
+    keywords: list[str] | None = None
+    content_source: str | None = None
+    org_id: int | None = None
+    post_id: int | None = None
+
+@app.get("/people", tags=["People"])
+async def get_people():
+    """Retrieve all people.
+    
+    Returns a list of all people from all content sources ordered by creation date (newest first).
+    Content sources include podcasts (via substack), FDA-cleared AI devices, and other sources.
+    
+    Returns:
+        List[dict]: Array of person objects with all fields
+    """
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT id, name, description, linkedin_url, job_description, keywords, 
+                   content_source, org_id, post_id, created_at, updated_at
+            FROM people
+            ORDER BY created_at DESC
+        """)
+    return [dict(r) for r in rows]
+
+@app.get("/people/search", tags=["People"])
+async def search_people(q: str = Query("", description="Search query - matches person name or description")):
+    """Search people by name or description.
+    
+    Performs a case-insensitive wildcard search on person names and descriptions.
+    Useful for autocomplete functionality in the frontend.
+    
+    Args:
+        q (str): Search query string
+    
+    Returns:
+        List[dict]: Matching people (max 50) with key fields
+    """
+    pool = get_pg_pool()
+    search_term = f"%{q}%"
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT id, name, description, job_description, content_source
+            FROM people
+            WHERE name ILIKE $1 OR description ILIKE $1
+            ORDER BY name ASC
+            LIMIT 50
+        """, search_term)
+    return [dict(r) for r in rows]
+
+@app.get("/people/{person_id}", tags=["People"])
+async def get_person(person_id: int):
+    """Retrieve a single person by ID.
+    
+    Returns the complete person definition including all fields.
+    
+    Args:
+        person_id (int): The person ID
+    
+    Returns:
+        dict: Person object with all fields
+    
+    Raises:
+        404: If person not found
+    """
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT id, name, description, linkedin_url, job_description, keywords, 
+                   content_source, org_id, post_id, created_at, updated_at
+            FROM people
+            WHERE id = $1
+            """,
+            person_id
+        )
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Person {person_id} not found")
+    return dict(row)
+
+@app.post("/people", tags=["People"])
+async def create_person(person: PersonCreate):
+    """Create a new person.
+    
+    Creates a new person record with name and optional details from content sources.
+    
+    Args:
+        person (PersonCreate): Person data with required field: name
+    
+    Returns:
+        dict: Created person object with generated id and timestamps
+    
+    Raises:
+        422: Invalid request body
+    """
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            INSERT INTO people (name, description, linkedin_url, job_description, keywords, 
+                            content_source, org_id, post_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING id, name, description, linkedin_url, job_description, keywords, 
+                      content_source, org_id, post_id, created_at, updated_at
+            """,
+            person.name,
+            person.description,
+            person.linkedin_url,
+            person.job_description,
+            person.keywords,
+            person.content_source,
+            person.org_id,
+            person.post_id
+        )
+    return dict(row)
+
+@app.put("/people/{person_id}", tags=["People"])
+async def update_person(person_id: int, patch: PersonUpdate):
+    """Update an existing person.
+    
+    Updates one or more fields of a person. Only provided fields are updated;
+    omitted fields retain their current values.
+    
+    Args:
+        person_id (int): The person ID
+        patch (PersonUpdate): Fields to update (all optional)
+    
+    Returns:
+        dict: Updated person object
+    
+    Raises:
+        404: Person not found
+        422: Invalid request body
+    """
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            UPDATE people
+            SET 
+                name = COALESCE($1, name),
+                description = COALESCE($2, description),
+                linkedin_url = COALESCE($3, linkedin_url),
+                job_description = COALESCE($4, job_description),
+                keywords = COALESCE($5, keywords),
+                content_source = COALESCE($6, content_source),
+                org_id = COALESCE($7, org_id),
+                post_id = COALESCE($8, post_id),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $9
+            RETURNING id, name, description, linkedin_url, job_description, keywords, 
+                      content_source, org_id, post_id, created_at, updated_at
+            """,
+            patch.name,
+            patch.description,
+            patch.linkedin_url,
+            patch.job_description,
+            patch.keywords,
+            patch.content_source,
+            patch.org_id,
+            patch.post_id,
+            person_id
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail=f"Person {person_id} not found")
+        return dict(row)
+
+@app.delete("/people/{person_id}", tags=["People"])
+async def delete_person(person_id: int):
+    """Delete a person.
+    
+    Permanently deletes a person record.
+    
+    Args:
+        person_id (int): The person ID
+    
+    Returns:
+        dict: Confirmation with deleted_id
+    
+    Raises:
+        404: Person not found
+    """
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        result = await conn.execute(
+            "DELETE FROM people WHERE id = $1", person_id
+        )
+        if result == "DELETE 0":
+            raise HTTPException(status_code=404, detail=f"Person {person_id} not found")
+    return {"status": "ok", "deleted_id": person_id}
+
+# -------------------------------------------------------------------------
 # Paths CRUD
 # -------------------------------------------------------------------------
 class PathNode(BaseModel):

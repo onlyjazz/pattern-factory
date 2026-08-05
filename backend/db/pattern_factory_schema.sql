@@ -33,31 +33,32 @@ CREATE TABLE orgs (
     content_source TEXT,          -- e.g., 'linkedin', 'crunchbase', 'website'
     post_id BIGINT REFERENCES posts(id) ON DELETE SET NULL,          
     category_id BIGINT REFERENCES categories(id) ON DELETE SET NULL,
+    estimated_annual_sales NUMERIC,
     created_at TIMESTAMP DEFAULT now(),
     updated_at TIMESTAMP DEFAULT now(),
     deleted_at TIMESTAMP
 );
 
 -- =====================
--- Guests
+-- People
 -- =====================
 
-drop table if exists guests cascade;
-CREATE TABLE guests (
+drop table if exists people cascade;
+CREATE TABLE people (
     id BIGSERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     description TEXT,
     linkedin_url TEXT,
     job_description TEXT,
     keywords TEXT[],
-    content_source TEXT,                -- e.g., 'linkedin', 'twitter', 'website', 'company_page', content post
+    content_source TEXT,                -- e.g., 'linkedin', 'twitter', 'website', 'company_page', substack, fda-device, etc.
     org_id BIGINT REFERENCES orgs(id) ON DELETE SET NULL,
     post_id BIGINT REFERENCES posts(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT now(),
     updated_at TIMESTAMP DEFAULT now(),
     deleted_at TIMESTAMP
 );
-ALTER TABLE guests ADD CONSTRAINT guests_name_unique UNIQUE (name);
+ALTER TABLE people ADD CONSTRAINT people_name_unique UNIQUE (name);
 
 -- =====================
 -- Episodes
@@ -109,11 +110,11 @@ CREATE TABLE patterns (
 -- Join Tables (Many-to-Many)
 -- =====================
 
-DROP TABLE if exists pattern_guest_link cascade;
-CREATE TABLE pattern_guest_link (
+DROP TABLE if exists pattern_people_link cascade;
+CREATE TABLE pattern_people_link (
     pattern_id BIGINT REFERENCES patterns(id) ON DELETE CASCADE,
-    guest_id BIGINT REFERENCES guests(id) ON DELETE CASCADE,
-    PRIMARY KEY (pattern_id, guest_id)
+    people_id BIGINT REFERENCES people(id) ON DELETE CASCADE,
+    PRIMARY KEY (pattern_id, people_id)
 );
 
 DROP TABLE if exists pattern_org_link cascade;
@@ -151,9 +152,9 @@ DROP INDEX if exists idx_orgs_vector cascade;
 CREATE INDEX idx_orgs_vector
     ON orgs USING GIN (to_tsvector('english', coalesce(name,'') || ' ' || coalesce(description,'')));
 
-DROP INDEX if exists idx_guests_vector cascade;
-CREATE INDEX idx_guests_vector
-    ON guests USING GIN (to_tsvector('english', coalesce(name,'') || ' ' || coalesce(description,'')));
+DROP INDEX if exists idx_people_vector cascade;
+CREATE INDEX idx_people_vector
+    ON people USING GIN (to_tsvector('english', coalesce(name,'') || ' ' || coalesce(description,'')));
 
 -- Dec 5 refactor: removed episode-related indexes
 DROP INDEX if exists idx_episodes_vector cascade;
@@ -183,13 +184,13 @@ FOR EACH ROW EXECUTE FUNCTION patterns_vector_update();
 -- INDEX TUNING FOR PATTERN FACTORY
 -- ============================================
 -- 
-CREATE INDEX IF NOT EXISTS idx_pattern_guest_link_guest  ON pattern_guest_link(guest_id);
+CREATE INDEX IF NOT EXISTS idx_pattern_people_link_people  ON pattern_people_link(people_id);
 CREATE INDEX IF NOT EXISTS idx_pattern_org_link_org      ON pattern_org_link(org_id);
 CREATE INDEX IF NOT EXISTS idx_pattern_post_link_post    ON pattern_post_link(post_id);
 
 -- 
 CREATE INDEX IF NOT EXISTS idx_orgs_active     ON orgs(id)     WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_guests_active   ON guests(id)   WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_people_active   ON people(id)   WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_posts_active    ON posts(id)    WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_patterns_active ON patterns(id) WHERE deleted_at IS NULL;
 --

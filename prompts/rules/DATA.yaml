@@ -18,7 +18,7 @@ DATA:
           - updated_at
           - deleted_at
 
-        guests:
+        people:
           - id
           - name
           - description
@@ -68,9 +68,9 @@ DATA:
           - updated_at
           - deleted_at
 
-        pattern_guest_link:
+        pattern_people_link:
           - pattern_id
-          - guest_id
+          - people_id
 
         pattern_org_link:
           - pattern_id

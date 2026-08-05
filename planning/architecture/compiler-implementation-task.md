@@ -4,7 +4,7 @@
 
 ## Objective
 
-Implement the first production version of the OpenCRO Planning Compiler.
+Implement the first production version of the OpenCRO Planning Compiler using typescript.
 
 The selected cycle is a logical compilation unit. Task definitions may be distributed across project folders. The compiler loads all project-specific files for the selected cycle and compiles them as one plan.
 The compiler transforms the declarative planning repository into:

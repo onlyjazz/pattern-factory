@@ -1,0 +1,363 @@
+cycle: cycle-1
+name: Cycle 1 — Production Pipeline
+goal: Generate production-quality reports end to end and qualify 3 unattended runs.
+starts_at: '2026-08-02'
+ends_at: '2026-08-08'
+execution_policy:
+  start_unblocked_groups_in_parallel: true
+  stop_on_failed_gate: true
+  human_review_at_cycle_gate: true
+  cycle_gate:
+    reviewer: Danny
+    criteria:
+      - All blocking tasks completed
+      - Validation evidence attached
+      - Remaining blockers explicitly accepted or moved
+      - Next cycle dependencies unblocked
+waves:
+  - wave: 1
+    tasks:
+      - PF-101
+  - wave: 2
+    tasks:
+      - PF-102
+  - wave: 3
+    tasks:
+      - PF-103
+  - wave: 4
+    tasks:
+      - PF-104
+      - PF-108
+  - wave: 5
+    tasks:
+      - PF-105
+      - PF-106
+  - wave: 6
+    tasks:
+      - PF-107
+      - PF-109
+  - wave: 7
+    tasks:
+      - PF-110
+  - wave: 8
+    tasks:
+      - PF-111
+  - wave: 9
+    tasks:
+      - PF-112
+  - wave: 10
+    tasks:
+      - PF-113
+  - wave: 11
+    tasks:
+      - PF-114
+parallel_groups:
+  - group: c1-audit
+    tasks:
+      - PF-101
+  - group: c1-schema
+    tasks:
+      - PF-102
+      - PF-103
+  - group: c1-platform
+    tasks:
+      - PF-104
+      - PF-105
+      - PF-106
+  - group: c1-generation
+    tasks:
+      - PF-107
+      - PF-112
+  - group: c1-research
+    tasks:
+      - PF-108
+      - PF-109
+  - group: c1-writing
+    tasks:
+      - PF-110
+      - PF-111
+  - group: c1-publishing
+    tasks:
+      - PF-113
+  - group: c1-gate
+    tasks:
+      - PF-114
+tasks:
+  - plan_key: PF-101
+    title: Audit current Pattern Factory pipeline
+    type: inspect
+    objective: Document the current report-generation flow and identify reliability gaps.
+    acceptance_criteria:
+      - Architecture map names all stages
+      - Defects are ranked by severity and blocking impact
+      - Unknowns are explicitly listed
+    artifacts:
+      - The required output described above
+      - Tests or validation evidence
+      - A completion report tied to every acceptance criterion
+      - Updated documentation where behavior, schema, prompts, or operations change
+    warp_prompt: |
+      # Inspection Task
+
+      Do not modify production code unless explicitly requested. Trace actual behavior from code and runtime evidence. Separate verified facts, assumptions, defects, and unknowns. Produce artifacts downstream agents can consume.
+  - plan_key: PF-102
+    title: Freeze report entity schema
+    type: design
+    objective: Define the stable entities and fields required for production reports.
+    acceptance_criteria:
+      - Schema covers company, device, assets, threats, countermeasures and report artifacts
+      - No required field is ambiguous
+      - Backward compatibility plan exists
+    artifacts:
+      - The required output described above
+      - Tests or validation evidence
+      - A completion report tied to every acceptance criterion
+      - Updated documentation where behavior, schema, prompts, or operations change
+    depends_on:
+      - PF-101
+    warp_prompt: |
+      # Engineering Task
+
+      Implement the requested change with the smallest coherent patch. Add or update automated tests. Run relevant migrations and tests. Avoid unrelated refactoring. Return exact files changed and commands run.
+  - plan_key: PF-103
+    title: Implement schema migration
+    type: implement
+    objective: Apply the frozen report schema to the database.
+    acceptance_criteria:
+      - Migration succeeds on clean and populated databases
+      - Rollback succeeds
+      - Models match schema
+      - Tests pass
+    artifacts:
+      - The required output described above
+      - Tests or validation evidence
+      - A completion report tied to every acceptance criterion
+      - Updated documentation where behavior, schema, prompts, or operations change
+    depends_on:
+      - PF-102
+    warp_prompt: |
+      # Engineering Task
+
+      Implement the requested change with the smallest coherent patch. Add or update automated tests. Run relevant migrations and tests. Avoid unrelated refactoring. Return exact files changed and commands run.
+  - plan_key: PF-104
+    title: Add stable artifact IDs
+    type: implement
+    objective: Create stable identifiers for each generation artifact.
+    acceptance_criteria:
+      - IDs persist across retries
+      - Relationships are queryable
+      - No collision in test batch
+    artifacts:
+      - The required output described above
+      - Tests or validation evidence
+      - A completion report tied to every acceptance criterion
+      - Updated documentation where behavior, schema, prompts, or operations change
+    depends_on:
+      - PF-103
+    warp_prompt: |
+      # Engineering Task
+
+      Implement the requested change with the smallest coherent patch. Add or update automated tests. Run relevant migrations and tests. Avoid unrelated refactoring. Return exact files changed and commands run.
+  - plan_key: PF-105
+    title: Persist prompt Git provenance
+    type: implement
+    objective: Record the exact YAML prompt source and Git revision used for every generation.
+    acceptance_criteria:
+      - Every generation run records provenance
+      - Failed runs retain metadata
+      - Clean and dirty states are distinguishable
+      - Existing reports remain readable
+    artifacts:
+      - The required output described above
+      - Tests or validation evidence
+      - A completion report tied to every acceptance criterion
+      - Updated documentation where behavior, schema, prompts, or operations change
+    depends_on:
+      - PF-104
+    warp_prompt: |
+      # Engineering Task
+
+      Implement the requested change with the smallest coherent patch. Add or update automated tests. Run relevant migrations and tests. Avoid unrelated refactoring. Return exact files changed and commands run.
+  - plan_key: PF-106
+    title: Add structured generation logging
+    type: implement
+    objective: Make every stage observable with machine-readable logs.
+    acceptance_criteria:
+      - Every stage emits start/end events
+      - Failures include actionable error context
+      - Logs can reconstruct a run
+    artifacts:
+      - The required output described above
+      - Tests or validation evidence
+      - A completion report tied to every acceptance criterion
+      - Updated documentation where behavior, schema, prompts, or operations change
+    depends_on:
+      - PF-104
+    warp_prompt: |
+      # Engineering Task
+
+      Implement the requested change with the smallest coherent patch. Add or update automated tests. Run relevant migrations and tests. Avoid unrelated refactoring. Return exact files changed and commands run.
+  - plan_key: PF-107
+    title: Implement retry-safe orchestration
+    type: implement
+    objective: Make report generation idempotent and recoverable.
+    acceptance_criteria:
+      - Retry does not duplicate entities
+      - Terminal failures stop cleanly
+      - Interrupted run resumes
+    artifacts:
+      - The required output described above
+      - Tests or validation evidence
+      - A completion report tied to every acceptance criterion
+      - Updated documentation where behavior, schema, prompts, or operations change
+    depends_on:
+      - PF-104
+      - PF-106
+    warp_prompt: |
+      # Engineering Task
+
+      Implement the requested change with the smallest coherent patch. Add or update automated tests. Run relevant migrations and tests. Avoid unrelated refactoring. Return exact files changed and commands run.
+  - plan_key: PF-108
+    title: Implement competitive research brief schema
+    type: implement
+    objective: Create the structured evidence package used before writing an opener.
+    acceptance_criteria:
+      - Brief validates against schema
+      - Every claim has evidence and confidence
+      - Missing evidence is explicit
+    artifacts:
+      - The required output described above
+      - Tests or validation evidence
+      - A completion report tied to every acceptance criterion
+      - Updated documentation where behavior, schema, prompts, or operations change
+    depends_on:
+      - PF-103
+    warp_prompt: |
+      # Engineering Task
+
+      Implement the requested change with the smallest coherent patch. Add or update automated tests. Run relevant migrations and tests. Avoid unrelated refactoring. Return exact files changed and commands run.
+  - plan_key: PF-109
+    title: Implement competitive research agent
+    type: implement
+    objective: Generate the structured competitive brief automatically.
+    acceptance_criteria:
+      - Five sample briefs pass validation
+      - No unsupported factual claim in review sample
+      - Failures are explicit
+    artifacts:
+      - The required output described above
+      - Tests or validation evidence
+      - A completion report tied to every acceptance criterion
+      - Updated documentation where behavior, schema, prompts, or operations change
+    depends_on:
+      - PF-108
+      - PF-105
+    warp_prompt: |
+      # Engineering Task
+
+      Implement the requested change with the smallest coherent patch. Add or update automated tests. Run relevant migrations and tests. Avoid unrelated refactoring. Return exact files changed and commands run.
+  - plan_key: PF-110
+    title: Implement opener treatment prompts
+    type: implement
+    objective: Create YAML prompts for four opening treatments.
+    acceptance_criteria:
+      - Each treatment is materially distinct
+      - Prompts load by key
+      - Outputs obey length and evidence rules
+    artifacts:
+      - The required output described above
+      - Tests or validation evidence
+      - A completion report tied to every acceptance criterion
+      - Updated documentation where behavior, schema, prompts, or operations change
+    depends_on:
+      - PF-109
+      - PF-105
+    warp_prompt: |
+      # Engineering Task
+
+      Implement the requested change with the smallest coherent patch. Add or update automated tests. Run relevant migrations and tests. Avoid unrelated refactoring. Return exact files changed and commands run.
+  - plan_key: PF-111
+    title: Implement opener agent
+    type: implement
+    objective: Generate three variants for an assigned opener treatment.
+    acceptance_criteria:
+      - Three variants produced
+      - Treatment ID persists
+      - Invalid evidence blocks generation
+      - Tests pass
+    artifacts:
+      - The required output described above
+      - Tests or validation evidence
+      - A completion report tied to every acceptance criterion
+      - Updated documentation where behavior, schema, prompts, or operations change
+    depends_on:
+      - PF-110
+      - PF-107
+    warp_prompt: |
+      # Engineering Task
+
+      Implement the requested change with the smallest coherent patch. Add or update automated tests. Run relevant migrations and tests. Avoid unrelated refactoring. Return exact files changed and commands run.
+  - plan_key: PF-112
+    title: Implement six-page report assembler
+    type: implement
+    objective: Assemble research, opener, valuation, threats and countermeasures into the production report structure.
+    acceptance_criteria:
+      - Complete report assembles from sample inputs
+      - Required sections always present
+      - Errors identify missing stage
+    artifacts:
+      - The required output described above
+      - Tests or validation evidence
+      - A completion report tied to every acceptance criterion
+      - Updated documentation where behavior, schema, prompts, or operations change
+    depends_on:
+      - PF-103
+      - PF-111
+    warp_prompt: |
+      # Engineering Task
+
+      Implement the requested change with the smallest coherent patch. Add or update automated tests. Run relevant migrations and tests. Avoid unrelated refactoring. Return exact files changed and commands run.
+  - plan_key: PF-113
+    title: Implement static HTML report renderer
+    type: implement
+    objective: Render the assembled report as publishable static HTML.
+    acceptance_criteria:
+      - HTML validates
+      - Mobile layout is usable
+      - All sections render
+      - Report ID is present
+    artifacts:
+      - The required output described above
+      - Tests or validation evidence
+      - A completion report tied to every acceptance criterion
+      - Updated documentation where behavior, schema, prompts, or operations change
+    depends_on:
+      - PF-112
+    warp_prompt: |
+      # Engineering Task
+
+      Implement the requested change with the smallest coherent patch. Add or update automated tests. Run relevant migrations and tests. Avoid unrelated refactoring. Return exact files changed and commands run.
+  - plan_key: PF-114
+    title: Run 50-report unattended qualification
+    type: validate
+    objective: Prove the Cycle 1 pipeline can generate 50 reports without manual intervention.
+    acceptance_criteria:
+      - 50 jobs attempted
+      - Success rate and stage metrics reported
+      - All failures reproducible
+      - No silent data loss
+    artifacts:
+      - The required output described above
+      - Tests or validation evidence
+      - A completion report tied to every acceptance criterion
+      - Updated documentation where behavior, schema, prompts, or operations change
+    depends_on:
+      - PF-107
+      - PF-109
+      - PF-111
+      - PF-112
+      - PF-113
+    warp_prompt: |
+      # Validation Task
+
+      Test the real subsystem, including failure paths and existing data. Record commands, sample sizes, pass/fail results, defects, and reproducible evidence. Do not repair unrelated defects unless the task says to.

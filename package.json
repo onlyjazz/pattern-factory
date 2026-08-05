@@ -9,7 +9,10 @@
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"validate": "node --import tsx ./planning/compiler/src/cli.ts validate",
+		"sync": "node --import tsx ./planning/compiler/src/cli.ts sync",
+		"render-warp": "node --import tsx ./planning/compiler/src/cli.ts render-warp"
 	},
 	"devDependencies": {
 		"@iconify/svelte": "^5.0.0",
@@ -51,6 +54,9 @@
 		"datatables.net-buttons": "^3.2.4",
 		"datatables.net-buttons-dt": "^3.2.4",
 		"datatables.net-dt": "^2.3.3",
+		"dotenv": "^16.4.5",
+		"graphql": "^16.8.1",
+		"graphql-request": "^6.0.0",
 		"js-yaml": "^4.1.0",
 		"jszip": "^3.10.1",
 		"lucide-svelte": "^0.511.0",

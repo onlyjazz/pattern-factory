@@ -2,6 +2,38 @@ import { API_BASE } from './config';
 export type ID = string
 export interface Pattern { id: ID; name: string; description: string; kind: string; story_md?: string | null; taxonomy?: string | null; }
 
+export interface Org {
+    id: ID;
+    name: string;
+    description?: string | null;
+    stage?: string | null;
+    funding?: number | null;
+    date_funded?: string | null;
+    date_founded?: string | null;
+    linkedin_company_url?: string | null;
+    keywords?: string[] | null;
+    content_source?: string | null;
+    post_id?: number | null;
+    category_id?: number | null;
+    estimated_annual_sales?: number | null;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface Person {
+    id: ID;
+    name: string;
+    description?: string | null;
+    linkedin_url?: string | null;
+    job_description?: string | null;
+    keywords?: string[] | null;
+    content_source?: string | null;
+    org_id?: number | null;
+    post_id?: number | null;
+    created_at?: string;
+    updated_at?: string;
+}
+
 export interface Threat {
     id: ID;
     name: string;
