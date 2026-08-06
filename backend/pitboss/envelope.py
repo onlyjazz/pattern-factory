@@ -37,6 +37,7 @@ class Verb(str, Enum):
     CONTENT = "CONTENT"
     CARD = "CARD"
     GENERATE = "GENERATE"  # Generate risk model from card URL
+    ENRICH = "ENRICH"  # Enrich organization data (funding, revenue)
     GENERIC = "GENERIC"  # Placeholder: LanguageCapo will determine actual verb
 
 

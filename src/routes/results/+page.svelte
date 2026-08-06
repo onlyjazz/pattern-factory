@@ -187,15 +187,21 @@ import { API_BASE } from '$lib/config';
     }
     
     // Try to parse string as number and format if valid
+    // Only parse if the ENTIRE string is numeric (not just starts with a number)
     if (typeof value === 'string' && value.trim() !== '') {
-      const num = parseFloat(value);
-      if (!isNaN(num) && isFinite(num)) {
-        // Check if it looks like a whole number (no decimal point in original)
-        if (!value.includes('.')) {
-          return Math.floor(num).toLocaleString('en-US');
+      const trimmed = value.trim();
+      // Check if the entire string is numeric (only digits, dots, and optional minus sign)
+      const isNumericString = /^-?\d+(\.\d+)?$/.test(trimmed);
+      if (isNumericString) {
+        const num = parseFloat(trimmed);
+        if (!isNaN(num) && isFinite(num)) {
+          // Check if it looks like a whole number (no decimal point in original)
+          if (!trimmed.includes('.')) {
+            return Math.floor(num).toLocaleString('en-US');
+          }
+          // For decimals, format with 2 decimal places
+          return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
-        // For decimals, format with 2 decimal places
-        return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       }
     }
     
@@ -317,6 +323,17 @@ import { API_BASE } from '$lib/config';
 </div>
 
 <style>
+  :global(table) {
+    table-layout: auto;
+    width: 100%;
+  }
+
+  :global(td) {
+    overflow: visible !important;
+    text-overflow: unset !important;
+    white-space: normal !important;
+  }
+
   :global(td a) {
     color: #0066cc;
     text-decoration: underline;

@@ -70,7 +70,7 @@ class PitbossSupervisor:
         
         # Check for invalid verb
         if not verb_str:
-            error_msg = "Missing or empty 'verb' field. Must be: RULE, CONTENT, CARD, or GENERATE"
+            error_msg = "Missing or empty 'verb' field. Must be: RULE, CONTENT, CARD, GENERATE, or ENRICH"
             logger.error(f"Invalid envelope: {error_msg}")
             if self.websocket:
                 await self.websocket.send_json(make_error(
@@ -82,7 +82,7 @@ class PitbossSupervisor:
             return
         
         if verb_str not in [v.value for v in Verb]:
-            error_msg = f"Invalid verb '{verb_str}'. Must be: RULE, CONTENT, CARD, or GENERATE"
+            error_msg = f"Invalid verb '{verb_str}'. Must be: RULE, CONTENT, CARD, GENERATE, or ENRICH"
             logger.error(f"Invalid envelope: {error_msg}")
             if self.websocket:
                 await self.websocket.send_json(make_error(
@@ -186,6 +186,8 @@ class PitbossSupervisor:
             env.messageBody["_ctx"] = self.context_builder
         if "_tools" not in env.messageBody:
             env.messageBody["_tools"] = self.tool_registry
+        if "_db" not in env.messageBody:
+            env.messageBody["_db"] = self.db
         
         # Pass verb into message_body for agents to detect flow (RULE vs CONTENT)
         env.messageBody["_verb"] = verb_str

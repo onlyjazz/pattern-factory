@@ -1,0 +1,54 @@
+SEARCH:
+  rev: 1.0
+  date: 2026-08-06
+  author: Pattern Factory Enrichment Team
+
+  # Prompt for LLM-based extraction of company data from search results
+  extraction_prompt: |
+    Extract comprehensive company information from these search results for {org_name}.
+
+    Search Results:
+    {snippets_text}
+
+    Extraction Instructions:
+    1. DESCRIPTION: Extract the complete company description including mission, products/services, and business focus.
+       - Use the full text from the source material, preserving all details
+       - Include the complete paragraph, not truncated
+       - Focus on core business and technology
+
+    2. HEADQUARTERS: Extract location (city, country/state).
+       - Format as "City, Country" or "City, State, Country"
+       - Use null if not found
+
+    3. EMPLOYEES: Extract employee count as an integer.
+       - Use only confirmed numbers
+       - Use null if range or estimate given instead
+
+    4. DATE FOUNDED: Extract the year or full date company was founded.
+       - Format as ISO 8601 date string (YYYY-MM-DD) or just year (YYYY) if only year is available
+       - For year-only (e.g., "Founded 2018"), use "2018-01-01"
+       - Use null if not found
+
+    5. ANNUAL REVENUE: Look for current annual revenue/sales figures in USD.
+       - If a range is given, use the midpoint (e.g., $1M-$5M → use 3000000)
+       - Use null if only historical data available
+
+    6. TOTAL FUNDING RAISED: Extract the total cumulative funding amount.
+       - Sum all Series rounds if individual amounts given
+       - If range stated, use the midpoint
+       - Use null if not found
+
+    Return valid JSON only (no markdown, no code blocks):
+    {{
+      "description": "<company business description or null>",
+      "headquarters": "<city, country or null>",
+      "employees": <integer or null>,
+      "date_founded": "<YYYY-MM-DD or YYYY or null>",
+      "annual_revenue": <number in USD or null>,
+      "annual_revenue_source": "<snippet query or null>",
+      "total_funding_raised": <number in USD or null>,
+      "total_funding_source": "<snippet query or null>",
+      "data_quality": "<high|medium|low>",
+      "confidence": <0.0-1.0>,
+      "notes": "<any edge cases or assumptions>"
+    }}

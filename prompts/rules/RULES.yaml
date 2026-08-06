@@ -20,10 +20,10 @@ RULES:
       Use the content_source field to determine if the pattern is from a podcast episode ('podcast')
 
   - rule_code: LIST_ORGS 
-    name: "Organizations who were on the podcast"
-    description: "List of organizations who were on the podcast"
+    name: "Companies"
+    description: "List of companies with their details"
     logic: |
-      show me the orgs with name, description, date founded, date funded, funding stage
+      show me name, funding, estimated_annual_sales, description, date_founded, date_funded, stage from orgs
 
   - rule_code: PATTERNS_BY_GUEST
     name: "Patterns by Guest"
@@ -73,7 +73,7 @@ RULES:
     description: "Compute time from founding date to funding date for organizations."
     logic: |
      show name, stage, and the number of years from date_founded to date_funded for all orgs
-     
+
   - rule_code: WCRT
     name: "Cards in Baseline"
     description: "What threats are in the Baseline model"

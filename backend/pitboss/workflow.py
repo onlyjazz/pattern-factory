@@ -154,7 +154,42 @@ class WorkflowEngine:
         }
         self.workflows["GENERATE"] = generate_workflow
         
-        logger.info(f"✅ Loaded {len(self.workflows)} workflows (RULE, CONTENT, GENERATE)")
+        # ENRICH Flow (Organization data enrichment)
+        enrich_workflow = {
+            "model.Capo": WorkflowNode(
+                agent_name="model.Capo",
+                branch_yes="model.validateOrgName",
+                branch_no="sendMessageToChat",
+                description="Initial validation of enrich request"
+            ),
+            "model.validateOrgName": WorkflowNode(
+                agent_name="model.validateOrgName",
+                branch_yes="model.searchForEnrichmentData",
+                branch_no="sendMessageToChat",
+                description="Validate org name in database"
+            ),
+            "model.searchForEnrichmentData": WorkflowNode(
+                agent_name="model.searchForEnrichmentData",
+                branch_yes="model.verifyExtractionResults",
+                branch_no="sendMessageToChat",
+                description="Search web for funding/revenue data"
+            ),
+            "model.verifyExtractionResults": WorkflowNode(
+                agent_name="model.verifyExtractionResults",
+                branch_yes="tool.enrichOrgDatabase",
+                branch_no="sendMessageToChat",
+                description="Verify extracted data with LLM (HITL: present for approval)"
+            ),
+            "tool.enrichOrgDatabase": WorkflowNode(
+                agent_name="tool.enrichOrgDatabase",
+                branch_yes="sendMessageToChat",
+                branch_no="sendMessageToChat",
+                description="Update organization record with approved data"
+            ),
+        }
+        self.workflows["ENRICH"] = enrich_workflow
+        
+        logger.info(f"✅ Loaded {len(self.workflows)} workflows (RULE, CONTENT, GENERATE, ENRICH)")
     
     def get_workflow(self, verb: str) -> Dict[str, WorkflowNode]:
         """Get workflow by verb (RULE or CONTENT)."""

@@ -51,12 +51,14 @@ def get_capo_system_prompt() -> str:
 
     # Fallback prompt
     return (
-        "You are a router that classifies a user’s message for the Pattern Factory. "
-        "Choose exactly one verb: RULE or CONTENT. RULE means the user wants to query/build "
-        "logical views (rules → SQL → execute). CONTENT means the user wants to extract "
-        "entities (orgs, guests, categories, patterns, posts) from a URL or text. "
-        "Return strict JSON only: { \"decision\": \"yes\"|\"no\", \"verb\": \"RULE\"|\"CONTENT\", \"confidence\": 0.0–1.0, \"reason\": \"...\" }. "
-        "If intent is unclear (<0.6 confidence), set decision to \"no\" and explain what’s ambiguous in reason."
+        "You are a router that classifies a user's message for the Pattern Factory. "
+        "Choose exactly one verb: RULE, CONTENT, GENERATE, or ENRICH.\n"
+        "- RULE: user wants to query/build logical views (rules → SQL → execute)\n"
+        "- CONTENT: user wants to extract entities (orgs, guests, patterns, posts) from a URL or text\n"
+        "- GENERATE: user wants to generate risk models from card URLs\n"
+        "- ENRICH: user wants to enrich organization data (funding, revenue, sales)\n"
+        "Return strict JSON only: { \"decision\": \"yes\"|\"no\", \"verb\": \"RULE\"|\"CONTENT\"|\"GENERATE\"|\"ENRICH\", \"confidence\": 0.0–1.0, \"reason\": \"...\" }. "
+        "If intent is unclear (<0.6 confidence), set decision to \"no\" and explain what's ambiguous in reason."
     )
 
 
@@ -108,6 +110,17 @@ async def agent_language_capo(message_body: Dict[str, Any]) -> Tuple[str, float,
         reason = f"User wants to extract from URL: '{url}'"
         logger.info(f"  Detected 'EXTRACT' syntax → routing to CONTENT workflow")
         return ("yes", 0.95, reason, "CONTENT")
+    
+    # Fast-path: recognize explicit "enrich <ORG>" syntax → route to ENRICH
+    # Match 'enrich ' or 'enrich:' or 'enrich, ' variations
+    text_upper = text.upper()
+    if text_upper.startswith("ENRICH ") or text_upper.startswith("ENRICH:") or text_upper.startswith("ENRICH,"):
+        # Extract org name after 'enrich'
+        prefix_len = 7 if text_upper.startswith("ENRICH ") else 7  # All are 7 chars or less
+        org_name = text[prefix_len:].strip()
+        reason = f"User wants to enrich organization: '{org_name}'"
+        logger.info(f"  Detected 'ENRICH' syntax → routing to ENRICH workflow")
+        return ("yes", 0.95, reason, "ENRICH")
 
     # Try LLM-based classification first
     api_key = os.getenv("OPENAI_API_KEY")
@@ -129,7 +142,7 @@ async def agent_language_capo(message_body: Dict[str, Any]) -> Tuple[str, float,
             decision = data.get("decision", "no")
             verb = (data.get("verb", "") or "").strip().upper()
             # Default to RULE if empty or invalid
-            if verb not in ("RULE", "CONTENT", "GENERATE"):
+            if verb not in ("RULE", "CONTENT", "GENERATE", "ENRICH"):
                 verb = "RULE"
             confidence = float(data.get("confidence", 0.55))
             reason = data.get("reason", "")
@@ -207,11 +220,25 @@ def _heuristic_language_capo(text: str) -> Tuple[str, float, str, str]:
         "entities",
         "entity",
     ]
+    
+    enrich_keywords = [
+        "enrich",
+        "funding",
+        "revenue",
+        "annual sales",
+        "annual revenue",
+        "valuation",
+    ]
 
     rule_score = sum(1 for kw in rule_keywords if kw in text_lower)
     content_score = sum(1 for kw in content_keywords if kw in text_lower)
+    enrich_score = sum(1 for kw in enrich_keywords if kw in text_lower)
 
-    if rule_score > content_score:
+    if enrich_score > rule_score and enrich_score > content_score:
+        verb = "ENRICH"
+        confidence = min(0.95, 0.5 + (enrich_score * 0.1))
+        reason = f"User is asking for organization enrichment (detected {enrich_score} ENRICH keywords)"
+    elif rule_score > content_score:
         verb = "RULE"
         confidence = min(0.95, 0.5 + (rule_score * 0.1))
         reason = f"User is asking for data query/view (detected {rule_score} RULE keywords)"
@@ -1734,6 +1761,13 @@ async def agent_verify_upsert_risk_model(message_body: Dict[str, Any]) -> Tuple[
 # ============================================================================
 # Agent Registry
 # ============================================================================
+# Import enrichment agents
+from .enrichment import (
+    agent_validate_org_name,
+    agent_search_for_enrichment_data,
+    agent_verify_extraction_results,
+    agent_enrich_org_database,
+)
 
 AGENT_REGISTRY = {
     # Pre-workflow language capo
@@ -1756,6 +1790,12 @@ AGENT_REGISTRY = {
     "model.verifyRequest_generate": agent_verify_request_generate,
     "model.requestToExtractRiskModel": agent_request_to_extract_risk_model,
     "model.verifyUpsertRiskModel": agent_verify_upsert_risk_model,
+    
+    # ENRICH flow
+    "model.validateOrgName": agent_validate_org_name,
+    "model.searchForEnrichmentData": agent_search_for_enrichment_data,
+    "model.verifyExtractionResults": agent_verify_extraction_results,
+    "tool.enrichOrgDatabase": agent_enrich_org_database,
 }
 
 
@@ -1799,6 +1839,13 @@ def _get_agent_for_verb(agent_name: str, verb: str):
                     return agent_capo_rule
                 case "model.verifyRequest":
                     return agent_verify_request_generate  # Validate card URL
+                case _:
+                    return AGENT_REGISTRY.get(agent_name)
+        
+        case "ENRICH":
+            match agent_name:
+                case "model.Capo":
+                    return agent_capo_rule
                 case _:
                     return AGENT_REGISTRY.get(agent_name)
         

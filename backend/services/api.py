@@ -1571,7 +1571,7 @@ async def get_views(
 @app.get("/query/{table}", tags=["Query"])
 async def query_table(
     table: str,
-    limit: int = Query(200, description="Maximum number of rows to return")
+    limit: int = Query(10000, description="Maximum number of rows to return (default: 10000, max: 100000)")
 ):
     """Execute a universal query against any table or view.
     
@@ -1589,7 +1589,7 @@ async def query_table(
         table (str): Table or view name (alphanumeric, underscore, and hyphen allowed)
             - For registered views: use the table_name from /views response
             - For system tables: use the table name directly (e.g., 'patterns', 'threats')
-        limit (int): Maximum number of rows to return (default: 200)
+        limit (int): Maximum number of rows to return (default: 10000, max: 100000)
     
     Returns:
         List[dict]: Array of row objects from the query with all columns
@@ -1599,17 +1599,24 @@ async def query_table(
     
     Security Notes:
         - Table names are validated to contain only alphanumeric characters, underscores, and hyphens
-        - LIMIT clause is enforced server-side to prevent large result sets
+        - LIMIT clause is enforced server-side with maximum of 100000 rows to prevent abuse
         - All queries use prepared statements via asyncpg
     
     Examples:
-        GET /query/LIST_ORGS?limit=50
-        Returns: [{"id": 1, "name": "Acme Corp", ...}, ...]
+        GET /query/LIST_ORGS
+        Returns: All orgs (up to 10000 rows)
         
-        GET /query/patterns?limit=100
-        Returns: [{"id": 1, "name": "Circuit Breaker", "kind": "pattern", ...}, ...]
+        GET /query/patterns?limit=500
+        Returns: Up to 500 patterns
     """
     pool = get_pg_pool()
+    
+    # Enforce maximum limit to prevent abuse
+    max_limit = 100000
+    if limit > max_limit:
+        limit = max_limit
+    if limit < 1:
+        limit = 10000
 
     # Basic sanitization to block SQL injection
     # Allow alphanumeric, underscores, and hyphens

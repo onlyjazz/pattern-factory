@@ -45,6 +45,10 @@ DATA:
           - created_at
           - updated_at
           - deleted_at
+          - content_url
+          - estimated_annual_sales
+          - employees
+          - headquarters
 
         patterns:
           - id
@@ -80,6 +84,23 @@ DATA:
           - pattern_id
           - post_id
 
+        products:
+          - id
+          - date_of_final_decision
+          - submission_number
+          - device
+          - indicated_use
+          - company
+          - panel
+          - primary_product_code
+          - product_contact_1
+          - product_contact_2
+          - product_contact_3
+          - created_at
+          - updated_at
+          - deleted_at
+          - search_vector
+
         system_log:
           - id
           - event
@@ -106,6 +127,7 @@ DATA:
           - category
           - keywords
           - description
+          - submission_number
           - created_at
           - updated_at
  

@@ -14,6 +14,27 @@ The application extracts patterns and antipatterns from podcast transcripts and 
 
 > **Architecture reference:** Read `ARCHITECTURE.md` before any architectural change or refactor. It is the source of truth for the system architecture map, module responsibilities, API contracts, data flows, technical debt, and the engineering constraints that must be honored in future work.
 
+## Schema Discovery
+
+**IMPORTANT:** When investigating database structure, always query the live PostgreSQL schema directly rather than relying on migration files.
+
+The database is organized into two main schemas:
+- **public.*** : Application entities (orgs, products, patterns, posts, users, etc.)
+- **threat.*** : Threat modeling entities (models, threats, assets, vulnerabilities, countermeasures)
+
+```bash
+# List all tables in public schema
+psql -h 127.0.0.1 -U pattern_factory -d pattern-factory -c "\dt public.*"
+
+# List all tables in threat schema
+psql -h 127.0.0.1 -U pattern_factory -d pattern-factory -c "\dt threat.*"
+
+# Inspect a table's structure
+psql -h 127.0.0.1 -U pattern_factory -d pattern-factory -c "\d public.orgs"
+```
+
+Migration files in `backend/db/` describe historical changes but may not reflect the current state. The database is the source of truth.
+
 ## Architecture Overview
 
 ### Backend Structure
@@ -33,7 +54,7 @@ The application extracts patterns and antipatterns from podcast transcripts and 
 **Pitboss Supervisor** (`backend/pitboss/`):
 - Orchestrates natural-language rule execution pipeline
 - `supervisor.py`: Main orchestrator that chains tool execution
-- `context_builder.py`: Builds LLM context from pattern-factory.yaml (SYSTEM + DATA sections)
+- `context_builder.py`: Builds LLM context from rules files (SYSTEM + DATA + CONTENT sections)
 - `tools.py`: Registry of async tools (sql_pitboss, data_table, register_rule, register_view)
 - `config.py`: Configuration management for model settings, timeouts, and execution parameters
 
@@ -68,18 +89,22 @@ The application extracts patterns and antipatterns from podcast transcripts and 
 - Active model row highlighted with pale green background in models table
 
 ### Data Model
-**Pattern Factory YAML**
-- Contains metadata for proper construction of system prompts as rules to generate logical views for the application
+**Pattern Factory Rules** (`prompts/rules/`)
+- Modularized YAML files for system prompts and schema definitions
+- Provides metadata for constructing system prompts and generating logical views
 
 **Core Tables**:
 - `patterns`: pattern definitions (id, name, description, kind, metadata, etc.)
+- `products`: FDA-cleared AI-enabled medical devices (loaded from aiml-devices.csv)
+  - Linked to orgs via company name (non-enforced at DB level)
+  - Linked to threat.models via submission_number
 - `episodes`, `guests`, `orgs`, `posts`: content sources
 - `pattern_*_link`: Junction tables for many-to-many relationships
 - `views_registry`: Materialized view metadata
 - `system_log`: Event logging for auditing
 - `users`: User account definitions
 - `public.active_models`: User's active model mapping (one model per user)
-- `threat.models`: Threat models for Model mode
+- `threat.models`: Threat models for Model mode (includes submission_number for product linking)
 - `threat.threats`, `threat.assets`, `threat.vulnerabilities`, `threat.countermeasures`: Model mode entities
 
 **Derived Views** (created from rules):
@@ -196,14 +221,20 @@ See `.env.example` for template.
 
 ## Important Files and Patterns
 
-### Pattern Factory YAML (`prompts/rules/pattern-factory.yaml`)
+### Pattern Factory Rules (`prompts/rules/`)
 
-Defines the DSL schema:
-- `SYSTEM.prompt`: Instructions for LLM (model_rule_agent)
-- `DATA.tables`: Complete schema description (used by ContextBuilder)
-- `RULES`: Predefined rules that users can execute (examples for the LLM)
+Modularized YAML files define the DSL schema and LLM instructions:
 
-Changes here affect SQL generation quality. Keep table/column descriptions accurate.
+**Core Files**:
+- `SYSTEM.yaml`: LLM system prompt instructions (model_rule_agent)
+- `DATA.yaml`: Complete database schema description (used by ContextBuilder)
+- `CONTENT.yaml`: Predefined content models and patterns
+- `CAPO.yaml`: Content Agent/Pattern Operations
+- `RULES.yaml`: Predefined rules that users can execute (examples for the LLM)
+
+Changes to schema definitions in `DATA.yaml` affect SQL generation quality. Keep table/column descriptions accurate.
+
+Legacy backup: `pattern-factory.yaml.bkp` (monolithic version - for reference only)
 
 ### Message Protocol v1.1 (Put-and-Take Pattern)
 
@@ -271,13 +302,13 @@ Plus tool-specific fields (e.g., `sql`, `table_name`, `row_count`).
 ### Adding a New Pattern Source
 
 1. Add table to PostgreSQL schema
-2. Update `DATA.tables` in `pattern-factory.yaml`
+2. Update `DATA.yaml` with new table schema in the appropriate schema section
 3. Create new junction table if needed (e.g., `pattern_newsitem_link`)
 4. Add corresponding derived view definition
 
 ### Creating a New Rule
 
-Users add rules via the web UI; for static definitions, edit `RULES` section in `pattern-factory.yaml`.
+Users add rules via the web UI; for static definitions, edit `RULES.yaml`.
 
 ### Understanding the Mode System
 
@@ -319,7 +350,7 @@ The sidebar's Views section is filtered by the current application mode. Each vi
 ### Database Schema Changes
 
 1. Create migration script in `backend/db/`
-2. Document schema in `pattern-factory.yaml` DATA section
+2. Update schema in `prompts/rules/DATA.yaml`
 3. Restart FastAPI to reload schema
 
 ## UI/Form Design Guidelines
