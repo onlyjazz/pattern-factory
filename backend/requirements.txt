@@ -92,5 +92,6 @@ watchfiles==1.1.0
     # via uvicorn
 websockets==15.0.1
     # via uvicorn
-psycopg==3.2.12 
+psycopg==3.2.12
 asyncpg
+aiohttp==3.10.11

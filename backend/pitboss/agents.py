@@ -1769,6 +1769,14 @@ from .enrichment import (
     agent_enrich_org_database,
 )
 
+# Import feelgood agents
+from .feelgood import (
+    agent_validate_product_id,
+    agent_search_for_superiority,
+    agent_extract_superiority_claim,
+    tool_update_product_superiority,
+)
+
 AGENT_REGISTRY = {
     # Pre-workflow language capo
     "model.LanguageCapo": agent_language_capo,
@@ -1796,6 +1804,12 @@ AGENT_REGISTRY = {
     "model.searchForEnrichmentData": agent_search_for_enrichment_data,
     "model.verifyExtractionResults": agent_verify_extraction_results,
     "tool.enrichOrgDatabase": agent_enrich_org_database,
+    
+    # FEELGOOD flow
+    "model.validateProductId": agent_validate_product_id,
+    "model.searchForSuperiority": agent_search_for_superiority,
+    "model.extractSuperiorityClaim": agent_extract_superiority_claim,
+    "tool.updateProductSuperiority": tool_update_product_superiority,
 }
 
 
@@ -1843,6 +1857,13 @@ def _get_agent_for_verb(agent_name: str, verb: str):
                     return AGENT_REGISTRY.get(agent_name)
         
         case "ENRICH":
+            match agent_name:
+                case "model.Capo":
+                    return agent_capo_rule
+                case _:
+                    return AGENT_REGISTRY.get(agent_name)
+        
+        case "FEELGOOD":
             match agent_name:
                 case "model.Capo":
                     return agent_capo_rule

@@ -151,6 +151,16 @@ python -m pitboss.supervisor
 
 ### CLI Tools
 
+**Environment Variables Required**:
+All CLI tools require the following environment variables to be set in `.env`:
+```bash
+DATABASE_URL=postgresql://pattern_factory:314159@localhost:5432/pattern-factory
+OPENAI_API_KEY=sk-...
+EXA_API_KEY=...        # Required for FEELGOOD and ENRICH flows
+```
+
+Do NOT pass these on the command line. Load from `.env` file using `python-dotenv`.
+
 **Extract Posts** (`bin/extract-posts`):
 Extract entities (posts, patterns, orgs, guests) from web URLs and upsert to database.
 
@@ -168,7 +178,56 @@ Extract entities (posts, patterns, orgs, guests) from web URLs and upsert to dat
 ./bin/extract-posts https://example.substack.com/p/post-title --verbose
 ```
 
-Requires `DATABASE_URL` and `OPENAI_API_KEY` env vars. See `docs/CLI_EXTRACT_POSTS.md` for full documentation.
+Requires `DATABASE_URL` and `OPENAI_API_KEY` from `.env`. See `docs/CLI_EXTRACT_POSTS.md` for full documentation.
+
+**FDA Primary Source** (`bin/fda-primary`):
+Populate device descriptions for FDA-cleared AI-enabled medical devices from official FDA sources.
+
+```bash
+./bin/fda-primary                     # Process up to 100 products
+./bin/fda-primary --range=1-50        # Process specific range
+./bin/fda-primary --product-ids=1,5   # Process specific IDs
+./bin/fda-primary --limit=200         # Custom limit
+```
+
+Requires `DATABASE_URL` from `.env`. See `docs/FDA_PRIMARY_SOURCE.md` for documentation.
+
+**FEELGOOD Agent Flow** (`bin/feelgood`):
+Extract competitive advantage claims for FDA-cleared AI-enabled medical devices.
+
+```bash
+./bin/feelgood                        # Process up to 100 products
+./bin/feelgood --range=1-50           # Process specific range  
+./bin/feelgood --product-ids=1,5      # Process specific IDs
+./bin/feelgood --limit=200            # Custom limit
+```
+
+Requires `DATABASE_URL`, `EXA_API_KEY`, and `OPENAI_API_KEY` from `.env`. See `docs/FEELGOOD_AGENT_FLOW.md` for documentation.
+
+**Extracting Intended Use from FDA Sources**:
+Every FDA-cleared medical device has an official "Intended Use" statement in its clearance documents. Intended Use describes the general function or purpose of the device as claimed by the manufacturer (distinct from "Indications for Use," which specifies the particular disease or condition it treats/diagnoses). To find a device's intended use:
+
+1. Identify submission type by K-number prefix:
+   - "K" prefix: 510(k) Premarket Notification (most common)
+   - "P" prefix: Premarket Approval (PMA, high-risk devices)
+   - "DEN" prefix: De Novo classification
+
+2. Search FDA Devices@FDA database:
+   - Navigate to https://www.fda.gov/cdrh/devicesatfda/
+   - Enter submission number in "Premarket Submission Number" field
+   - Click Search
+
+3. Locate clearance summary PDF:
+   - For 510(k): Click "Summary" link at bottom
+   - For PMA: Look for "Summary of Safety and Effectiveness Data" (SSED)
+   - Open PDF
+
+4. Extract the intended use statement from the clearance document:
+   - This describes the general purpose/function the manufacturer claims for the device
+   - Examples: "Cardiac imaging", "Automated ECG analysis", "Breast lesion detection"
+   - This exact text must be used for web search and competitive analysis
+
+For batch processing where intended_use is missing from the database, the FEELGOOD agent constructs a fallback description from device name and company. For higher accuracy in competitive advantage analysis, populate the database with actual FDA clearance text extracted from official clearance documents.
 
 ### Database Setup
 

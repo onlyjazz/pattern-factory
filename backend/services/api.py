@@ -101,6 +101,10 @@ Database connection configured via environment variables: PGHOST, PGPORT, PGUSER
             "description": "Blog post and content management",
         },
         {
+            "name": "Products",
+            "description": "FDA-cleared AI-enabled medical device management",
+        },
+        {
             "name": "Threats",
             "description": "Risk/threat management for threat models",
         },
@@ -1511,6 +1515,188 @@ async def delete_countermeasure(countermeasure_id: int):
         if result == "DELETE 0":
             raise HTTPException(status_code=404, detail="Countermeasure not found")
     return {"status": "ok", "deleted_id": countermeasure_id}
+
+# -------------------------------------------------------------------------
+# Products CRUD (FDA-Cleared AI-Enabled Medical Devices)
+# -------------------------------------------------------------------------
+class ProductCreate(BaseModel):
+    """Create a new FDA-cleared AI medical device product."""
+    submission_number: str  # FDA 510(k) submission number (required, unique)
+    device: str  # Device name (required)
+    date_of_final_decision: str | None = None
+    intended_use: str | None = None  # FDA-approved general function/purpose of device
+    indications_for_use: str | None = None  # Specific medical conditions the device treats/diagnoses
+    company: str | None = None  # Manufacturer company name
+    panel: str | None = None  # FDA regulatory panel
+    primary_product_code: str | None = None  # FDA product code
+    product_contact_1: str | None = None  # LinkedIn profile URL
+    product_contact_2: str | None = None  # LinkedIn profile URL
+    product_contact_3: str | None = None  # LinkedIn profile URL
+    device_description: str | None = None  # Device description from OpenFDA
+    superiority: str | None = None  # Competitive advantage claims from FEELGOOD flow
+    org_id: int | None = None  # Foreign key to organizations
+
+class ProductUpdate(BaseModel):
+    """Update an FDA-cleared AI medical device product."""
+    submission_number: str | None = None
+    device: str | None = None
+    date_of_final_decision: str | None = None
+    intended_use: str | None = None  # FDA-approved general function/purpose of device
+    indications_for_use: str | None = None  # Specific medical conditions the device treats/diagnoses
+    company: str | None = None
+    panel: str | None = None
+    primary_product_code: str | None = None
+    product_contact_1: str | None = None
+    product_contact_2: str | None = None
+    product_contact_3: str | None = None
+    device_description: str | None = None
+    superiority: str | None = None
+    org_id: int | None = None
+
+@app.get("/products", tags=["Products"])
+async def get_products():
+    """Get all FDA-cleared AI medical device products."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT id, date_of_final_decision, submission_number, device, intended_use, indications_for_use, company, panel, 
+                   primary_product_code, product_contact_1, product_contact_2, product_contact_3,
+                   device_description, superiority, org_id, created_at, updated_at
+            FROM public.products
+            WHERE deleted_at IS NULL
+            ORDER BY created_at DESC
+        """)
+    return [dict(r) for r in rows]
+
+@app.post("/products", tags=["Products"])
+async def create_product(product: ProductCreate):
+    """Create a new FDA-cleared AI medical device product."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        # Verify org exists if org_id provided
+        if product.org_id is not None:
+            org_exists = await conn.fetchval(
+                "SELECT id FROM public.orgs WHERE id = $1", product.org_id
+            )
+            if not org_exists:
+                raise HTTPException(status_code=400, detail="Organization not found")
+        
+        row = await conn.fetchrow(
+            """
+            INSERT INTO public.products 
+            (date_of_final_decision, submission_number, device, intended_use, indications_for_use, company, panel,
+             primary_product_code, product_contact_1, product_contact_2, product_contact_3,
+             device_description, superiority, org_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            RETURNING id, date_of_final_decision, submission_number, device, intended_use, indications_for_use, company, panel,
+                      primary_product_code, product_contact_1, product_contact_2, product_contact_3,
+                      device_description, superiority, org_id, created_at, updated_at
+            """,
+            product.date_of_final_decision,
+            product.submission_number,
+            product.device,
+            product.intended_use,
+            product.indications_for_use,
+            product.company,
+            product.panel,
+            product.primary_product_code,
+            product.product_contact_1,
+            product.product_contact_2,
+            product.product_contact_3,
+            product.device_description,
+            product.superiority,
+            product.org_id
+        )
+        return dict(row)
+
+@app.get("/products/{product_id}", tags=["Products"])
+async def get_product(product_id: int):
+    """Get a single FDA-cleared AI medical device product."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT id, date_of_final_decision, submission_number, device, intended_use, indications_for_use, company, panel,
+                   primary_product_code, product_contact_1, product_contact_2, product_contact_3,
+                   device_description, superiority, org_id, created_at, updated_at
+            FROM public.products
+            WHERE id = $1 AND deleted_at IS NULL
+            """,
+            product_id
+        )
+    if not row:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return dict(row)
+
+@app.put("/products/{product_id}", tags=["Products"])
+async def update_product(product_id: int, patch: ProductUpdate):
+    """Update an FDA-cleared AI medical device product."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        # Verify org exists if updating org_id
+        if patch.org_id is not None:
+            org_exists = await conn.fetchval(
+                "SELECT id FROM public.orgs WHERE id = $1", patch.org_id
+            )
+            if not org_exists:
+                raise HTTPException(status_code=400, detail="Organization not found")
+        
+        row = await conn.fetchrow(
+            """
+            UPDATE public.products
+            SET 
+                date_of_final_decision = COALESCE($1, date_of_final_decision),
+                submission_number = COALESCE($2, submission_number),
+                device = COALESCE($3, device),
+                intended_use = COALESCE($4, intended_use),
+                indications_for_use = COALESCE($5, indications_for_use),
+                company = COALESCE($6, company),
+                panel = COALESCE($7, panel),
+                primary_product_code = COALESCE($8, primary_product_code),
+                product_contact_1 = COALESCE($9, product_contact_1),
+                product_contact_2 = COALESCE($10, product_contact_2),
+                product_contact_3 = COALESCE($11, product_contact_3),
+                device_description = COALESCE($12, device_description),
+                superiority = COALESCE($13, superiority),
+                org_id = COALESCE($14, org_id),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $15 AND deleted_at IS NULL
+            RETURNING id, date_of_final_decision, submission_number, device, intended_use, indications_for_use, company, panel,
+                      primary_product_code, product_contact_1, product_contact_2, product_contact_3,
+                      device_description, superiority, org_id, created_at, updated_at
+            """,
+            patch.date_of_final_decision,
+            patch.submission_number,
+            patch.device,
+            patch.intended_use,
+            patch.indications_for_use,
+            patch.company,
+            patch.panel,
+            patch.primary_product_code,
+            patch.product_contact_1,
+            patch.product_contact_2,
+            patch.product_contact_3,
+            patch.device_description,
+            patch.superiority,
+            patch.org_id,
+            product_id
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="Product not found")
+        return dict(row)
+
+@app.delete("/products/{product_id}", tags=["Products"])
+async def delete_product(product_id: int):
+    """Delete an FDA-cleared AI medical device product (soft delete)."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        result = await conn.execute(
+            "UPDATE public.products SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1",
+            product_id
+        )
+        if result == "UPDATE 0":
+            raise HTTPException(status_code=404, detail="Product not found")
+    return {"status": "ok", "deleted_id": product_id}
 
 # -------------------------------------------------------------------------
 # GET /views  (Mode-aware view registry)

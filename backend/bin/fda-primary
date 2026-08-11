@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+"""
+FDA Primary Source Integration CLI
+
+Populate device descriptions and indications for use from official FDA sources
+(bypassing OpenFDA public API lag).
+
+Usage:
+  ./bin/fda-primary                      # Populate up to 100 products
+  ./bin/fda-primary --range=1-50         # Populate specific product ID range
+  ./bin/fda-primary --product-ids=1,5,10 # Populate specific product IDs
+  ./bin/fda-primary --limit=200          # Populate up to 200 products
+  
+Environment Variables:
+  DATABASE_URL    PostgreSQL connection URL (required)
+"""
+
+import sys
+import os
+
+# Add backend to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+from services.fda_primary_source import main
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())

@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+"""
+OpenFDA Integration CLI
+
+Fetch FDA 510(k) device descriptions and populate the products table.
+
+Usage:
+  ./bin/openfda                          # Populate up to 100 products without descriptions
+  ./bin/openfda --range=1-50             # Populate specific product ID range
+  ./bin/openfda --product-ids=1,5,10     # Populate specific product IDs
+  ./bin/openfda --limit=200              # Populate up to 200 products
+  
+Environment Variables:
+  DATABASE_URL    PostgreSQL connection URL (required)
+  OPENFDA_API_KEY Optional OpenFDA API key for higher rate limits
+"""
+
+import sys
+import os
+
+# Add backend to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+from services.openfda_service import main
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())

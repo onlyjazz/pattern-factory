@@ -189,7 +189,42 @@ class WorkflowEngine:
         }
         self.workflows["ENRICH"] = enrich_workflow
         
-        logger.info(f"✅ Loaded {len(self.workflows)} workflows (RULE, CONTENT, GENERATE, ENRICH)")
+        # FEELGOOD Flow (Extract product superiority claims from web search)
+        feelgood_workflow = {
+            "model.Capo": WorkflowNode(
+                agent_name="model.Capo",
+                branch_yes="model.validateProductId",
+                branch_no="sendMessageToChat",
+                description="Initial validation of feelgood request"
+            ),
+            "model.validateProductId": WorkflowNode(
+                agent_name="model.validateProductId",
+                branch_yes="model.searchForSuperiority",
+                branch_no="sendMessageToChat",
+                description="Validate product exists in database"
+            ),
+            "model.searchForSuperiority": WorkflowNode(
+                agent_name="model.searchForSuperiority",
+                branch_yes="model.extractSuperiorityClaim",
+                branch_no="sendMessageToChat",
+                description="Search web for competitive advantages"
+            ),
+            "model.extractSuperiorityClaim": WorkflowNode(
+                agent_name="model.extractSuperiorityClaim",
+                branch_yes="tool.updateProductSuperiority",
+                branch_no="sendMessageToChat",
+                description="Extract competitive advantage claims from search results"
+            ),
+            "tool.updateProductSuperiority": WorkflowNode(
+                agent_name="tool.updateProductSuperiority",
+                branch_yes="sendMessageToChat",
+                branch_no="sendMessageToChat",
+                description="Update product record with superiority claim"
+            ),
+        }
+        self.workflows["FEELGOOD"] = feelgood_workflow
+        
+        logger.info(f"✅ Loaded {len(self.workflows)} workflows (RULE, CONTENT, GENERATE, ENRICH, FEELGOOD)")
     
     def get_workflow(self, verb: str) -> Dict[str, WorkflowNode]:
         """Get workflow by verb (RULE or CONTENT)."""

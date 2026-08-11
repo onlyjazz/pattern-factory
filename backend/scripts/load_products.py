@@ -85,7 +85,8 @@ async def load_products_from_csv(csv_path: str, dry_run: bool = False) -> int:
                 "date_of_final_decision": date_of_final_decision,
                 "submission_number": submission_number,
                 "device": device,
-                "indicated_use": None,  # Will be populated by agent later
+                "intended_use": None,  # Will be populated by FDA Primary Source service
+                "indications_for_use": None,  # Will be populated by FDA Primary Source service
                 "company": company,
                 "panel": panel,
                 "primary_product_code": primary_product_code,
@@ -121,14 +122,15 @@ async def load_products_from_csv(csv_path: str, dry_run: bool = False) -> int:
                         date_of_final_decision,
                         submission_number,
                         device,
-                        indicated_use,
+                        intended_use,
+                        indications_for_use,
                         company,
                         panel,
                         primary_product_code,
                         product_contact_1,
                         product_contact_2,
                         product_contact_3
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                     ON CONFLICT (submission_number) DO UPDATE SET
                         device = EXCLUDED.device,
                         company = EXCLUDED.company,
@@ -139,7 +141,8 @@ async def load_products_from_csv(csv_path: str, dry_run: bool = False) -> int:
                     row["date_of_final_decision"],
                     row["submission_number"],
                     row["device"],
-                    row["indicated_use"],
+                    row["intended_use"],
+                    row["indications_for_use"],
                     row["company"],
                     row["panel"],
                     row["primary_product_code"],

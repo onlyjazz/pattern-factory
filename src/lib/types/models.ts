@@ -34,13 +34,16 @@ export interface Product {
   date_of_final_decision?: string; // ISO timestamp
   submission_number: string; // FDA submission ID (e.g., K254207)
   device: string; // Device name
-  indicated_use?: string; // FDA-approved intended use
+  intended_use?: string; // FDA-approved general function/purpose of device
+  indications_for_use?: string; // Specific medical conditions the device treats/diagnoses
   company?: string; // Manufacturer company name
   panel?: string; // FDA regulatory panel
   primary_product_code?: string; // FDA product code
   product_contact_1?: string; // LinkedIn profile URL
   product_contact_2?: string; // LinkedIn profile URL
   product_contact_3?: string; // LinkedIn profile URL
+  device_description?: string; // Device description from OpenFDA
+  superiority?: string; // Competitive advantage claims from FEELGOOD flow
   org_id?: number; // Foreign key to organizations
   created_at?: string; // ISO timestamp
   updated_at?: string; // ISO timestamp
