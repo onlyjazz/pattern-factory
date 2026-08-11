@@ -1,0 +1,30 @@
+#!/usr/bin/env python3
+"""
+CLI tool to lookup FDA device intended use and indications for use.
+
+This tool queries the FDA Devices@FDA database to extract official:
+- Intended Use: The general function/purpose of the device as claimed by manufacturer
+- Indications for Use: The specific medical conditions the device treats/diagnoses
+
+Usage:
+    ./bin/fda-devices-lookup                          # Process up to 100 products
+    ./bin/fda-devices-lookup --range=1-50             # Process specific range
+    ./bin/fda-devices-lookup --product-ids=1,5,10     # Process specific IDs
+    ./bin/fda-devices-lookup --limit=200              # Custom limit
+
+Reference:
+    FDA Devices@FDA: https://www.fda.gov/cdrh/devicesatfda/
+"""
+
+import sys
+import asyncio
+import os
+
+# Add parent directories to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+from services.fda_devices_lookup import FDADevicesLookupService
+
+
+if __name__ == "__main__":
+    asyncio.run(FDADevicesLookupService.main())

@@ -204,6 +204,22 @@ Extract competitive advantage claims for FDA-cleared AI-enabled medical devices.
 
 Requires `DATABASE_URL`, `EXA_API_KEY`, and `OPENAI_API_KEY` from `.env`. See `docs/FEELGOOD_AGENT_FLOW.md` for documentation.
 
+**FDA Devices@FDA Lookup** (`bin/fda-devices-lookup`):
+Lookup and extract official Intended Use and Indications for Use from FDA Devices@FDA database.
+
+```bash
+./bin/fda-devices-lookup                        # Process up to 100 products
+./bin/fda-devices-lookup --range=1-50           # Process specific range
+./bin/fda-devices-lookup --product-ids=1,5,10   # Process specific IDs
+./bin/fda-devices-lookup --limit=200            # Custom limit
+```
+
+This tool queries the FDA Devices@FDA database to find official clearance summary documents and extract:
+- **Intended Use**: The general function/purpose of the device as claimed by manufacturer
+- **Indications for Use**: The specific medical conditions the device treats/diagnoses
+
+Requires `DATABASE_URL` from `.env`. For complete automation, the service needs to be enhanced with PDF parsing to extract text from clearance summary documents. Current implementation identifies submission types and constructs FDA Devices@FDA URLs for manual lookup.
+
 **Extracting Intended Use from FDA Sources**:
 Every FDA-cleared medical device has an official "Intended Use" statement in its clearance documents. Intended Use describes the general function or purpose of the device as claimed by the manufacturer (distinct from "Indications for Use," which specifies the particular disease or condition it treats/diagnoses). To find a device's intended use:
 
