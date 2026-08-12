@@ -3,15 +3,17 @@ Product Superiority Agent Flow (FEELGOOD Workflow)
 
 FEELGOOD Workflow:
   model.Capo → model.validateProductId → model.searchForSuperiority
-  → model.extractSuperiorityClaim → tool.updateProductSuperiority
+  → tool.updateProductSuperiority
 
-Extracts competitive advantage claims from web search results using Exa API
-and LLM-based analysis of how products differentiate from competitors.
+Extracts competitive advantage claims for products using Exa's Answer API,
+which returns a citation-backed narrative of how each device differentiates
+from competing solutions.
 
 Each agent returns: (decision: yes|no, confidence: 0.0-1.0, reason: str)
 """
 
 import logging
+import re
 from typing import Tuple, Dict, Any, Optional
 import json
 from datetime import datetime
@@ -126,6 +128,42 @@ async def agent_validate_product_id(message_body: Dict[str, Any]) -> Tuple[str, 
         return ("no", 0.10, reason)
 
 
+# System prompt for Exa Answer API: request clean flowing prose so stored
+# superiority claims read well in a single-line DB column. Exa sometimes
+# returns bulleted lists or multi-line text without this guidance.
+_EXA_ANSWER_SYSTEM_PROMPT = (
+    "You are a medical-device competitive-intelligence analyst. "
+    "Answer with a concise paragraph (2-4 sentences) of flowing prose that "
+    "explains how the device is better than or differentiates from other solutions. "
+    "Do not use bullet points, numbered lists, line breaks, or square-bracket "
+    "citation markers. Write a single coherent paragraph."
+)
+
+
+def _clean_superiority_text(text: str) -> str:
+    """Normalize Exa Answer API output into clean single-paragraph prose.
+
+    Strips inline citation markers (e.g. "[1][2]"), removes leading bullet /
+    numbered-list markers on each line, flattens newlines into spaces, and
+    collapses runs of whitespace. Keeps inline labels like "Predictive Lead
+    Time:" intact since they carry useful structure once flattened.
+    """
+    if not text:
+        return ""
+    # Strip inline citation markers like [1], [2][3]
+    text = re.sub(r"\s*\[\d+\]", "", text)
+    # Strip leading bullet markers on each line (-, –, •, *)
+    text = re.sub(r"(?m)^\s*[-–•*]\s+", "", text)
+    # Strip leading numbered-list markers on each line (1. , 2. ) — only at
+    # line starts so mid-sentence numbers like "48 minutes" are preserved
+    text = re.sub(r"(?m)^\s*\d+\.\s+", "", text)
+    # Flatten newlines (and surrounding whitespace) into single spaces
+    text = re.sub(r"\s*\n\s*", " ", text)
+    # Collapse any remaining runs of whitespace
+    text = re.sub(r"\s{2,}", " ", text).strip()
+    return text
+
+
 # ============================================================================
 # Model.searchForSuperiority - Search web for competitive advantages
 # ============================================================================
@@ -134,9 +172,11 @@ async def agent_search_for_superiority(message_body: Dict[str, Any]) -> Tuple[st
     """
     model.searchForSuperiority (FEELGOOD flow)
     
-    RESPONSIBILITY: Search web for competitive advantage information using Exa API.
-            Constructs query from product company, device name, and intended_use.
-            Returns top search results for LLM analysis.
+    RESPONSIBILITY: Use Exa's Answer API to produce a superiority narrative
+            for the product. Constructs a query from product company and device
+            name, calls exa.answer(model="exa"), and stores the returned answer
+            directly as message_body["superiority_claim"] — no separate LLM
+            extraction step is needed.
     
     Returns: (decision: yes|no, confidence: 0.0-1.0, reason: str)
     """
@@ -191,39 +231,67 @@ async def agent_search_for_superiority(message_body: Dict[str, Any]) -> Tuple[st
             return ("no", 0.50, reason)
         
         try:
-            # Search using Exa (exactly like PROFILE flow)
+            # Use Exa's Answer API: search + synthesis in one call. Returns a
+            # citation-backed superiority narrative directly (model="exa"),
+            # replacing the highlights-search + LLM-extraction two-step.
             exa = Exa(api_key=exa_api_key)
-            results = exa.search(
+            answer_response = exa.answer(
                 query,
-                num_results=5,
-                type="auto",
-                contents={"highlights": True}
+                model="exa",
+                system_prompt=_EXA_ANSWER_SYSTEM_PROMPT,
             )
-            
-            if not results or not results.results:
-                reason = f"No search results found for: {query}"
+
+            superiority_answer = ""
+            if answer_response and hasattr(answer_response, "answer"):
+                superiority_answer = (answer_response.answer or "").strip()
+
+            # Normalize to clean single-paragraph prose (strip citation markers,
+            # bullet markers, and newlines that Exa sometimes returns)
+            if superiority_answer:
+                superiority_answer = _clean_superiority_text(superiority_answer)
+
+            if not superiority_answer or len(superiority_answer) < 20:
+                reason = f"Exa Answer API returned no substantial answer for: {query}"
                 logger.warning(f"  Decision: no (confidence: 0.60) - {reason}")
                 return ("no", 0.60, reason)
-            
-            # Extract highlights and URLs for LLM analysis
-            search_results = []
-            for result in results.results[:3]:  # Top 3 results
-                search_results.append({
-                    "url": result.url,
-                    "title": result.title,
-                    "snippet": result.text if hasattr(result, 'text') else "",
-                    "highlights": result.highlights if hasattr(result, 'highlights') else []
-                })
-            
+
+            # Capture citations for traceability
+            citations = []
+            if hasattr(answer_response, "citations") and answer_response.citations:
+                citations = [
+                    {
+                        "url": getattr(c, "url", ""),
+                        "title": getattr(c, "title", ""),
+                    }
+                    for c in answer_response.citations[:5]
+                ]
+
+            logger.info(f"  Answer ({len(superiority_answer)} chars): {superiority_answer[:120]}...")
+            if citations:
+                logger.info(f"  Citations: {len(citations)} (e.g. {citations[0].get('url')})")
+
+            # The Answer API returns the superiority narrative directly, so we
+            # store it as the final claim and skip model.extractSuperiorityClaim.
             message_body["search_query"] = query
-            message_body["search_results"] = search_results
-            
-            reason = f"Found {len(search_results)} results for product superiority analysis"
-            logger.info(f"  Decision: yes (confidence: 0.95) - {reason}")
-            return ("yes", 0.95, reason)
-            
+            message_body["search_results"] = [{
+                "url": "exa-answer",
+                "title": "Exa Answer API",
+                "snippet": superiority_answer,
+                "highlights": [],
+            }]
+            message_body["superiority_claim"] = superiority_answer
+            message_body["extraction_source"] = "exa_answer_api"
+            message_body["extraction_confidence"] = 0.90
+
+            reason = (
+                f"Exa Answer API returned superiority claim "
+                f"({len(superiority_answer)} chars, {len(citations)} citations)"
+            )
+            logger.info(f"  Decision: yes (confidence: 0.90) - {reason}")
+            return ("yes", 0.90, reason)
+
         except Exception as e:
-            reason = f"Exa search failed: {str(e)}"
+            reason = f"Exa Answer API call failed: {str(e)}"
             logger.warning(f"  Decision: no (confidence: 0.50) - {reason}", exc_info=True)
             return ("no", 0.50, reason)
         
@@ -381,6 +449,7 @@ async def tool_update_product_superiority(message_body: Dict[str, Any]) -> Tuple
                     "product_id": product_id,
                     "superiority_claim": superiority_claim[:200] + ("..." if len(superiority_claim) > 200 else ""),
                     "claim_length": len(superiority_claim),
+                    "extraction_source": message_body.get("extraction_source", "llm_extraction"),
                     "timestamp": datetime.utcnow().isoformat()
                 }
             )

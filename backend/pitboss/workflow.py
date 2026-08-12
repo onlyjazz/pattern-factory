@@ -205,15 +205,9 @@ class WorkflowEngine:
             ),
             "model.searchForSuperiority": WorkflowNode(
                 agent_name="model.searchForSuperiority",
-                branch_yes="model.extractSuperiorityClaim",
-                branch_no="sendMessageToChat",
-                description="Search web for competitive advantages"
-            ),
-            "model.extractSuperiorityClaim": WorkflowNode(
-                agent_name="model.extractSuperiorityClaim",
                 branch_yes="tool.updateProductSuperiority",
                 branch_no="sendMessageToChat",
-                description="Extract competitive advantage claims from search results"
+                description="Get superiority narrative via Exa Answer API"
             ),
             "tool.updateProductSuperiority": WorkflowNode(
                 agent_name="tool.updateProductSuperiority",
