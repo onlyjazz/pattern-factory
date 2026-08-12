@@ -1,6 +1,6 @@
 SEARCH:
-  rev: 1.0
-  date: 2026-08-06
+  rev: 1.1
+  date: 2026-08-11
   author: Pattern Factory Enrichment Team
 
   # Prompt for LLM-based extraction of company data from search results
@@ -52,3 +52,59 @@ SEARCH:
       "confidence": <0.0-1.0>,
       "notes": "<any edge cases or assumptions>"
     }}
+
+  # Prompt for PROFILE workflow extraction of FDA device profile data from FDA search results
+  fda_profile_extraction_prompt: |
+    You are an expert Medical Device Regulatory Agent. You are reviewing cleaned text chunks retrieved by a search engine from the official FDA database.
+
+    Your goal is to extract three distinct clinical fields for the target device code.
+
+    TARGET FIELDS:
+    1. "device_description": The technical architecture, cloud/on-premise deployment details, and algorithmic framework of the software tool.
+    2. "intended_use": The overarching clinical objective of the system.
+    3. "indications_for_use": The specific patient cohort (e.g., ages 22+), specific diseases, clinical settings, or anatomical structures.
+
+    EXTRACTION INSTRUCTIONS:
+    - Prioritize text explicitly labeled near "FDA Form 3881" or "OMB No. 0910-0120". This is the gold standard for "Indications for Use".
+    - If the document combines "Intended Use" and "Indications for Use" into a single paragraph, extract the identical paragraph into both fields. Do not leave "indications_for_use" blank if it is woven into the intended use section.
+    - If a section cannot be found in the text payload, return null for that field. Do not invent details.
+
+    Return ONLY valid JSON with three keys: device_description, intended_use, indications_for_use. Each value must be a string or null.
+
+  fda_profile_user_prompt: |
+    Extract device profile from FDA clearance document:
+
+    Device: {device_name}
+    Company: {company_name}
+    Submission Number: {submission_number}
+
+    ---FDA CLEARANCE TEXT---
+    {fda_text}
+
+    Return ONLY valid JSON with exactly three keys:
+    {{
+      "device_description": "<technical architecture and deployment details or null>",
+      "intended_use": "<overarching clinical objective or null>",
+      "indications_for_use": "<specific patient cohort, diseases, clinical settings, or anatomical structures or null>"
+    }}
+
+  fda_profile_search_config:
+    primary_query: "what is the intended use for {device_name}"  # NOTE: override in code with simple device-based query
+    use_autoprompt: true
+    num_results: 5
+    include_domains:
+      - fda.gov
+      - accessdata.fda.gov
+    text:
+      max_characters: 15000
+      include_html_tags: false
+
+  fda_profile_fallback_search_config:
+    fallback_query: "site:fda.gov/medical-devices/software-medical-device-samd/artificial-intelligence-enabled-medical-devices {submission_number}"
+    use_autoprompt: false
+    num_results: 1
+    include_domains:
+      - fda.gov
+    text:
+      max_characters: 10000
+      include_html_tags: false

@@ -21,6 +21,7 @@ import asyncio
 import yaml
 from pathlib import Path
 from datetime import datetime
+from .logging_util import log_event
 
 try:
     from exa_py import Exa
@@ -476,6 +477,20 @@ async def agent_enrich_org_database(message_body: Dict[str, Any]) -> Tuple[str, 
             result = await db.fetchrow(update_query, annual_revenue, total_funding, description, headquarters, employees, date_founded_ts, org_id)
             
             if result:
+                # Log enrichment using shared logging utility
+                await log_event(
+                    db,
+                    "ENRICH_COMPLETE",
+                    {
+                        "org_id": org_id,
+                        "org_name": result['name'],
+                        "estimated_annual_sales": annual_revenue,
+                        "total_funding": total_funding,
+                        "fields_updated": sum([annual_revenue > 0, total_funding > 0, description is not None, headquarters is not None, employees is not None, date_founded_ts is not None]),
+                        "timestamp": datetime.utcnow().isoformat()
+                    }
+                )
+                
                 reason = f"✅ Updated {result['name']}: estimated_annual_sales=${annual_revenue:,}, total_funding=${total_funding:,}"
                 logger.info(f"  Decision: yes (confidence: 0.98) - {reason}")
                 return ("yes", 0.98, reason)

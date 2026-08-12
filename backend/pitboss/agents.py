@@ -121,6 +121,20 @@ async def agent_language_capo(message_body: Dict[str, Any]) -> Tuple[str, float,
         reason = f"User wants to enrich organization: '{org_name}'"
         logger.info(f"  Detected 'ENRICH' syntax → routing to ENRICH workflow")
         return ("yes", 0.95, reason, "ENRICH")
+    
+    # Fast-path: recognize explicit "profile <ID>" or "profile submission_number" syntax → route to PROFILE
+    if text_upper.startswith("PROFILE "):
+        product_ref = text[8:].strip()
+        reason = f"User wants to profile FDA device: '{product_ref}'"
+        logger.info(f"  Detected 'PROFILE' syntax → routing to PROFILE workflow")
+        return ("yes", 0.95, reason, "PROFILE")
+    
+    # Fast-path: recognize explicit "feelgood <ID>" or "feelgood submission_number" syntax → route to FEELGOOD
+    if text_upper.startswith("FEELGOOD "):
+        product_ref = text[9:].strip()
+        reason = f"User wants to extract competitive advantage for product: '{product_ref}'"
+        logger.info(f"  Detected 'FEELGOOD' syntax → routing to FEELGOOD workflow")
+        return ("yes", 0.95, reason, "FEELGOOD")
 
     # Try LLM-based classification first
     api_key = os.getenv("OPENAI_API_KEY")
@@ -229,10 +243,50 @@ def _heuristic_language_capo(text: str) -> Tuple[str, float, str, str]:
         "annual revenue",
         "valuation",
     ]
+    
+    feelgood_keywords = [
+        "feelgood",
+        "superiority",
+        "competitive advantage",
+        "advantage",
+    ]
+    
+    profile_keywords = [
+        "profile",
+        "fda",
+        "device description",
+        "intended use",
+        "indications for use",
+    ]
 
     rule_score = sum(1 for kw in rule_keywords if kw in text_lower)
     content_score = sum(1 for kw in content_keywords if kw in text_lower)
     enrich_score = sum(1 for kw in enrich_keywords if kw in text_lower)
+    feelgood_score = sum(1 for kw in feelgood_keywords if kw in text_lower)
+    profile_score = sum(1 for kw in profile_keywords if kw in text_lower)
+
+    # Determine highest score
+    scores = {
+        "ENRICH": enrich_score,
+        "FEELGOOD": feelgood_score,
+        "PROFILE": profile_score,
+        "RULE": rule_score,
+        "CONTENT": content_score,
+    }
+    max_score = max(scores.values())
+    
+    # If FEELGOOD or PROFILE wins, return that
+    if feelgood_score == max_score and feelgood_score > 0:
+        verb = "FEELGOOD"
+        confidence = min(0.95, 0.5 + (feelgood_score * 0.1))
+        reason = f"User is asking for competitive advantage analysis (detected {feelgood_score} FEELGOOD keywords)"
+        return ("yes", confidence, reason, verb)
+    
+    if profile_score == max_score and profile_score > 0:
+        verb = "PROFILE"
+        confidence = min(0.95, 0.5 + (profile_score * 0.1))
+        reason = f"User is asking for FDA device profile (detected {profile_score} PROFILE keywords)"
+        return ("yes", confidence, reason, verb)
 
     if enrich_score > rule_score and enrich_score > content_score:
         verb = "ENRICH"
@@ -1771,10 +1825,17 @@ from .enrichment import (
 
 # Import feelgood agents
 from .feelgood import (
-    agent_validate_product_id,
+    agent_validate_product_id,  # Shared: used by both FEELGOOD and PROFILE
     agent_search_for_superiority,
     agent_extract_superiority_claim,
     tool_update_product_superiority,
+)
+
+# Import profile agents
+from .profile import (
+    agent_search_fda_database,
+    agent_extract_device_profile,
+    tool_update_product_profile,
 )
 
 AGENT_REGISTRY = {
@@ -1805,11 +1866,17 @@ AGENT_REGISTRY = {
     "model.verifyExtractionResults": agent_verify_extraction_results,
     "tool.enrichOrgDatabase": agent_enrich_org_database,
     
-    # FEELGOOD flow
-    "model.validateProductId": agent_validate_product_id,
+    # FEELGOOD flow (product superiority)
+    "model.validateProductId": agent_validate_product_id,  # Shared with PROFILE
     "model.searchForSuperiority": agent_search_for_superiority,
     "model.extractSuperiorityClaim": agent_extract_superiority_claim,
     "tool.updateProductSuperiority": tool_update_product_superiority,
+    
+    # PROFILE flow (FDA device profiling)
+    # Uses shared agent_validate_product_id above
+    "model.searchFDADatabase": agent_search_fda_database,
+    "model.extractDeviceProfile": agent_extract_device_profile,
+    "tool.updateProductProfile": tool_update_product_profile,
 }
 
 
@@ -1864,6 +1931,13 @@ def _get_agent_for_verb(agent_name: str, verb: str):
                     return AGENT_REGISTRY.get(agent_name)
         
         case "FEELGOOD":
+            match agent_name:
+                case "model.Capo":
+                    return agent_capo_rule
+                case _:
+                    return AGENT_REGISTRY.get(agent_name)
+        
+        case "PROFILE":
             match agent_name:
                 case "model.Capo":
                     return agent_capo_rule

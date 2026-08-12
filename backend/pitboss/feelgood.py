@@ -16,6 +16,7 @@ from typing import Tuple, Dict, Any, Optional
 import json
 from datetime import datetime
 import os
+from .logging_util import log_event
 
 try:
     from exa_py import Exa
@@ -171,14 +172,9 @@ async def agent_search_for_superiority(message_body: Dict[str, Any]) -> Tuple[st
             else:
                 intended_use = f"Clinical application for {device}"
         
-        # Build search query
-        # Priority: device_description > indications_for_use > intended_use > device name
-        search_context = device_description or indications_for_use or intended_use or device
-        if not search_context:
-            search_context = device
-        
-        # Build the search query
-        query = f"how is the {search_context} from {company} superior to competing or existing solutions"
+        # Build simple, effective search query
+        # Keep it short and direct for better search results
+        query = f"How is {device} from {company} better than other solutions in the market?"
         
         logger.info(f"  Search query: {query}")
         
@@ -195,13 +191,13 @@ async def agent_search_for_superiority(message_body: Dict[str, Any]) -> Tuple[st
             return ("no", 0.50, reason)
         
         try:
-            # Search using Exa
+            # Search using Exa (exactly like PROFILE flow)
             exa = Exa(api_key=exa_api_key)
             results = exa.search(
                 query,
                 num_results=5,
-                type="neural",
-                highlights=True
+                type="auto",
+                contents={"highlights": True}
             )
             
             if not results or not results.results:
@@ -292,10 +288,16 @@ Search Results:
 Provide a concise superiority claim (2-3 sentences) that highlights how this product differentiates from competitors."""
         
         try:
-            client = OpenAI()
-            response = client.messages.create(
-                model="gpt-4o",
-                max_tokens=500,
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                reason = "OPENAI_API_KEY not set"
+                logger.warning(f"  Decision: no (confidence: 0.60) - {reason}")
+                return ("no", 0.60, reason)
+            
+            client = OpenAI(api_key=api_key)
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                temperature=0.0,
                 messages=[
                     {
                         "role": "user",
@@ -304,7 +306,7 @@ Provide a concise superiority claim (2-3 sentences) that highlights how this pro
                 ]
             )
             
-            superiority_claim = response.content[0].text.strip()
+            superiority_claim = response.choices[0].message.content.strip()
             
             if not superiority_claim or len(superiority_claim) < 20:
                 reason = "LLM extraction produced insufficient text"
@@ -371,20 +373,16 @@ async def tool_update_product_superiority(message_body: Dict[str, Any]) -> Tuple
                 product_id
             )
             
-            # Log the operation
-            await db.execute(
-                """
-                INSERT INTO public.system_log (event_type, entity_table, entity_id, details)
-                VALUES ($1, $2, $3, $4)
-                """,
+            # Log the operation using shared logging utility
+            await log_event(
+                db,
                 "FEELGOOD_COMPLETE",
-                "products",
-                product_id,
-                json.dumps({
+                {
+                    "product_id": product_id,
                     "superiority_claim": superiority_claim[:200] + ("..." if len(superiority_claim) > 200 else ""),
                     "claim_length": len(superiority_claim),
                     "timestamp": datetime.utcnow().isoformat()
-                })
+                }
             )
             
             reason = f"Product {product_id} superiority claim updated ({len(superiority_claim)} chars)"

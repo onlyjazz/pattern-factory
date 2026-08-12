@@ -39,6 +39,7 @@ class Verb(str, Enum):
     GENERATE = "GENERATE"  # Generate risk model from card URL
     ENRICH = "ENRICH"  # Enrich organization data (funding, revenue)
     FEELGOOD = "FEELGOOD"  # Extract product superiority claims from web search
+    PROFILE = "PROFILE"  # Extract FDA device profile (device_description, intended_use, indications_for_use)
     GENERIC = "GENERIC"  # Placeholder: LanguageCapo will determine actual verb
 
 

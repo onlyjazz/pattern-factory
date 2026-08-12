@@ -224,7 +224,43 @@ class WorkflowEngine:
         }
         self.workflows["FEELGOOD"] = feelgood_workflow
         
-        logger.info(f"✅ Loaded {len(self.workflows)} workflows (RULE, CONTENT, GENERATE, ENRICH, FEELGOOD)")
+        # PROFILE Flow (Extract device profile from FDA sources)
+        # Note: Uses shared model.validateProductId agent with FEELGOOD
+        profile_workflow = {
+            "model.Capo": WorkflowNode(
+                agent_name="model.Capo",
+                branch_yes="model.validateProductId",
+                branch_no="sendMessageToChat",
+                description="Initial validation of profile request"
+            ),
+            "model.validateProductId": WorkflowNode(
+                agent_name="model.validateProductId",
+                branch_yes="model.searchFDADatabase",
+                branch_no="sendMessageToChat",
+                description="Validate product exists in database (shared with FEELGOOD)"
+            ),
+            "model.searchFDADatabase": WorkflowNode(
+                agent_name="model.searchFDADatabase",
+                branch_yes="model.extractDeviceProfile",
+                branch_no="sendMessageToChat",
+                description="Search FDA Devices@FDA database for submission"
+            ),
+            "model.extractDeviceProfile": WorkflowNode(
+                agent_name="model.extractDeviceProfile",
+                branch_yes="tool.updateProductProfile",
+                branch_no="sendMessageToChat",
+                description="Extract device profile data from FDA clearance documents"
+            ),
+            "tool.updateProductProfile": WorkflowNode(
+                agent_name="tool.updateProductProfile",
+                branch_yes="sendMessageToChat",
+                branch_no="sendMessageToChat",
+                description="Update product record with device profile (description, intended_use, indications_for_use)"
+            ),
+        }
+        self.workflows["PROFILE"] = profile_workflow
+        
+        logger.info(f"✅ Loaded {len(self.workflows)} workflows (RULE, CONTENT, GENERATE, ENRICH, FEELGOOD, PROFILE)")
     
     def get_workflow(self, verb: str) -> Dict[str, WorkflowNode]:
         """Get workflow by verb (RULE or CONTENT)."""

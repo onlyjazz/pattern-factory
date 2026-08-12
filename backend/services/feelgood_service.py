@@ -369,12 +369,10 @@ async def main():
         async with service.pool.acquire() as conn:
             await conn.execute(
                 """
-                INSERT INTO public.system_log (event_type, entity_table, entity_id, details)
-                VALUES ($1, $2, $3, $4)
+                INSERT INTO public.system_log (event, context)
+                VALUES ($1, $2)
                 """,
                 "FEELGOOD_BATCH_COMPLETE",
-                "products",
-                None,
                 json.dumps(results)
             )
         
