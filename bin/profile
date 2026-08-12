@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+"""
+CLI tool for batch processing FDA device profiles using the PROFILE workflow.
+
+Usage:
+    ./bin/profile                      # Process up to 100 products
+    ./bin/profile --range=1-50         # Process specific range
+    ./bin/profile --product-ids=1,5    # Process specific IDs
+    ./bin/profile --limit=200          # Custom limit
+
+Environment Variables (required):
+    DATABASE_URL       PostgreSQL connection string
+    EXA_API_KEY        Exa API key for FDA search
+    OPENAI_API_KEY     OpenAI API key for LLM extraction
+
+The PROFILE workflow:
+  1. Validates product exists with submission_number
+  2. Searches FDA Devices@FDA via Exa (strict domain filtering)
+  3. Extracts device_description, intended_use, indications_for_use using LLM
+  4. Updates products table with extracted data
+
+Results are logged to system_log table as PROFILE_BATCH_COMPLETE event.
+"""
+
+import sys
+import os
+import asyncio
+
+# Add backend to path so we can import services
+backend_path = os.path.join(os.path.dirname(__file__), "..", "backend")
+sys.path.insert(0, backend_path)
+
+from services.profile_service import ProfileService
+
+
+def print_help():
+    """Print help message."""
+    print(__doc__)
+
+
+def main():
+    """CLI entry point."""
+    # Show help if requested
+    if "--help" in sys.argv or "-h" in sys.argv:
+        print_help()
+        sys.exit(0)
+    
+    # Delegate to ProfileService.main() which handles all args
+    from services.profile_service import main as service_main
+    asyncio.run(service_main())
+
+
+if __name__ == "__main__":
+    main()
