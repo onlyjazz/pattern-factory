@@ -1,0 +1,6 @@
+# Test dependencies for the Pattern Factory API regression suite.
+# Install with:  pip install -r backend/requirements-dev.txt
+#
+# httpx (used by fastapi.testclient.TestClient) is already pinned in
+# backend/requirements.txt, so it is not repeated here.
+pytest>=7.4

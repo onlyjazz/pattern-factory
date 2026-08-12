@@ -151,9 +151,31 @@ app.add_middleware(
 PG_POOL: Optional[asyncpg.Pool] = None
 
 # -------------------------------------------------------------------------
-# Import Pitboss Supervisor
+# Import Pitboss Supervisor & Pydantic request models
 # -------------------------------------------------------------------------
 from backend.pitboss.supervisor import PitbossSupervisor
+from backend.services.models import (
+    AssetCreate,
+    AssetUpdate,
+    CardCreate,
+    CardUpdate,
+    CountermeasureCreate,
+    CountermeasureUpdate,
+    ModelCreate,
+    ModelUpdate,
+    PathCreate,
+    PathEdge,
+    PathNode,
+    PathUpdate,
+    PatternCreate,
+    PatternUpdate,
+    ProductCreate,
+    ProductUpdate,
+    ThreatCreate,
+    ThreatUpdate,
+    VulnerabilityCreate,
+    VulnerabilityUpdate,
+)
 logger.info("🧠 Imported Pitboss Supervisor successfully")
 
 # -------------------------------------------------------------------------
@@ -255,16 +277,6 @@ async def get_patterns():
 
     return [dict(r) for r in rows]
 
-# Create a new pattern
-from pydantic import BaseModel
-
-class PatternCreate(BaseModel):
-    name: str
-    description: str
-    kind: str
-    story: str | None = None
-    taxonomy: str | None = None
-
 # -------------------------------------------------------------------------
 # GET /patterns/search (MUST come before /patterns/{pattern_id})
 # -------------------------------------------------------------------------
@@ -357,14 +369,6 @@ async def create_pattern(pattern: PatternCreate):
         )
         return dict(row)
 
-class PatternUpdate(BaseModel):
-    """Pattern update request body (all fields optional)."""
-    name: str | None = None
-    description: str | None = None
-    kind: str | None = None
-    story: str | None = None
-    taxonomy: str | None = None
-
 @app.put("/patterns/{pattern_id}", tags=["Patterns"])
 async def update_pattern(pattern_id: int, patch: PatternUpdate):
     """Update an existing pattern.
@@ -437,26 +441,6 @@ async def delete_pattern(pattern_id: int):
 # -------------------------------------------------------------------------
 # Cards CRUD
 # -------------------------------------------------------------------------
-class CardCreate(BaseModel):
-    name: str
-    description: str
-    pattern_id: int
-    story: str | None = None
-    order_index: int | None = 0
-    domain: str | None = None
-    audience: str | None = None
-    maturity: str | None = None
-
-class CardUpdate(BaseModel):
-    name: str | None = None
-    description: str | None = None
-    pattern_id: int | None = None
-    story: str | None = None
-    order_index: int | None = None
-    domain: str | None = None
-    audience: str | None = None
-    maturity: str | None = None
-
 @app.get("/cards", tags=["Cards"])
 async def get_cards():
     """Get all cards with pattern information."""
@@ -609,29 +593,6 @@ async def get_pattern_cards(pattern_id: int):
 # -------------------------------------------------------------------------
 # Paths CRUD
 # -------------------------------------------------------------------------
-class PathNode(BaseModel):
-    id: str
-    type: str  # assumption, decision, state
-    label: str
-    serial: Optional[int] = None
-    optionality: Optional[dict] = None  # {collapses: bool, reason: str}
-
-class PathEdge(BaseModel):
-    from_node: str  # node id
-    to_node: str    # node id
-    reason: str
-
-class PathCreate(BaseModel):
-    name: str
-    nodes: list[PathNode] = []
-    edges: list[PathEdge] = []
-
-class PathUpdate(BaseModel):
-    name: Optional[str] = None
-    nodes: Optional[list[PathNode]] = None
-    edges: Optional[list[PathEdge]] = None
-    youAreHere: Optional[int] = None
-
 @app.get("/paths")
 async def get_paths():
     pool = get_pg_pool()
@@ -772,41 +733,6 @@ async def delete_path(path_id: int):
 # -------------------------------------------------------------------------
 # Threats CRUD
 # -------------------------------------------------------------------------
-class ThreatCreate(BaseModel):
-    name: str
-    description: str
-    domain: str | None = None
-    tag: str | None = None
-    probability: int | None = None
-    damage_description: str | None = None
-    spoofing: bool = False
-    tampering: bool = False
-    repudiation: bool = False
-    information_disclosure: bool = False
-    denial_of_service: bool = False
-    elevation_of_privilege: bool = False
-    mitigation_level: int = 0
-    disabled: bool = False
-    model_id: int = 1
-    card_id: str | None = None
-
-class ThreatUpdate(BaseModel):
-    name: str | None = None
-    description: str | None = None
-    domain: str | None = None
-    tag: str | None = None
-    probability: int | None = None
-    damage_description: str | None = None
-    spoofing: bool | None = None
-    tampering: bool | None = None
-    repudiation: bool | None = None
-    information_disclosure: bool | None = None
-    denial_of_service: bool | None = None
-    elevation_of_privilege: bool | None = None
-    mitigation_level: int | None = None
-    disabled: bool | None = None
-    card_id: str | None = None
-
 @app.get("/threats", tags=["Threats"])
 async def get_threats():
     """Get all threats for the active model."""
@@ -1021,24 +947,6 @@ CURRENT_USER_ID = "4da53331-d976-4512-a215-ed756612a8e0"
 # -------------------------------------------------------------------------
 # Models CRUD
 # -------------------------------------------------------------------------
-class ModelCreate(BaseModel):
-    name: str
-    version: str | None = None
-    author: str | None = None
-    company: str | None = None
-    category: str | None = None
-    keywords: str | None = None
-    description: str | None = None
-
-class ModelUpdate(BaseModel):
-    name: str | None = None
-    version: str | None = None
-    author: str | None = None
-    company: str | None = None
-    category: str | None = None
-    keywords: str | None = None
-    description: str | None = None
-
 @app.get("/models", tags=["Models"])
 async def get_models():
     """Get all models."""
@@ -1177,31 +1085,6 @@ async def get_active_model():
 # -------------------------------------------------------------------------
 # Assets CRUD
 # -------------------------------------------------------------------------
-class AssetCreate(BaseModel):
-    name: str
-    description: str
-    tag: str | None = None
-    version: str | None = None
-    fixed_value: float = 0
-    fixed_value_period: int = 12
-    recurring_value: float = 0
-    include_fixed_value: bool = True
-    include_recurring_value: bool = True
-    disabled: bool = False
-    model_id: int = 1
-
-class AssetUpdate(BaseModel):
-    name: str | None = None
-    description: str | None = None
-    tag: str | None = None
-    version: str | None = None
-    fixed_value: float | None = None
-    fixed_value_period: int | None = None
-    recurring_value: float | None = None
-    include_fixed_value: bool | None = None
-    include_recurring_value: bool | None = None
-    disabled: bool | None = None
-
 @app.get("/assets", tags=["Assets"])
 async def get_assets():
     """Get all assets for the active model."""
@@ -1307,17 +1190,6 @@ async def delete_asset(asset_id: int):
 # -------------------------------------------------------------------------
 # Vulnerabilities CRUD
 # -------------------------------------------------------------------------
-class VulnerabilityCreate(BaseModel):
-    name: str
-    description: str
-    disabled: bool = False
-    model_id: int = 1
-
-class VulnerabilityUpdate(BaseModel):
-    name: str | None = None
-    description: str | None = None
-    disabled: bool | None = None
-
 @app.get("/vulnerabilities", tags=["Vulnerabilities"])
 async def get_vulnerabilities():
     """Get all vulnerabilities for the active model."""
@@ -1398,29 +1270,6 @@ async def delete_vulnerability(vulnerability_id: int):
 # -------------------------------------------------------------------------
 # Countermeasures CRUD
 # -------------------------------------------------------------------------
-class CountermeasureCreate(BaseModel):
-    name: str
-    description: str
-    fixed_implementation_cost: int = 0
-    fixed_cost_period: int = 12
-    recurring_implementation_cost: int = 0
-    include_fixed_cost: bool = True
-    include_recurring_cost: bool = True
-    implemented: bool = False
-    disabled: bool = False
-    model_id: int = 1
-
-class CountermeasureUpdate(BaseModel):
-    name: str | None = None
-    description: str | None = None
-    fixed_implementation_cost: int | None = None
-    fixed_cost_period: int | None = None
-    recurring_implementation_cost: int | None = None
-    include_fixed_cost: bool | None = None
-    include_recurring_cost: bool | None = None
-    implemented: bool | None = None
-    disabled: bool | None = None
-
 @app.get("/countermeasures", tags=["Countermeasures"])
 async def get_countermeasures():
     """Get all countermeasures for the active model."""
@@ -1519,40 +1368,6 @@ async def delete_countermeasure(countermeasure_id: int):
 # -------------------------------------------------------------------------
 # Products CRUD (FDA-Cleared AI-Enabled Medical Devices)
 # -------------------------------------------------------------------------
-class ProductCreate(BaseModel):
-    """Create a new FDA-cleared AI medical device product."""
-    submission_number: str  # FDA 510(k) submission number (required, unique)
-    device: str  # Device name (required)
-    date_of_final_decision: str | None = None
-    intended_use: str | None = None  # FDA-approved general function/purpose of device
-    indications_for_use: str | None = None  # Specific medical conditions the device treats/diagnoses
-    company: str | None = None  # Manufacturer company name
-    panel: str | None = None  # FDA regulatory panel
-    primary_product_code: str | None = None  # FDA product code
-    product_contact_1: str | None = None  # LinkedIn profile URL
-    product_contact_2: str | None = None  # LinkedIn profile URL
-    product_contact_3: str | None = None  # LinkedIn profile URL
-    device_description: str | None = None  # Device description from OpenFDA
-    superiority: str | None = None  # Competitive advantage claims from FEELGOOD flow
-    org_id: int | None = None  # Foreign key to organizations
-
-class ProductUpdate(BaseModel):
-    """Update an FDA-cleared AI medical device product."""
-    submission_number: str | None = None
-    device: str | None = None
-    date_of_final_decision: str | None = None
-    intended_use: str | None = None  # FDA-approved general function/purpose of device
-    indications_for_use: str | None = None  # Specific medical conditions the device treats/diagnoses
-    company: str | None = None
-    panel: str | None = None
-    primary_product_code: str | None = None
-    product_contact_1: str | None = None
-    product_contact_2: str | None = None
-    product_contact_3: str | None = None
-    device_description: str | None = None
-    superiority: str | None = None
-    org_id: int | None = None
-
 @app.get("/products", tags=["Products"])
 async def get_products():
     """Get all FDA-cleared AI medical device products."""
