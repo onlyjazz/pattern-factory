@@ -37,6 +37,7 @@ logging.basicConfig(
 # Import pitboss components
 from pitboss.agents import call_agent
 from pitboss.workflow import WorkflowEngine
+from pitboss.logging_util import log_event
 
 
 @dataclass
@@ -365,16 +366,12 @@ async def main():
         await service.initialize()
         results = await service.process_products(product_ids, limit)
         
-        # Log results to database
-        async with service.pool.acquire() as conn:
-            await conn.execute(
-                """
-                INSERT INTO public.system_log (event, context)
-                VALUES ($1, $2)
-                """,
-                "FEELGOOD_BATCH_COMPLETE",
-                json.dumps(results)
-            )
+        # Log results to database using shared logging utility
+        await log_event(
+            service.pool,
+            "FEELGOOD_BATCH_COMPLETE",
+            results
+        )
         
         sys.exit(0 if results["failed"] == 0 else 1)
     

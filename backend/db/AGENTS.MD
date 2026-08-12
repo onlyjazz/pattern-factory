@@ -1,8 +1,38 @@
-# FOLLOW THIS RULES FOR maintaining this database
+# Database Schema & Backend API Maintenance
 
-## Always do when updating the db schema
-- When adding or altering tables, always update the TypeScript Models in src/lib/types/models.ts
-- When adding or altering tables, always update the Pydantic models in backend/services/models.py
+## Always Do When Updating DB Schema
+
+- When adding or altering tables, always update the TypeScript Models in `src/lib/types/models.ts`
+- When adding or altering tables, always update the Pydantic models in `backend/services/models.py`
+- Ensure Pydantic model fields match all database columns being queried and returned in API responses
+- Failure to sync causes `UndefinedColumnError` exceptions
+
+## Pydantic Model Sync Pattern
+
+For any new database field:
+- Add the field to the corresponding Pydantic `Create` class with appropriate default
+- Add the field to the corresponding Pydantic `Update` class with optional type
+- Update all API endpoints that return the entity to include the new field in SELECT statements
+- Test that the field is properly persisted and retrieved
+- Run `python -m pytest` from the repo root to verify the API contract still holds
+
+Example (`backend/services/models.py`):
+```python
+# ❌ WRONG - missing fields in Pydantic model
+class AssetCreate(BaseModel):
+    name: str
+    description: str
+
+# ✅ CORRECT - all fields in Pydantic model
+class AssetCreate(BaseModel):
+    name: str
+    description: str
+    fixed_value: float = 0
+    fixed_value_period: int = 12
+    recurring_value: float = 0
+    include_fixed_value: bool = True
+    include_recurring_value: bool = True
+```
 
 ## Pydantic request models location (refactor pat-306)
 All FastAPI request-body Pydantic models (the `*Create` / `*Update` classes

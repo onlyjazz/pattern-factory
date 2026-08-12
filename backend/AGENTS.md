@@ -1,41 +1,71 @@
-# WARP Rule: Backend Pydantic Model Updates
+# Backend API, Pydantic Models & System Logging
 
-When updating backend API to support new database columns/fields, ALWAYS update both:
+See `backend/db/AGENTS.MD` for comprehensive database schema maintenance and Pydantic model sync rules (consolidated source of truth for DB/API coordination).
 
-1. **Database schema** (SQL migrations)
-2. **Pydantic models** in `backend/services/models.py` (AssetCreate, AssetUpdate, ThreatCreate, ThreatUpdate, VulnerabilityCreate, VulnerabilityUpdate, CountermeasureCreate, CountermeasureUpdate, etc.)
+## System Logging (Single Source of Truth)
 
-The Pydantic models MUST have fields that match the database columns being queried and returned in the API responses. Failure to do so will result in `UndefinedColumnError` exceptions.
+**All system logging MUST use** `backend/pitboss/logging_util.py:log_event()` — this is the ONLY correct way to log events.
 
-> **Refactor note (pat-306):** Pydantic request-body classes now live in
-> `backend/services/models.py`, NOT inline in `backend/services/api.py`.
-> `api.py` imports them from `backend.services.models`. Do not re-define
-> these classes inline in `api.py`; add new request bodies to `models.py`
-> and import them back into `api.py`.
+### Correct Usage
 
-## Pattern
-
-For any new database field, ensure:
-- Add the field to the corresponding Pydantic `Create` class with appropriate default
-- Add the field to the corresponding Pydantic `Update` class with optional type
-- Update all API endpoints that return the entity to include the new field in SELECT statements
-- Test that the field is properly persisted and retrieved
-- Run `python -m pytest` from the repo root to verify the API contract still holds
-
-Example (`backend/services/models.py`):
 ```python
-# ❌ WRONG - missing fields in Pydantic model
-class AssetCreate(BaseModel):
-    name: str
-    description: str
+from pitboss.logging_util import log_event
 
-# ✅ CORRECT - all fields in Pydantic model
-class AssetCreate(BaseModel):
-    name: str
-    description: str
-    fixed_value: float = 0
-    fixed_value_period: int = 12
-    recurring_value: float = 0
-    include_fixed_value: bool = True
-    include_recurring_value: bool = True
+# In async code:
+await log_event(
+    db,  # asyncpg connection or pool
+    "EVENT_NAME",
+    {"field1": value1, "field2": value2}  # optional context dict
+)
 ```
+
+### Signature
+
+```python
+async def log_event(
+    db,  # asyncpg connection/pool
+    event: str,  # Event name (e.g., "FEELGOOD_COMPLETE", "ENRICH_COMPLETE")
+    context: Optional[Dict[str, Any]] = None  # Optional context data
+) -> bool:  # Returns True on success, False on failure
+```
+
+### Database Schema
+
+Table: `public.system_log`
+- `id`: UUID (auto-generated)
+- `event`: TEXT (event name)
+- `context`: JSONB (context dict, auto-serialized)
+- `created_at`: TIMESTAMP (auto-generated)
+
+### Examples
+
+```python
+# FEELGOOD batch completion
+await log_event(pool, "FEELGOOD_BATCH_COMPLETE", {
+    "total": 100,
+    "success": 95,
+    "failed": 5
+})
+
+# ENRICH agent completion
+await log_event(db, "ENRICH_COMPLETE", {
+    "org_id": 42,
+    "org_name": "Acme Corp",
+    "estimated_annual_sales": 1000000,
+    "total_funding": 5000000
+})
+```
+
+### Never Do This
+
+❌ **DO NOT** write raw SQL inserts:
+```python
+# WRONG - bypasses logging utility
+await db.execute(
+    "INSERT INTO public.system_log (event, context) VALUES ($1, $2)",
+    "MY_EVENT",
+    json.dumps(data)
+)
+```
+
+❌ **DO NOT** use `backend/db/log.py` (file is deleted, wrong schema)

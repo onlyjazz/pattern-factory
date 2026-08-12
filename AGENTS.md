@@ -2,6 +2,19 @@
 
 Pattern Factory's agent-driven architecture orchestrates natural language processing, data extraction, and threat modeling through a multi-workflow supervisor system. This document describes all agents, their responsibilities, decision flows, and database interactions.
 
+## Rules Organization
+
+This project uses **local AGENTS.md files** (not a centralized WARP.md) to document project-specific guidance:
+
+- **`AGENTS.md`** (root) — Agent workflows, architecture, database interactions (you are here)
+- **`src/AGENTS.md`** — Frontend UI/component patterns, accessibility, CSS classes
+- **`backend/AGENTS.md`** — Backend Pydantic models, API contracts, sync rules
+- **`backend/db/AGENTS.MD`** — Database schema maintenance, test suite, migration rules
+
+When editing code, apply the rules from the file in that code's directory (and parent directories in order of precedence). Always read the relevant AGENTS.md before making structural changes.
+
+---
+
 ## Overview
 
 The system uses a **decision-tree workflow engine** where agents are stateless decision-makers that:
