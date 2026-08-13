@@ -163,6 +163,8 @@ from backend.services.models import (
     CountermeasureUpdate,
     ModelCreate,
     ModelUpdate,
+    OrgCreate,
+    OrgUpdate,
     PathCreate,
     PathEdge,
     PathNode,
@@ -1364,6 +1366,153 @@ async def delete_countermeasure(countermeasure_id: int):
         if result == "DELETE 0":
             raise HTTPException(status_code=404, detail="Countermeasure not found")
     return {"status": "ok", "deleted_id": countermeasure_id}
+
+# -------------------------------------------------------------------------
+# Organizations CRUD (with Market Size Stratification)
+# -------------------------------------------------------------------------
+@app.get("/orgs", tags=["Organizations"])
+async def get_organizations():
+    """Get all organizations with market size stratification.
+    
+    Returns organizations segmented by tier:
+    - Tier 1: Enterprise (size > $500M) — Strategic players
+    - Tier 2: Mid-Market (size $50M–$500M) — Established challengers
+    - Tier 3: Startup (size < $50M) — Early-stage AI companies
+    
+    Size is computed as MAX(5 × estimated_annual_sales, 10 × funding).
+    """
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT id, name, description, stage, funding, date_funded, date_founded,
+                   linkedin_company_url, content_source, category_id, content_url,
+                   estimated_annual_sales, employees, headquarters, size, tier,
+                   created_at, updated_at
+            FROM public.orgs
+            WHERE deleted_at IS NULL
+            ORDER BY tier ASC, size DESC, created_at DESC
+        """)
+    return [dict(r) for r in rows]
+
+@app.post("/orgs", tags=["Organizations"])
+async def create_organization(org: OrgCreate):
+    """Create a new organization.
+    
+    Size and tier are automatically computed from estimated_annual_sales and funding.
+    """
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            INSERT INTO public.orgs
+            (name, description, stage, funding, date_funded, date_founded,
+             linkedin_company_url, content_source, category_id, content_url,
+             estimated_annual_sales, employees, headquarters)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            RETURNING id, name, description, stage, funding, date_funded, date_founded,
+                      linkedin_company_url, content_source, category_id, content_url,
+                      estimated_annual_sales, employees, headquarters, size, tier,
+                      created_at, updated_at
+            """,
+            org.name,
+            org.description,
+            org.stage,
+            org.funding,
+            org.date_funded,
+            org.date_founded,
+            org.linkedin_company_url,
+            org.content_source,
+            org.category_id,
+            org.content_url,
+            org.estimated_annual_sales,
+            org.employees,
+            org.headquarters
+        )
+        return dict(row)
+
+@app.get("/orgs/{org_id}", tags=["Organizations"])
+async def get_organization(org_id: int):
+    """Get a single organization with stratification data."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT id, name, description, stage, funding, date_funded, date_founded,
+                   linkedin_company_url, content_source, category_id, content_url,
+                   estimated_annual_sales, employees, headquarters, size, tier,
+                   created_at, updated_at
+            FROM public.orgs
+            WHERE id = $1 AND deleted_at IS NULL
+            """,
+            org_id
+        )
+    if not row:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    return dict(row)
+
+@app.put("/orgs/{org_id}", tags=["Organizations"])
+async def update_organization(org_id: int, patch: OrgUpdate):
+    """Update an organization.
+    
+    Size and tier are automatically recomputed when estimated_annual_sales or funding change.
+    """
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            UPDATE public.orgs
+            SET
+                name = COALESCE($1, name),
+                description = COALESCE($2, description),
+                stage = COALESCE($3, stage),
+                funding = COALESCE($4, funding),
+                date_funded = COALESCE($5, date_funded),
+                date_founded = COALESCE($6, date_founded),
+                linkedin_company_url = COALESCE($7, linkedin_company_url),
+                content_source = COALESCE($8, content_source),
+                category_id = COALESCE($9, category_id),
+                content_url = COALESCE($10, content_url),
+                estimated_annual_sales = COALESCE($11, estimated_annual_sales),
+                employees = COALESCE($12, employees),
+                headquarters = COALESCE($13, headquarters),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $14 AND deleted_at IS NULL
+            RETURNING id, name, description, stage, funding, date_funded, date_founded,
+                      linkedin_company_url, content_source, category_id, content_url,
+                      estimated_annual_sales, employees, headquarters, size, tier,
+                      created_at, updated_at
+            """,
+            patch.name,
+            patch.description,
+            patch.stage,
+            patch.funding,
+            patch.date_funded,
+            patch.date_founded,
+            patch.linkedin_company_url,
+            patch.content_source,
+            patch.category_id,
+            patch.content_url,
+            patch.estimated_annual_sales,
+            patch.employees,
+            patch.headquarters,
+            org_id
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="Organization not found")
+        return dict(row)
+
+@app.delete("/orgs/{org_id}", tags=["Organizations"])
+async def delete_organization(org_id: int):
+    """Delete (soft delete) an organization."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        result = await conn.execute(
+            "UPDATE public.orgs SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1",
+            org_id
+        )
+        if result == "UPDATE 0":
+            raise HTTPException(status_code=404, detail="Organization not found")
+    return {"status": "ok", "deleted_id": org_id}
 
 # -------------------------------------------------------------------------
 # Products CRUD (FDA-Cleared AI-Enabled Medical Devices)

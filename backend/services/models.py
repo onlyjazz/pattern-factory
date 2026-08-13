@@ -14,6 +14,47 @@ from pydantic import BaseModel
 
 
 # -------------------------------------------------------------------------
+# Organizations
+# -------------------------------------------------------------------------
+class OrgCreate(BaseModel):
+    """Create a new organization."""
+    name: str
+    description: str | None = None
+    stage: str | None = None
+    funding: float | None = None
+    date_funded: str | None = None
+    date_founded: str | None = None
+    linkedin_company_url: str | None = None
+    content_source: str | None = None
+    category_id: int | None = None
+    content_url: str | None = None
+    estimated_annual_sales: float | None = None
+    employees: int | None = None
+    headquarters: str | None = None
+    size: int | None = None
+    tier: int | None = None
+
+
+class OrgUpdate(BaseModel):
+    """Update an organization."""
+    name: str | None = None
+    description: str | None = None
+    stage: str | None = None
+    funding: float | None = None
+    date_funded: str | None = None
+    date_founded: str | None = None
+    linkedin_company_url: str | None = None
+    content_source: str | None = None
+    category_id: int | None = None
+    content_url: str | None = None
+    estimated_annual_sales: float | None = None
+    employees: int | None = None
+    headquarters: str | None = None
+    size: int | None = None
+    tier: int | None = None
+
+
+# -------------------------------------------------------------------------
 # Patterns
 # -------------------------------------------------------------------------
 class PatternCreate(BaseModel):
