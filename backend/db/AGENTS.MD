@@ -1,7 +1,12 @@
 # Database Schema & Backend API Maintenance
 
+#  Always note - pay attention to this first
+- the database is called pattern-factory
+- to understand and when altering the schema - always query with psql don't use migration scripts
+
 ## Always Do When Updating DB Schema
 
+- Update prompts/rules/DATA.yaml - in the tables section
 - When adding or altering tables, always update the TypeScript Models in `src/lib/types/models.ts`
 - When adding or altering tables, always update the Pydantic models in `backend/services/models.py`
 - Ensure Pydantic model fields match all database columns being queried and returned in API responses
