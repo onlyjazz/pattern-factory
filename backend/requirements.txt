@@ -95,3 +95,4 @@ websockets==15.0.1
 psycopg==3.2.12
 asyncpg
 aiohttp==3.10.11
+pypdf==6.15.0

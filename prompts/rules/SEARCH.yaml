@@ -55,28 +55,36 @@ SEARCH:
 
   # Prompt for PROFILE workflow extraction of FDA device profile data from FDA search results
   fda_profile_extraction_prompt: |
-    You are an expert Medical Device Regulatory Agent. You are reviewing cleaned text chunks retrieved by a search engine from the official FDA database.
+    You are an expert Medical Device Regulatory Agent reviewing text retrieved by a search engine from official FDA sources.
 
-    Your goal is to extract three distinct clinical fields for the target device code.
+    CRITICAL — ENTITY IDENTITY VERIFICATION (do this first):
+    The target device is the one manufactured by the company and cleared by the FDA under the submission number provided in the user message. Before extracting anything, confirm the retrieved text is actually about THAT specific device. Device names are frequently ambiguous — for example, "Prism" is both an ophthalmic optical component and a digital therapy for PTSD. If the text describes a different product that merely shares or overlaps the device name (a generic optical, mechanical, or otherwise unrelated device), return null for ALL three fields. Do not extract plausible-looking content about the wrong entity.
+
+    Strong evidence the text is about the right device: the submission number appears in the text, the company name appears in the text, or the text explicitly ties the device to that company and its clinical application.
 
     TARGET FIELDS:
     1. "device_description": The technical architecture, cloud/on-premise deployment details, and algorithmic framework of the software tool.
-    2. "intended_use": The overarching clinical objective of the system.
+    2. "intended_use": The overarching clinical objective of the system, as stated by the manufacturer.
     3. "indications_for_use": The specific patient cohort (e.g., ages 22+), specific diseases, clinical settings, or anatomical structures.
 
     EXTRACTION INSTRUCTIONS:
     - Prioritize text explicitly labeled near "FDA Form 3881" or "OMB No. 0910-0120". This is the gold standard for "Indications for Use".
     - If the document combines "Intended Use" and "Indications for Use" into a single paragraph, extract the identical paragraph into both fields. Do not leave "indications_for_use" blank if it is woven into the intended use section.
+    - Extract only what the text explicitly states about the target device. Do not substitute generic background knowledge.
     - If a section cannot be found in the text payload, return null for that field. Do not invent details.
+    - When unsure whether the text refers to the target device, return null rather than risk extracting content about the wrong product.
 
     Return ONLY valid JSON with three keys: device_description, intended_use, indications_for_use. Each value must be a string or null.
 
   fda_profile_user_prompt: |
-    Extract device profile from FDA clearance document:
+    Extract the device profile from the FDA clearance text below.
 
-    Device: {device_name}
-    Company: {company_name}
-    Submission Number: {submission_number}
+    TARGET DEVICE (use these to confirm entity identity — the text MUST be about THIS device):
+    - Device name: {device_name}
+    - Manufacturer (company): {company_name}
+    - FDA submission number: {submission_number}
+
+    ENTITY CHECK: Before extracting, verify the text references the company "{company_name}" and/or the submission number "{submission_number}". If the text is about a different product that only shares the device name (for example an unrelated optical, mechanical, or generic device), return null for all three fields rather than extract content about the wrong product.
 
     ---FDA CLEARANCE TEXT---
     {fda_text}
@@ -89,22 +97,30 @@ SEARCH:
     }}
 
   fda_profile_search_config:
-    primary_query: "what is the intended use for {device_name}"  # NOTE: override in code with simple device-based query
+    # Primary: anchor on the UNIQUE FDA submission id + company, restricted to
+    # official FDA domains. The device name alone is too ambiguous (e.g.,
+    # "Prism" = optical component OR PTSD digital therapy), so it is never
+    # used as the sole search term. include_domains + text retrieval are
+    # enforced by the profile agent code.
+    primary_query: "FDA {submission_number} {company_name} {device_name} intended use indications for use"
     use_autoprompt: true
     num_results: 5
     include_domains:
       - fda.gov
       - accessdata.fda.gov
-    text:
-      max_characters: 15000
-      include_html_tags: false
+    contents:
+      highlights: true
+      text:
+        max_characters: 8000
 
   fda_profile_fallback_search_config:
-    fallback_query: "site:fda.gov/medical-devices/software-medical-device-samd/artificial-intelligence-enabled-medical-devices {submission_number}"
+    # Fallback: same unique anchors (submission number + company), broaden
+    # domains if the FDA-domain search returns nothing. Still never searches
+    # on the device name alone.
+    fallback_query: '"{submission_number}" {company_name} {device_name} FDA 510k clearance intended use'
     use_autoprompt: false
-    num_results: 1
-    include_domains:
-      - fda.gov
-    text:
-      max_characters: 10000
-      include_html_tags: false
+    num_results: 5
+    contents:
+      highlights: true
+      text:
+        max_characters: 8000
