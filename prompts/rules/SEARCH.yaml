@@ -21,8 +21,11 @@ SEARCH:
        - Use null if not found
 
     3. EMPLOYEES: Extract employee count as an integer.
-       - Use only confirmed numbers
-       - Use null if range or estimate given instead
+       - Accept ranges by taking the midpoint, rounded to the nearest integer (e.g., "200-500" → 350, "51-200" → 126)
+       - Accept estimates and approximations: use the stated number for "~500", "approximately 200", "around 1,000"; for "200+" style values use the lower bound (200)
+       - Prefer the most recent figure when multiple dates are present
+       - Use null only if no employee figure of any kind is found
+       - Set employees_is_estimate to true when the value came from a range, an estimate, or "approximately"/"~"/"+" language; false only for an exact stated count
 
     4. DATE FOUNDED: Extract the year or full date company was founded.
        - Format as ISO 8601 date string (YYYY-MM-DD) or just year (YYYY) if only year is available
@@ -43,6 +46,8 @@ SEARCH:
       "description": "<company business description or null>",
       "headquarters": "<city, country or null>",
       "employees": <integer or null>,
+      "employees_source": "<snippet query or null>",
+      "employees_is_estimate": <true|false>,
       "date_founded": "<YYYY-MM-DD or YYYY or null>",
       "annual_revenue": <number in USD or null>,
       "annual_revenue_source": "<snippet query or null>",

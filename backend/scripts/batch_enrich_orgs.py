@@ -5,20 +5,29 @@ Batch Enrichment Script for Organizations
 Usage:
     python batch_enrich_orgs.py --id-range 1 50          # Enrich orgs with id between 1 and 50
     python batch_enrich_orgs.py --id-range 1 100         # Enrich orgs with id between 1 and 100
+    python batch_enrich_orgs.py --ids 3,17,42            # Enrich specific org IDs
     python batch_enrich_orgs.py --confidence 0.75         # Auto-approve extractions >= 0.75
     python batch_enrich_orgs.py --id-range 1 50 --confidence 0.75
-    python batch_enrich_orgs.py --output results.csv      # Save results to CSV
+    python batch_enrich_orgs.py --ids 3,17,42 --output results.csv
 
 Flow:
-    1. Fetch orgs from database (filtered by id range)
+    1. Fetch orgs from database missing any enriched field (filtered by id range)
     2. For each org:
        a. validateOrgName: Confirm org exists in database
-       b. searchForEnrichmentData: Search Exa for funding/revenue data
+       b. searchForEnrichmentData: Search Exa for funding/revenue/employees data
        c. verifyExtractionResults: Parse results with LLM, get confidence score
        d. If confidence >= threshold: auto-approve and call enrichOrgDatabase
        e. Else: save for manual review
     3. Log results: success, skipped, failed
     4. Export CSV report
+
+Enriched fields (written by tool.enrichOrgDatabase):
+    - estimated_annual_sales  (numeric)
+    - funding                 (numeric)
+    - employees               (integer)
+    - headquarters            (text)
+    - description             (text)
+    - date_founded            (timestamp)
 
 Configuration:
     Script automatically loads from .env file in project root:
@@ -34,7 +43,7 @@ import csv
 import json
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 import sys
 import os
 
@@ -114,28 +123,61 @@ async def get_db_connection():
 # Batch Enrichment
 # ============================================================================
 
-async def fetch_orgs_to_enrich(db: asyncpg.Connection, id_min: int, id_max: int) -> List[Dict[str, Any]]:
+async def fetch_orgs_to_enrich(
+    db: asyncpg.Connection,
+    id_min: Optional[int] = None,
+    id_max: Optional[int] = None,
+    org_ids: Optional[List[int]] = None,
+) -> List[Dict[str, Any]]:
     """
-    Fetch organizations from database with missing enrichment data.
+    Fetch organizations from database missing any enriched field.
+    
+    An org is selected when at least one of the fields populated by the
+    ENRICH workflow is NULL (or zero for numeric fields): estimated_annual_sales,
+    funding, employees, headquarters, description, date_founded.
+    
+    Selection scope (mutually exclusive):
+        - org_ids: explicit list of org IDs (takes precedence over range)
+        - id_min/id_max: inclusive id range
     
     Args:
         db: asyncpg connection
-        id_min: Minimum org ID (inclusive)
-        id_max: Maximum org ID (inclusive)
+        id_min: Minimum org ID (inclusive). Used when org_ids is None.
+        id_max: Maximum org ID (inclusive). Used when org_ids is None.
+        org_ids: Explicit list of org IDs to enrich. Takes precedence over range.
     
     Returns:
-        List of org records (id, name, estimated_annual_sales, funding)
+        List of org records (id, name, and current enrichment field values)
     """
-    query = """
-        SELECT id, name, estimated_annual_sales, funding
+    select_cols = """
+        SELECT id, name, estimated_annual_sales, funding,
+               employees, headquarters, description, date_founded
         FROM public.orgs
-        WHERE id BETWEEN $1 AND $2
-            AND (estimated_annual_sales IS NULL OR estimated_annual_sales = 0 OR funding IS NULL OR funding = 0)
-        ORDER BY id
+    """
+    missing_fields = """
+        (
+            estimated_annual_sales IS NULL OR estimated_annual_sales = 0
+            OR funding IS NULL OR funding = 0
+            OR employees IS NULL
+            OR headquarters IS NULL
+            OR description IS NULL
+            OR date_founded IS NULL
+        )
     """
     
-    orgs = await db.fetch(query, id_min, id_max)
-    logger.info(f"📦 Fetched {len(orgs)} orgs to enrich (id between {id_min} and {id_max})")
+    if org_ids is not None:
+        if not org_ids:
+            logger.info("📦 No org IDs provided; nothing to enrich")
+            return []
+        query = f"{select_cols} WHERE id = ANY($1::bigint[]) AND {missing_fields} ORDER BY id"
+        orgs = await db.fetch(query, org_ids)
+        scope_desc = f"ids {org_ids}"
+    else:
+        query = f"{select_cols} WHERE id BETWEEN $1 AND $2 AND {missing_fields} ORDER BY id"
+        orgs = await db.fetch(query, id_min, id_max)
+        scope_desc = f"id between {id_min} and {id_max}"
+    
+    logger.info(f"📦 Fetched {len(orgs)} orgs to enrich ({scope_desc})")
     return [dict(org) for org in orgs]
 
 
@@ -266,30 +308,41 @@ async def enrich_single_org(
 
 
 async def batch_enrich(
-    id_min: int,
-    id_max: int,
+    id_min: Optional[int] = None,
+    id_max: Optional[int] = None,
+    org_ids: Optional[List[int]] = None,
     confidence_threshold: float = 0.70,
     output_csv: str = None,
 ) -> None:
     """
-    Run batch enrichment for organization records in ID range.
+    Run batch enrichment for organization records.
+    
+    Selection scope (mutually exclusive):
+        - org_ids: explicit list of org IDs (takes precedence over range)
+        - id_min/id_max: inclusive id range
     
     Args:
-        id_min: Minimum org ID (inclusive)
-        id_max: Maximum org ID (inclusive)
+        id_min: Minimum org ID (inclusive). Used when org_ids is None.
+        id_max: Maximum org ID (inclusive). Used when org_ids is None.
+        org_ids: Explicit list of org IDs to enrich. Takes precedence over range.
         confidence_threshold: Auto-approve if extraction confidence >= threshold
         output_csv: Optional path to save results CSV
     """
+    if org_ids is not None:
+        scope = f"IDs {org_ids}"
+    else:
+        scope = f"ID Range: [{id_min}, {id_max}]"
+    
     db = None
     try:
         # Connect to database
         db = await get_db_connection()
         
         # Fetch orgs to enrich
-        orgs = await fetch_orgs_to_enrich(db, id_min, id_max)
+        orgs = await fetch_orgs_to_enrich(db, id_min=id_min, id_max=id_max, org_ids=org_ids)
         
         if not orgs:
-            logger.warning(f"❌ No orgs found to enrich in range [{id_min}, {id_max}]")
+            logger.warning(f"❌ No orgs found to enrich ({scope})")
             return
         
         # Track results
@@ -306,7 +359,7 @@ async def batch_enrich(
         
         logger.info(f"\n{'='*80}")
         logger.info(f"Starting batch enrichment for {len(orgs)} organizations")
-        logger.info(f"ID Range: [{id_min}, {id_max}]")
+        logger.info(scope)
         logger.info(f"Confidence threshold: {confidence_threshold}")
         logger.info(f"{'='*80}\n")
         
@@ -413,19 +466,27 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python batch_enrich_orgs.py --id-range 1 50           # Enrich orgs 1-50
+  python batch_enrich_orgs.py --id-range 1 50            # Enrich orgs 1-50
   python batch_enrich_orgs.py --id-range 1 100 --confidence 0.75
-  python batch_enrich_orgs.py --id-range 100 200 --output results.csv
+  python batch_enrich_orgs.py --ids 3,17,42              # Enrich specific orgs
+  python batch_enrich_orgs.py --ids 3,17,42 --output results.csv
         """,
     )
     
-    parser.add_argument(
+    # Selection: exactly one of --id-range or --ids is required
+    selection = parser.add_mutually_exclusive_group(required=True)
+    selection.add_argument(
         "--id-range",
         nargs=2,
         type=int,
         metavar=("MIN", "MAX"),
-        required=True,
         help="ID range: enrich orgs where id BETWEEN MIN AND MAX (inclusive)",
+    )
+    selection.add_argument(
+        "--ids",
+        type=str,
+        metavar="ID1,ID2,...",
+        help="Comma-separated list of org IDs to enrich (e.g. --ids 3,17,42)",
     )
     
     parser.add_argument(
@@ -444,11 +505,19 @@ Examples:
     
     args = parser.parse_args()
     
-    id_min, id_max = args.id_range
-    
-    if id_min > id_max:
-        logger.error(f"❌ Invalid range: {id_min} > {id_max}")
-        sys.exit(1)
+    # Resolve selection scope
+    org_ids = None
+    id_min = id_max = None
+    if args.ids is not None:
+        org_ids = [int(x.strip()) for x in args.ids.split(",") if x.strip()]
+        if not org_ids:
+            logger.error("❌ --ids provided but parsed to an empty list")
+            sys.exit(1)
+    else:
+        id_min, id_max = args.id_range
+        if id_min > id_max:
+            logger.error(f"❌ Invalid range: {id_min} > {id_max}")
+            sys.exit(1)
     
     if not (0.0 <= args.confidence <= 1.0):
         logger.error(f"❌ Confidence must be between 0.0 and 1.0, got {args.confidence}")
@@ -458,6 +527,7 @@ Examples:
     asyncio.run(batch_enrich(
         id_min=id_min,
         id_max=id_max,
+        org_ids=org_ids,
         confidence_threshold=args.confidence,
         output_csv=args.output,
     ))

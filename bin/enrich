@@ -1,0 +1,57 @@
+#!/bin/bash
+# =============================================================================
+# enrich - Batch enrich organization records (ENRICH workflow)
+#
+# Wraps backend/scripts/batch_enrich_orgs.py, which runs the ENRICH agent flow
+# over a range of orgs and writes extracted data back to public.orgs:
+#   estimated_annual_sales, funding, employees, headquarters, description,
+#   date_founded.
+#
+# Only orgs missing at least one enriched field within the given ID range are
+# processed (the Python script applies that filter against the live database).
+#
+# Usage:
+#   ./bin/enrich --id-range <MIN> <MAX> [options]
+#   ./bin/enrich --ids <ID1,ID2,...> [options]
+#
+# Runtime parameters (selection — exactly one required):
+#   --id-range MIN MAX   Enrich orgs with id BETWEEN MIN AND MAX (inclusive).
+#                        MIN must be <= MAX.
+#   --ids ID1,ID2,...    Enrich a comma-separated list of specific org IDs
+#                        (e.g. --ids 3,17,42). Mutually exclusive with --id-range.
+#
+# Optional:
+#   --confidence N       Auto-approve extractions with confidence >= N.
+#                        Float between 0.0 and 1.0. Default: 0.70.
+#   --output PATH        Export a per-org results report to this CSV.
+#   -h, --help           Show this help.
+#
+# Examples:
+#   ./bin/enrich --id-range 1 50                  # Enrich orgs 1-50
+#   ./bin/enrich --id-range 1 100 --confidence 0.75
+#   ./bin/enrich --ids 3,17,42                    # Enrich specific orgs
+#   ./bin/enrich --ids 3,17,42 --output /tmp/enrich_report.csv
+#
+# Required environment (loaded from .env in the project root):
+#   DATABASE_URL    PostgreSQL connection string
+#   OPENAI_API_KEY  OpenAI key for LLM extraction (gpt-4o-mini)
+#   EXA_API_KEY     Exa key for web search
+#
+# Logs are written to stdout and /tmp/batch_enrich.log.
+# =============================================================================
+
+# Show help if requested (before delegating so this wrapper documents itself)
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    # Print the header comment block (skip the shebang), stripping the leading "# "
+    awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "$0"
+    exit 0
+fi
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Run from the project root so .env and sys.path resolution match the script's
+# own project-root discovery logic.
+cd "$PROJECT_ROOT" || exit 1
+exec python "$PROJECT_ROOT/backend/scripts/batch_enrich_orgs.py" "$@"

@@ -8,7 +8,7 @@ Each agent returns: (decision: yes|no, confidence: 0.0-1.0, reason: str)
 """
 
 import logging
-from typing import Tuple, Dict, Any, Optional
+from typing import Tuple, Dict, Any, Optional, List
 import re
 import httpx
 import json
@@ -192,6 +192,60 @@ async def agent_validate_org_name(message_body: Dict[str, Any]) -> Tuple[str, fl
 # Model.searchForEnrichmentData - Search web for funding/revenue data
 # ============================================================================
 
+async def _exa_search(
+    client: Any,
+    query: str,
+    num_results: int = 10,
+    max_chars: int = 1500,
+) -> List[Dict[str, Any]]:
+    """
+    Run a single Exa search and return normalized result dicts.
+
+    Each dict has: query, snippet, source, url. Search errors are logged and
+    an empty list is returned so one failing query never aborts the whole
+    enrichment search.
+    """
+    logger.info(f"  Searching Exa: {query}")
+    results: List[Dict[str, Any]] = []
+    try:
+        response = await asyncio.to_thread(
+            client.search,
+            query,
+            num_results=num_results,
+            type="auto",
+            contents={
+                "highlights": True,
+                "text": True,
+            },
+        )
+    except Exception as e:
+        logger.error(f"  Exa search error for '{query}': {str(e)}", exc_info=True)
+        return results
+
+    if response and hasattr(response, "results") and response.results:
+        for result in response.results[:3]:  # top 3 per query
+            snippet = ""
+            # Prefer full text, fallback to highlights, then summary
+            if hasattr(result, "text") and result.text:
+                snippet = result.text[:max_chars]
+            elif hasattr(result, "highlights") and result.highlights:
+                snippet = " ".join(result.highlights)
+            elif hasattr(result, "summary"):
+                snippet = result.summary[:500]
+
+            if snippet.strip():
+                results.append({
+                    "query": query,
+                    "snippet": snippet.strip(),
+                    "source": "exa",
+                    "url": getattr(result, "url", ""),
+                })
+    else:
+        logger.warning(f"  No Exa search results found for '{query}'")
+
+    return results
+
+
 async def agent_search_for_enrichment_data(message_body: Dict[str, Any]) -> Tuple[str, float, str]:
     """
     model.searchForEnrichmentData (ENRICH flow)
@@ -212,62 +266,47 @@ async def agent_search_for_enrichment_data(message_body: Dict[str, Any]) -> Tupl
             logger.warning(f"  Decision: no (confidence: 0.90) - {reason}")
             return ("no", 0.90, reason)
         
-        # Search the web using Exa API
-        search_query = f"{org_name} total funding raised annual revenue financial"
-        logger.info(f"  Searching Exa: {search_query}")
-        
-        all_results = []
+        # Search the web using Exa API. Two passes are merged into one pool of
+        # snippets so the LLM sees pages covering every target field:
+        #   Pass 1 (financials): funding/revenue reliably rank on Crunchbase /
+        #     PitchBook / press releases; HQ and founded often ride along on
+        #     funding announcements.
+        #   Pass 2 (company profile): employees/headcount live on LinkedIn /
+        #     ZoomInfo / "About" pages that do not rank for financial language,
+        #     so a dedicated profile query is needed to surface them.
+        all_results: List[Dict[str, Any]] = []
         exa_api_key = os.getenv("EXA_API_KEY")
-        
+
         if not exa_api_key:
             reason = "EXA_API_KEY not configured"
             logger.warning(f"  Decision: no (confidence: 0.70) - {reason}")
             return ("no", 0.70, reason)
-        
+
         if not EXA_AVAILABLE:
             reason = "exa_py package not installed"
             logger.warning(f"  Decision: no (confidence: 0.70) - {reason}")
             return ("no", 0.70, reason)
-        
+
         try:
             client = Exa(api_key=exa_api_key)
-            
-            # Search using Exa's neural search
-            response = await asyncio.to_thread(
-                client.search,
-                search_query,
-                num_results=10,
-                type="auto",
-                contents={
-                    "highlights": True,
-                    "text": True
-                }
+
+            # Pass 1: financial data (funding + revenue, often HQ/founded too)
+            all_results.extend(
+                await _exa_search(
+                    client,
+                    f"{org_name} total funding raised annual revenue financial",
+                )
             )
-            
-            if response and hasattr(response, 'results') and response.results:
-                for result in response.results[:3]:  # Use top 3 results
-                    snippet = ""
-                    
-                    # Prefer full text content, fallback to highlights
-                    if hasattr(result, 'text') and result.text:
-                        snippet = result.text[:1500]  # Full text up to 1500 chars
-                    elif hasattr(result, 'highlights') and result.highlights:
-                        snippet = " ".join(result.highlights)
-                    elif hasattr(result, 'summary'):
-                        snippet = result.summary[:500]
-                    
-                    if snippet.strip():
-                        all_results.append({
-                            "query": search_query,
-                            "snippet": snippet.strip(),
-                            "source": "exa",
-                            "url": getattr(result, 'url', '')
-                        })
-                
-                logger.info(f"  Found {len(all_results)} search results")
-            else:
-                logger.warning(f"  No Exa search results found")
-        
+
+            # Pass 2: company profile (employees / headcount)
+            all_results.extend(
+                await _exa_search(
+                    client,
+                    f'"{org_name}" employees headcount team size company size',
+                )
+            )
+
+            logger.info(f"  Found {len(all_results)} search results across both passes")
         except Exception as e:
             logger.error(f"  Exa search error: {str(e)}", exc_info=True)
         
@@ -437,12 +476,17 @@ async def agent_enrich_org_database(message_body: Dict[str, Any]) -> Tuple[str, 
             return ("no", 0.10, reason)
         
         try:
-            # Use 0 for None numeric values, None for text fields
-            annual_revenue = extracted_data.get("annual_revenue") or 0
-            total_funding = extracted_data.get("total_funding_raised") or 0
+            # Pass None through when extraction yields nothing so the UPDATE
+            # below preserves the existing value (preserve-if-null, same pattern
+            # used for the text/date fields). Coercing null to 0 here would
+            # clobber a previously stored funding/sales figure on every re-run.
+            annual_revenue = extracted_data.get("annual_revenue")
+            total_funding = extracted_data.get("total_funding_raised")
             description = extracted_data.get("description")
             headquarters = extracted_data.get("headquarters")
             employees = extracted_data.get("employees")
+            if employees is not None:
+                employees = int(employees)
             date_founded = extracted_data.get("date_founded")  # ISO 8601 string or YYYY
             
             # Convert date_founded string to datetime object if provided
@@ -458,13 +502,15 @@ async def agent_enrich_org_database(message_body: Dict[str, Any]) -> Tuple[str, 
                 except Exception as e:
                     logger.warning(f"  Could not parse date_founded '{date_founded}': {str(e)}")
             
-            # Update orgs table with enriched data
-            # Use description if provided by enrichment, otherwise keep existing
-            # headquarters, employees, and date_founded only update if enriched data provided (not null)
+            # Update orgs table with enriched data. Every field uses the
+            # preserve-if-null pattern: a null extraction keeps the existing
+            # column value, so re-running enrichment (e.g. to fill employees)
+            # never clobbers a previously stored funding/sales figure. funding
+            # and estimated_annual_sales are NUMERIC; employees is INTEGER.
             update_query = """
                 UPDATE public.orgs 
-                SET estimated_annual_sales = $1, 
-                    funding = $2,
+                SET estimated_annual_sales = CASE WHEN $1::NUMERIC IS NOT NULL THEN $1::NUMERIC ELSE estimated_annual_sales END,
+                    funding = CASE WHEN $2::NUMERIC IS NOT NULL THEN $2::NUMERIC ELSE funding END,
                     description = CASE WHEN $3::TEXT IS NOT NULL THEN $3::TEXT ELSE description END,
                     headquarters = CASE WHEN $4::TEXT IS NOT NULL THEN $4::TEXT ELSE headquarters END,
                     employees = CASE WHEN $5::INTEGER IS NOT NULL THEN $5::INTEGER ELSE employees END,
@@ -486,12 +532,19 @@ async def agent_enrich_org_database(message_body: Dict[str, Any]) -> Tuple[str, 
                         "org_name": result['name'],
                         "estimated_annual_sales": annual_revenue,
                         "total_funding": total_funding,
-                        "fields_updated": sum([annual_revenue > 0, total_funding > 0, description is not None, headquarters is not None, employees is not None, date_founded_ts is not None]),
+                        "fields_updated": sum([(annual_revenue or 0) > 0, (total_funding or 0) > 0, description is not None, headquarters is not None, employees is not None, date_founded_ts is not None]),
                         "timestamp": datetime.utcnow().isoformat()
                     }
                 )
                 
-                reason = f"✅ Updated {result['name']}: estimated_annual_sales=${annual_revenue:,}, total_funding=${total_funding:,}"
+                # Report the actual merged DB state (preserved + new), not the
+                # possibly-None extracted values, so the log reflects what was
+                # really stored.
+                rev_now = result['estimated_annual_sales']
+                fund_now = result['funding']
+                rev_str = f"${rev_now:,.0f}" if rev_now else "$0"
+                fund_str = f"${fund_now:,.0f}" if fund_now else "$0"
+                reason = f"✅ Updated {result['name']}: estimated_annual_sales={rev_str}, total_funding={fund_str}"
                 logger.info(f"  Decision: yes (confidence: 0.98) - {reason}")
                 return ("yes", 0.98, reason)
             else:
