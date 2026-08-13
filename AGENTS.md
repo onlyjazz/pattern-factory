@@ -1200,3 +1200,10 @@ reason = "Invalid data"
 ### Never Do
 - Never use placeholder or truncation comments like `// TODO: Implement later`.
 
+## Commit Message Convention
+
+- Start every commit subject with its Linear issue ID: `PAT-XXX: <imperative summary>` (e.g. `PAT-308: fix profile agent entity resolution via direct FDA retrieval`).
+- Use a colon plus one space between the ID and the summary; write the summary in imperative mood, ~72 chars or fewer.
+- For commits spanning multiple issues, lead with the primary ID and list the rest in the body.
+- Create or locate a Linear issue before committing work that has none — avoid commits with no issue ID.
+
