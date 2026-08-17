@@ -3,7 +3,7 @@ Basis Threats Service - Generate orthogonal dimensionless threats from FDA devic
 
 Generate mode samples treatment-arm products, asks an LLM to extract canonical
 threat objects from product profile text, removes duplicate threat names,
-inserts the resulting rows, and pauses for user approval between devices.
+and inserts the resulting rows.
 
 Validate mode samples holdout products, extracts threats without inserting
 them, compares them to a generated basis version, and reports coverage.
@@ -71,14 +71,12 @@ class BasisThreatsService:
         dry_run: bool = False,
         sample_per_arm: int = 10,
         card_id: str = CARD_ID,
-        yes: bool = False,
     ):
         self.db_url = db_url
         self.model_name = model_name
         self.dry_run = dry_run
         self.sample_per_arm = sample_per_arm
         self.card_id = card_id
-        self.yes = yes
         self.pool: Optional[asyncpg.Pool] = None
         self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.prompt_config = load_basis_threats_prompt_config()
@@ -850,10 +848,6 @@ class BasisThreatsService:
                     "threats": threats_json["threats"],
                 }
             )
-
-            if index < len(products) and not self.yes and not self.ask_continue():
-                print("Exiting.")
-                break
         deduped_candidate_threats = self.dedupe_basis_threats(candidate_threats, version)
         matched_observations = []
         unmatched_observations = []
@@ -957,6 +951,10 @@ class BasisThreatsService:
         for threat_name in results["threat_names_found"]:
             print(f"- {threat_name}")
 
+        token_summary = self.print_run_token_summary(results["processed"])
+        results["model"] = self.model_name
+        results["openai_usage_total"] = token_summary
+
         if self.pool and not self.dry_run:
             await log_event(self.pool, "BASIS_THREATS_COMPLETE", results)
 
@@ -1032,10 +1030,6 @@ class BasisThreatsService:
                 }
             )
 
-            if index < len(products) and not self.yes and not self.ask_continue():
-                print("Exiting.")
-                break
-
         total = results["total_extracted_threats"]
         matched = results["matched_threats"]
         results["coverage"] = matched / total if total else 0.0
@@ -1045,7 +1039,54 @@ class BasisThreatsService:
         print(f"Matched threats: {matched}/{total}")
         print(f"Coverage: {results['coverage']:.1%}")
 
+        token_summary = self.print_run_token_summary(results["processed"])
+        results["model"] = self.model_name
+        results["openai_usage_total"] = token_summary
+
         return results
+
+
+    @staticmethod
+    def summarize_token_usage(processed: List[Dict[str, Any]]) -> Dict[str, Optional[int]]:
+        prompt_tokens = 0
+        completion_tokens = 0
+        total_tokens = 0
+        saw_usage = False
+
+        for item in processed:
+            usage = item.get("openai_usage") or {}
+            if not usage:
+                continue
+            saw_usage = True
+            prompt_tokens += int(usage.get("prompt_tokens") or 0)
+            completion_tokens += int(usage.get("completion_tokens") or 0)
+            total_tokens += int(usage.get("total_tokens") or 0)
+
+        if not saw_usage:
+            return {
+                "prompt_tokens": None,
+                "completion_tokens": None,
+                "total_tokens": None,
+            }
+
+        return {
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": total_tokens,
+        }
+
+    def print_run_token_summary(self, processed: List[Dict[str, Any]]) -> Dict[str, Optional[int]]:
+        usage = self.summarize_token_usage(processed)
+        print(f"\nModel: {self.model_name}")
+        if usage["total_tokens"] is None:
+            print("Total tokens consumed: unavailable")
+        else:
+            print(
+                "Total tokens consumed: "
+                f"{usage['total_tokens']} "
+                f"(prompt={usage['prompt_tokens']}, completion={usage['completion_tokens']})"
+            )
+        return usage
 
     @staticmethod
     def print_token_usage(threats_json: Dict[str, Any]) -> None:
@@ -1061,16 +1102,6 @@ class BasisThreatsService:
                 f"completion={usage.get('completion_tokens')} "
                 f"total={usage.get('total_tokens')}"
             )
-
-    @staticmethod
-    def ask_continue() -> bool:
-        while True:
-            answer = input("Continue to the next device? [y/n]: ").strip().lower()
-            if answer in {"y", "yes"}:
-                return True
-            if answer in {"n", "no"}:
-                return False
-            print("Please answer yes or no.")
 
 
 def parse_args(argv: List[str]) -> argparse.Namespace:
@@ -1113,11 +1144,6 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         action="store_true",
         help="Generate and print counts without inserting threats.",
     )
-    generate_parser.add_argument(
-        "--yes",
-        action="store_true",
-        help="Continue through all sampled devices without prompting.",
-    )
 
     validate_parser = subparsers.add_parser(
         "validate",
@@ -1148,11 +1174,6 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         "--version",
         default="latest",
         help="Basis threat version to validate against (default: latest).",
-    )
-    validate_parser.add_argument(
-        "--yes",
-        action="store_true",
-        help="Continue through all sampled devices without prompting.",
     )
     return parser.parse_args(argv)
 
@@ -1214,7 +1235,6 @@ async def main() -> None:
         dry_run=getattr(args, "dry_run", False),
         sample_per_arm=sample_per_arm,
         card_id=args.card_id,
-        yes=args.yes,
     )
 
     try:

@@ -4,17 +4,38 @@ CLI tool for generating a basis set of orthogonal dimensionless threats.
 
 Usage:
     ./bin/basis-threats generate
+    ./bin/basis-threats generate --arms=2,3 --sample-per-arm=5
     ./bin/basis-threats generate --dry-run
-    ./bin/basis-threats generate --sample-per-arm=5
+    ./bin/basis-threats generate --model=gpt-5.5 --card-id=UUID
     ./bin/basis-threats validate
-    ./bin/basis-threats validate --version=latest
+    ./bin/basis-threats validate --arms=1 --version=latest
+    ./bin/basis-threats validate --version=2
 
 Environment Variables (required in .env):
     DATABASE_URL       PostgreSQL connection string
     OPENAI_API_KEY     OpenAI API key for LLM extraction
 
-Optional:
+Optional Environment Variables:
     BASIS_THREATS_MODEL  OpenAI model name (default: gpt-5.5)
+
+Arguments:
+  {generate,validate}   Mode: generate basis threats or validate against holdout arms
+
+  --arms ARMS
+                        Comma-separated org arms (default: 2,3 for generate, 1 for validate).
+                        Valid values: 1, 2, or 3.
+
+  --sample-per-arm N    Number of devices sampled from each arm (default: 10).
+                        Must be at least 1.
+
+  --card-id UUID        Card UUID to assign threats to (default: 7513ebae-a266-49b1-a088-3afacec21a02).
+
+  --model MODEL         OpenAI model for threat extraction (default: $BASIS_THREATS_MODEL or gpt-5.5).
+
+  --version VERSION     Basis threat version to validate against in validate mode (default: latest).
+                        Accepts positive integer or 'latest'.
+
+  --dry-run             (generate only) Extract and print threat counts without inserting to database.
 """
 
 import asyncio

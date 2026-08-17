@@ -233,12 +233,9 @@ async function searchCards(query: string, isEdit: boolean = false) {
 									<th class="tal sortable" class:sorted-asc={sortField === 'probability' && sortDirection === 'asc'} class:sorted-desc={sortField === 'probability' && sortDirection === 'desc'} onclick={() => toggleSort('probability')}>
 										Probability
 									</th>
-									<th class="tal sortable" class:sorted-asc={sortField === 'mitigation_level' && sortDirection === 'asc'} class:sorted-desc={sortField === 'mitigation_level' && sortDirection === 'desc'} onclick={() => toggleSort('mitigation_level')}>
-										Mitigation Level
-									</th>
-									<th class="tal sortable" class:sorted-asc={sortField === 'disabled' && sortDirection === 'asc'} class:sorted-desc={sortField === 'disabled' && sortDirection === 'desc'} onclick={() => toggleSort('disabled')}>
-										Disabled
-									</th>
+							<th class="tal sortable" class:sorted-asc={sortField === 'description' && sortDirection === 'asc'} class:sorted-desc={sortField === 'description' && sortDirection === 'desc'} onclick={() => toggleSort('description')}>
+									Description
+							</th>
 									<th class="tar">Actions</th>
 								</tr>
 							</thead>
@@ -250,8 +247,7 @@ async function searchCards(query: string, isEdit: boolean = false) {
 									<td class="tal">{t.name}</td>
 									<td class="tal">{t.domain || '-'}</td>
 									<td class="tal">{t.probability || '-'}</td>
-									<td class="tal">{t.mitigation_level || '-'}</td>
-									<td class="tal">{t.disabled ? 'Yes' : 'No'}</td>
+									<td class="tal">{t.description || '-'}</td>
 
 									<td class="tar">
 										<button
