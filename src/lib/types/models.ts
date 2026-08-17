@@ -25,6 +25,46 @@ export interface Organization {
   updated_at?: string; // ISO timestamp
   deleted_at?: string | null; // ISO timestamp or null for active records
 }
+/** Basis-threat generation run metadata. */
+export interface BasisRun {
+  id: number;
+  model_id: number;
+  card_id: string;
+  arms: number[];
+  sample_per_arm: number;
+  llm_model: string;
+  prompt_version: string;
+  status: 'running' | 'completed' | 'failed' | 'cancelled';
+  candidate_threat_count: number;
+  run_unique_candidate_threat_count: number;
+  new_basis_threat_count: number;
+  existing_basis_threat_count: number;
+  started_at: string;
+  finished_at?: string | null;
+  error?: string | null;
+}
+
+/** Device-level evidence supporting a canonical basis threat. */
+export interface ThreatProvenance {
+  id: number;
+  run_id: number;
+  threat_id: number;
+  product_id: number;
+  model_id: number;
+  basis_version: number;
+  generated_name: string;
+  generated_payload: Record<string, unknown>;
+  match_type: 'new' | 'normalized_name' | 'token_overlap';
+  match_score?: number | null;
+  llm_model: string;
+  prompt_version: string;
+  source_profile_hash: string;
+  source_token_estimate: number;
+  prompt_tokens?: number | null;
+  completion_tokens?: number | null;
+  total_tokens?: number | null;
+  created_at: string;
+}
 
 /**
  * Product representing FDA-cleared AI-enabled medical device
@@ -45,6 +85,7 @@ export interface Product {
   device_description?: string; // Device description from OpenFDA
   superiority?: string; // Competitive advantage claims from FEELGOOD flow
   org_id?: number; // Foreign key to organizations
+  process_flag: boolean; // True after processing for basis-threat generation
   created_at?: string; // ISO timestamp
   updated_at?: string; // ISO timestamp
   deleted_at?: string | null; // ISO timestamp or null for active records

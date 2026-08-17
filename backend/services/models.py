@@ -174,6 +174,47 @@ class ThreatUpdate(BaseModel):
     disabled: bool | None = None
     card_id: str | None = None
 
+# -------------------------------------------------------------------------
+# Basis threat extraction provenance
+# -------------------------------------------------------------------------
+class BasisRunRecord(BaseModel):
+    id: int
+    model_id: int
+    card_id: str
+    arms: list[int]
+    sample_per_arm: int
+    llm_model: str
+    prompt_version: str
+    status: str
+    candidate_threat_count: int
+    run_unique_candidate_threat_count: int
+    new_basis_threat_count: int
+    existing_basis_threat_count: int
+    started_at: str
+    finished_at: str | None = None
+    error: str | None = None
+
+
+class ThreatProvenanceRecord(BaseModel):
+    id: int
+    run_id: int
+    threat_id: int
+    product_id: int
+    model_id: int
+    basis_version: int
+    generated_name: str
+    generated_payload: dict[str, object]
+    match_type: str
+    match_score: float | None = None
+    llm_model: str
+    prompt_version: str
+    source_profile_hash: str
+    source_token_estimate: int
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
+    total_tokens: int | None = None
+    created_at: str
+
 
 # -------------------------------------------------------------------------
 # Models
@@ -291,6 +332,7 @@ class ProductCreate(BaseModel):
     device_description: str | None = None  # Device description from OpenFDA
     superiority: str | None = None  # Competitive advantage claims from FEELGOOD flow
     org_id: int | None = None  # Foreign key to organizations
+    process_flag: bool = False  # True after the device is processed for basis-threat generation
 
 
 class ProductUpdate(BaseModel):
@@ -309,3 +351,4 @@ class ProductUpdate(BaseModel):
     device_description: str | None = None
     superiority: str | None = None
     org_id: int | None = None
+    process_flag: bool | None = None

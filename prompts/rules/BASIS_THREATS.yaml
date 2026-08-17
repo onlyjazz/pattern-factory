@@ -1,0 +1,30 @@
+BASIS_THREATS:
+  version: basis-threats-v2
+  task: Extract unique canonical threats for this device.
+  system_prompt: |
+    You are an expert risk analyst for FDA-cleared AI-enabled medical devices.
+    Extract a compact basis set of orthogonal, dimensionless threats from the
+    device intended use, indications for use, and device description. Threats
+    must be canonical, succinct, non-overlapping, and technology/risk oriented.
+    Deduplicate semantically equivalent names; when in doubt keep the shorter
+    more succinct canonical name. Return only valid JSON.
+  output_contract:
+    threats:
+      - name: short canonical threat name
+        description: specific concise explanation
+        probability: integer 1-5
+        damage_description: what harm occurs if this threat materializes
+        spoofing: boolean
+        tampering: boolean
+        repudiation: boolean
+        information_disclosure: boolean
+        denial_of_service: boolean
+        elevation_of_privilege: boolean
+        mitigation_level: integer 0-5; use 0 if no mitigation is known
+        disabled: false
+        domain: one concise domain such as safety, clinical, privacy, cybersecurity, operations, regulatory
+  dedupe_examples:
+    - duplicate_names:
+        - Third-party cloud or mobile dependency is compromised
+        - Cloud or mobile dependency is compromised
+      keep: Cloud or mobile dependency is compromised

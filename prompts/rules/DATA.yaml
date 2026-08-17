@@ -24,6 +24,7 @@ DATA:
           - deleted_at
           - search_vector
           - superiority
+          - process_flag
 
         active_models:
           - user_id
@@ -182,6 +183,43 @@ DATA:
           - version
           - domain
           - tag
+
+        basis_runs:
+          - id
+          - model_id
+          - card_id
+          - arms
+          - sample_per_arm
+          - llm_model
+          - prompt_version
+          - status
+          - candidate_threat_count
+          - run_unique_candidate_threat_count
+          - new_basis_threat_count
+          - existing_basis_threat_count
+          - started_at
+          - finished_at
+          - error
+
+        threat_provenance:
+          - id
+          - run_id
+          - threat_id
+          - product_id
+          - model_id
+          - basis_version
+          - generated_name
+          - generated_payload
+          - match_type
+          - match_score
+          - llm_model
+          - prompt_version
+          - source_profile_hash
+          - source_token_estimate
+          - prompt_tokens
+          - completion_tokens
+          - total_tokens
+          - created_at
 
         vulnerabilities:
           - id

@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+"""
+CLI tool for generating a basis set of orthogonal dimensionless threats.
+
+Usage:
+    ./bin/basis-threats generate
+    ./bin/basis-threats generate --dry-run
+    ./bin/basis-threats generate --sample-per-arm=5
+    ./bin/basis-threats validate
+    ./bin/basis-threats validate --version=latest
+
+Environment Variables (required in .env):
+    DATABASE_URL       PostgreSQL connection string
+    OPENAI_API_KEY     OpenAI API key for LLM extraction
+
+Optional:
+    BASIS_THREATS_MODEL  OpenAI model name (default: gpt-5.5)
+"""
+
+import asyncio
+import os
+import sys
+
+
+backend_path = os.path.join(os.path.dirname(__file__), "..", "backend")
+sys.path.insert(0, backend_path)
+
+from services.basis_threats_service import main as service_main
+
+
+if __name__ == "__main__":
+    asyncio.run(service_main())
