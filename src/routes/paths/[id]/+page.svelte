@@ -416,6 +416,7 @@ import { API_BASE } from '$lib/config';
 					aria-labelledby="optionality-modal-title"
 					tabindex="0"
 					style="transform: translate({modalPosition.x}px, {modalPosition.y}px);"
+					onclick={(e) => e.stopPropagation()}
 				>
 					<div class="modal-header" onmousedown={startDrag} role="banner">
 						<h2 id="optionality-modal-title" class="heading heading_2">Optionality</h2>
