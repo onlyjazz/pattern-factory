@@ -264,6 +264,16 @@ async function searchCards(query: string, isEdit: boolean = false) {
 										>
 											✎
 										</button>
+										<button
+											class="button button_small"
+											onclick={(e) => {
+												e.stopPropagation();
+												handleDelete(t.id);
+											}}
+											title="Delete"
+										>
+											🗑
+										</button>
 									</td>
 								</tr>
 {/each}
