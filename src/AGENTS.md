@@ -98,8 +98,12 @@
 - Overlay has `onkeydown={...}` (Escape key to close)
 - Dialog div has `role="dialog"` and `aria-labelledby="{heading-id}"`
 - Dialog div has `tabindex="0"` (makes it keyboard-focusable)
-- Dialog div has **NO onclick handler** (overlay already handles all clicks)
+- Dialog div has `onclick={(e) => e.stopPropagation()}` **(REQUIRED!)** — prevents clicks inside the modal from bubbling to the overlay and closing it
 - Modal title (h2) has `id="modal-title"` (referenced by aria-labelledby)
+
+⚠️ **REGRESSION NOTE: Modal Closes on Input Click**
+
+This is a common bug that has occurred multiple times when fixing a11y issues. **If clicking an input field inside a modal immediately closes the modal**, the cause is always: the modal-content div is missing `onclick={(e) => e.stopPropagation()}`. When users click inputs, the click event bubbles to the overlay's `onclick={closeModal}` handler, closing the modal. Always verify this attribute exists on modal-content before committing.
 
 ### Rule 4: Never use self-closing non-void elements
 

@@ -5,6 +5,26 @@ DATA:
     public:
       tables:
 
+        products:
+          - id
+          - date_of_final_decision
+          - submission_number
+          - device
+          - intended_use
+          - indications_for_use
+          - device_description
+          - company
+          - panel
+          - primary_product_code
+          - product_contact_1
+          - product_contact_2
+          - product_contact_3
+          - created_at
+          - updated_at
+          - deleted_at
+          - search_vector
+          - superiority
+
         active_models:
           - user_id
           - model_id
@@ -83,23 +103,6 @@ DATA:
         pattern_post_link:
           - pattern_id
           - post_id
-
-        products:
-          - id
-          - date_of_final_decision
-          - submission_number
-          - device
-          - indicated_use
-          - company
-          - panel
-          - primary_product_code
-          - product_contact_1
-          - product_contact_2
-          - product_contact_3
-          - created_at
-          - updated_at
-          - deleted_at
-          - search_vector
 
         system_log:
           - id

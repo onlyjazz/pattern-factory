@@ -23,7 +23,7 @@ RULES:
     name: "Companies"
     description: "List of companies with their details"
     logic: |
-      show me name, funding, estimated_annual_sales, description, date_founded, date_funded, stage from orgs
+      show me id, name, funding, estimated_annual_sales, description, date_founded, date_funded, size from orgs
 
   - rule_code: PATTERNS_BY_GUEST
     name: "Patterns by Guest"
@@ -139,4 +139,8 @@ RULES:
       and model_id = (select model_id from active_models limit 1)
       order by asset name, vulnerability name
 
-  
+  - rule_code: PRODUCTS
+    name: "AI-enabled medical devices by company"
+    description: "AI-enabled medical devices by company"
+    logic: |
+      select device, company, submission_number, intended_use, superiority from products order by company, device
