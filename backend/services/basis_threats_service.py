@@ -483,7 +483,8 @@ class BasisThreatsService:
         }
 
         def _call_openai() -> tuple[str, Dict[str, Optional[int]]]:
-            temperature = 1.0 if self.model_name == "gpt-5.5" else 0.0
+            # gpt-5.5 and newer gpt-5.6 variants require temperature=1.0
+            temperature = 1.0 if self.model_name in {"gpt-5.5", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.6-luna"} else 0.0
             response = self.openai_client.chat.completions.create(
                 model=self.model_name,
                 temperature=temperature,

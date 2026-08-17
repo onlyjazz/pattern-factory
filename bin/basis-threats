@@ -16,7 +16,8 @@ Environment Variables (required in .env):
     OPENAI_API_KEY     OpenAI API key for LLM extraction
 
 Optional Environment Variables:
-    BASIS_THREATS_MODEL  OpenAI model name (default: gpt-5.5)
+    BASIS_THREATS_MODEL  OpenAI model name (default: gpt-5.5).
+                        Options: gpt-5.5, gpt-5.6-terra, gpt-5.6-sol, gpt-5.6-luna
 
 Arguments:
   {generate,validate}   Mode: generate basis threats or validate against holdout arms
@@ -31,6 +32,7 @@ Arguments:
   --card-id UUID        Card UUID to assign threats to (default: 7513ebae-a266-49b1-a088-3afacec21a02).
 
   --model MODEL         OpenAI model for threat extraction (default: $BASIS_THREATS_MODEL or gpt-5.5).
+                        Supports gpt-5.5, gpt-5.6-terra, gpt-5.6-sol, gpt-5.6-luna.
 
   --version VERSION     Basis threat version to validate against in validate mode (default: latest).
                         Accepts positive integer or 'latest'.
