@@ -1,0 +1,277 @@
+#!/usr/bin/env python3
+"""
+selthreat - Select and bulk-import threats from canonical basis set.
+
+This tool selects the most plausible threats from the canonical basis set
+(model_id=35) for given FDA-cleared AI-enabled medical devices, then copies
+them into a target threat model.
+
+Usage:
+    ./bin/selthreat select --model-id=2 --device-id=5
+    ./bin/selthreat select --model-id=2 --device-ids=5,12,18 --count=10
+    ./bin/selthreat select --model-id=2 --device-id=5 --dry-run
+    ./bin/selthreat list --device-id=5 --count=8
+    ./bin/selthreat select --model-id=2 --device-id=5 --model=gpt-4o-mini
+
+Commands:
+  select                Select and import threats for device(s) into a target model
+  list                  Preview selected threats without importing
+
+Common Arguments:
+  --device-id ID        Single device/product ID to process
+  --device-ids IDS      Comma-separated list of device/product IDs
+  --model-id ID         Target threat model ID (required for 'select')
+  --count N             Number of threats to select (default 10, min 8, max 12)
+  --model MODEL         LLM model for threat selection (default: gpt-4o-mini)
+  --dry-run             Preview selections without writing to database
+  --verbose             Enable verbose logging
+
+Environment Variables (required in .env):
+  DATABASE_URL          PostgreSQL connection string
+  OPENAI_API_KEY        OpenAI API key for LLM threat selection
+"""
+
+import argparse
+import asyncio
+import json
+import logging
+import os
+import sys
+from typing import List
+
+backend_path = os.path.join(os.path.dirname(__file__), "..", "backend")
+sys.path.insert(0, backend_path)
+
+from services.threat_selector_service import ThreatSelectorService, DEFAULT_THREAT_COUNT, MIN_THREAT_COUNT, MAX_THREAT_COUNT
+
+logger = logging.getLogger("selthreat")
+
+
+async def select_command(args: argparse.Namespace) -> int:
+    """Execute the select subcommand."""
+    if args.model_id is None:
+        logger.error("--model-id is required for the select command")
+        return 1
+
+    device_ids = parse_device_ids(args)
+    if not device_ids:
+        logger.error("At least one device ID is required (--device-id or --device-ids)")
+        return 1
+
+    threat_count = clamp_threat_count(args.count)
+    db_url = os.getenv("DATABASE_URL")
+    if not db_url:
+        logger.error("DATABASE_URL environment variable not set")
+        return 1
+
+    service = ThreatSelectorService(
+        db_url=db_url,
+        dry_run=args.dry_run,
+        llm_model=args.model,
+    )
+
+    try:
+        await service.initialize()
+        logger.info("Processing %d device(s) with threat count %d", len(device_ids), threat_count)
+
+        all_results = []
+        for i, device_id in enumerate(device_ids, 1):
+            logger.info("[%d/%d] Selecting threats for device_id=%d", i, len(device_ids), device_id)
+            try:
+                result = await service.select_threats_for_device(
+                    target_model_id=args.model_id,
+                    device_id=device_id,
+                    threat_count=threat_count,
+                )
+                all_results.append(result)
+                print_result(result)
+                print()  # blank line
+            except Exception as e:
+                logger.error("Failed to select threats for device_id=%d: %s", device_id, str(e))
+                if not args.dry_run:
+                    logger.error("Transaction rolled back; no threats inserted")
+                    return 1
+
+        # Summary
+        if all_results:
+            total_selected = sum(r["threat_count_selected"] for r in all_results)
+            total_inserted = sum(r["threat_count_inserted"] for r in all_results)
+            logger.info(
+                "Summary: %d device(s) processed, %d threats selected, %d threats inserted",
+                len(all_results),
+                total_selected,
+                total_inserted,
+            )
+            if args.dry_run:
+                logger.info("(dry-run mode: no threats actually inserted)")
+
+        return 0
+
+    except Exception as e:
+        logger.error("Fatal error: %s", str(e))
+        return 1
+    finally:
+        await service.cleanup()
+
+
+async def list_command(args: argparse.Namespace) -> int:
+    """Execute the list subcommand."""
+    if args.device_id is None:
+        logger.error("--device-id is required for the list command")
+        return 1
+
+    threat_count = clamp_threat_count(args.count)
+    db_url = os.getenv("DATABASE_URL")
+    if not db_url:
+        logger.error("DATABASE_URL environment variable not set")
+        return 1
+
+    service = ThreatSelectorService(
+        db_url=db_url,
+        dry_run=True,  # list is always a preview
+        llm_model=args.model,
+    )
+
+    try:
+        await service.initialize()
+        logger.info("Previewing threats for device_id=%d (threat_count=%d)", args.device_id, threat_count)
+
+        result = await service.list_selected_threats(
+            device_id=args.device_id,
+            threat_count=threat_count,
+        )
+        print_result(result)
+        return 0
+
+    except Exception as e:
+        logger.error("Fatal error: %s", str(e))
+        return 1
+    finally:
+        await service.cleanup()
+
+
+def parse_device_ids(args: argparse.Namespace) -> List[int]:
+    """Parse device IDs from args."""
+    device_ids = []
+    if args.device_id is not None:
+        device_ids.append(args.device_id)
+    if hasattr(args, "device_ids") and args.device_ids:
+        try:
+            device_ids.extend([int(d.strip()) for d in args.device_ids.split(",")])
+        except ValueError as e:
+            logger.error("Invalid device ID format: %s", str(e))
+            return []
+    return device_ids
+
+
+def clamp_threat_count(count: int) -> int:
+    """Clamp threat count to valid range."""
+    if count < MIN_THREAT_COUNT:
+        logger.warning("Threat count %d is below minimum %d, using minimum", count, MIN_THREAT_COUNT)
+        return MIN_THREAT_COUNT
+    if count > MAX_THREAT_COUNT:
+        logger.warning("Threat count %d exceeds maximum %d, using maximum", count, MAX_THREAT_COUNT)
+        return MAX_THREAT_COUNT
+    return count
+
+
+def print_result(result: dict) -> None:
+    """Pretty-print a result dictionary."""
+    print(json.dumps(result, indent=2, default=str))
+
+
+def setup_logging(verbose: bool) -> None:
+    """Configure logging level."""
+    level = logging.DEBUG if verbose else logging.INFO
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+    )
+
+
+async def main() -> int:
+    """Main entry point."""
+    parser = argparse.ArgumentParser(
+        description="Select and bulk-import threats from canonical basis set",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=__doc__,
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True, help="Command to execute")
+
+    # select subcommand
+    select_parser = subparsers.add_parser("select", help="Select and import threats")
+    select_parser.add_argument(
+        "--model-id",
+        type=int,
+        required=True,
+        help="Target threat model ID",
+    )
+    device_group = select_parser.add_mutually_exclusive_group(required=True)
+    device_group.add_argument(
+        "--device-id",
+        type=int,
+        help="Single device/product ID",
+    )
+    device_group.add_argument(
+        "--device-ids",
+        type=str,
+        help="Comma-separated device/product IDs",
+    )
+    select_parser.add_argument(
+        "--count",
+        type=int,
+        default=DEFAULT_THREAT_COUNT,
+        help=f"Number of threats to select (default {DEFAULT_THREAT_COUNT}, min {MIN_THREAT_COUNT}, max {MAX_THREAT_COUNT})",
+    )
+    select_parser.add_argument(
+        "--model",
+        default="gpt-4o-mini",
+        help="LLM model for threat selection (default: gpt-4o-mini; recommended: gpt-5.6-terra for larger context)",
+    )
+    select_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview selections without writing to database",
+    )
+    select_parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Enable verbose logging",
+    )
+    select_parser.set_defaults(func=select_command)
+
+    # list subcommand
+    list_parser = subparsers.add_parser("list", help="Preview selected threats")
+    list_parser.add_argument(
+        "--device-id",
+        type=int,
+        required=True,
+        help="Device/product ID to preview",
+    )
+    list_parser.add_argument(
+        "--count",
+        type=int,
+        default=DEFAULT_THREAT_COUNT,
+        help=f"Number of threats to preview (default {DEFAULT_THREAT_COUNT}, min {MIN_THREAT_COUNT}, max {MAX_THREAT_COUNT})",
+    )
+    list_parser.add_argument(
+        "--model",
+        default="gpt-4o-mini",
+        help="LLM model for threat selection (default: gpt-4o-mini; recommended: gpt-5.6-terra for larger context)",
+    )
+    list_parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Enable verbose logging",
+    )
+    list_parser.set_defaults(func=list_command)
+
+    args = parser.parse_args()
+    setup_logging(args.verbose)
+
+    return await args.func(args)
+
+
+if __name__ == "__main__":
+    exit_code = asyncio.run(main())
+    sys.exit(exit_code)

@@ -58,15 +58,14 @@ function updateFilteredThreats(items: Threat[], search: string, field: keyof Thr
 		if (search.trim() !== '') {
 			const term = search;
 			result = result.filter(t => {
-				const tag = (t.tag || '');
+				const tag = (t.tag || '').toLowerCase();
 				const name = (t.name || '').toLowerCase();
-				const description = (t.description || '');
-				const domain = (t.domain || '');
+				const domain = (t.domain || '').toLowerCase();
 				const probability = String(t.probability || '');
 				const mitigationLevel = String(t.mitigation_level || '');
-				const damageDescription = (t.damage_description || '');
-				const disabled = String(t.disabled);
-				return tag.includes(term) || name.includes(term.toLowerCase()) || description.includes(term) || domain.includes(term) || probability.includes(term) || mitigationLevel.includes(term) || damageDescription.includes(term) || disabled.includes(term);
+				const damageDescription = (t.damage_description || '').toLowerCase();
+				const disabled = String(t.disabled).toLowerCase();
+				return tag.includes(term.toLowerCase()) || name.includes(term.toLowerCase()) || domain.includes(term.toLowerCase()) || probability.includes(term) || mitigationLevel.includes(term) || damageDescription.includes(term.toLowerCase()) || disabled.includes(term.toLowerCase());
 			});
 		}
 		
@@ -235,8 +234,8 @@ async function searchCards(query: string, isEdit: boolean = false) {
 									<th class="tal sortable" class:sorted-asc={sortField === 'probability' && sortDirection === 'asc'} class:sorted-desc={sortField === 'probability' && sortDirection === 'desc'} onclick={() => toggleSort('probability')}>
 										Probability
 									</th>
-							<th class="tal sortable" class:sorted-asc={sortField === 'description' && sortDirection === 'asc'} class:sorted-desc={sortField === 'description' && sortDirection === 'desc'} onclick={() => toggleSort('description')}>
-									Description
+									<th class="tal sortable" class:sorted-asc={sortField === 'damage_description' && sortDirection === 'asc'} class:sorted-desc={sortField === 'damage_description' && sortDirection === 'desc'} onclick={() => toggleSort('damage_description')}>
+									Damage Description
 							</th>
 									<th class="tar">Actions</th>
 								</tr>
@@ -249,7 +248,7 @@ async function searchCards(query: string, isEdit: boolean = false) {
 									<td class="tal">{t.name}</td>
 									<td class="tal">{t.domain || '-'}</td>
 									<td class="tal">{t.probability || '-'}</td>
-									<td class="tal">{t.description || '-'}</td>
+									<td class="tal">{t.damage_description || '-'}</td>
 
 									<td class="tar">
 										<button

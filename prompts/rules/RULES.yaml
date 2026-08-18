@@ -143,12 +143,15 @@ RULES:
     name: "AI-enabled medical devices by company"
     description: "AI-enabled medical devices by company"
     logic: |
-      select device, company, submission_number, intended_use, superiority from products order by company, device
+      SELECT p.id,p.device, p.company, o.size, p.submission_number, p.intended_use,  o.arm
+      FROM public.products AS p
+      JOIN public.orgs AS o ON p.org_id = o.id
+      ORDER BY p.company, p.device;
   
   - rule_code: ALL-THREATS
     name: "Threat list"
     description: "Threat list"
     logic: |
-      show threat name, description, domain 
+      show tag, name, domain, probability, damage_description
       where  model_id = (select model_id from active_models limit 1)
       order by threat name

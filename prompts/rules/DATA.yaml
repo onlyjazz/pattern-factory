@@ -23,8 +23,10 @@ DATA:
           - updated_at
           - deleted_at
           - search_vector
+          - org_id
           - superiority
           - process_flag
+
 
         active_models:
           - user_id
@@ -70,6 +72,11 @@ DATA:
           - estimated_annual_sales
           - employees
           - headquarters
+          - size
+          - tier
+          - arm
+          - study_arm
+          - randomized_at
 
         patterns:
           - id
