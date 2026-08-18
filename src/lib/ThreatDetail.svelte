@@ -115,13 +115,12 @@
 					<div class="detail-field">
 						<label>Damage Description</label>
 						<div class="input">
-							<input
+							<textarea
 								id="threat-damage-description"
-								type="text"
 								bind:value={threat.damage_description}
 								class="input__text"
 								class:input__text_changed={threat.damage_description?.length > 0}
-							/>
+							></textarea>
 						</div>
 					</div>
 				</div>
