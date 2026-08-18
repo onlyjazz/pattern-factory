@@ -144,3 +144,11 @@ RULES:
     description: "AI-enabled medical devices by company"
     logic: |
       select device, company, submission_number, intended_use, superiority from products order by company, device
+  
+  - rule_code: ALL-THREATS
+    name: "Threat list"
+    description: "Threat list"
+    logic: |
+      show threat name, description, domain 
+      where  model_id = (select model_id from active_models limit 1)
+      order by threat name
