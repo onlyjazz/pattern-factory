@@ -38,6 +38,19 @@
 				<h3>Basic Information</h3>
 				<div class="detail-row">
 					<div class="detail-field">
+						<label>Name</label>
+						<div class="input">
+							<input
+								id="threat-name"
+								type="text"
+								bind:value={threat.name}
+								class="input__text"
+								class:input__text_changed={threat.name?.length > 0}
+								required
+							/>
+						</div>
+					</div>
+					<div class="detail-field">
 						<label>Tag</label>
 						<div class="input">
 							<input

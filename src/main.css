@@ -573,6 +573,11 @@ a.flask-link {
 	line-height: 12px;
 	color: rgba(0,0,0,0.38);
 }
+textarea.input__text {
+	min-height: calc(15 * 1.6em + 16px);
+	padding: 10px 0;
+	line-height: 1.6;
+}
 .input__text_changed {
 	padding-top: 12px;
 }

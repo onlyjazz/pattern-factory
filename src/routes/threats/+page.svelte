@@ -153,18 +153,20 @@ async function searchCards(query: string, isEdit: boolean = false) {
 		const response = await fetch(`${apiBase}/threats/${updatedThreat.id}`, {
 			method: 'PUT',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
+		body: JSON.stringify({
 				name: updatedThreat.name,
 				description: updatedThreat.description,
+				domain: updatedThreat.domain || null,
+				tag: updatedThreat.tag || null,
 				probability: updatedThreat.probability || null,
-					damage_description: updatedThreat.damage_description || null,
-					spoofing: updatedThreat.spoofing,
-					tampering: updatedThreat.tampering,
-					repudiation: updatedThreat.repudiation,
-					information_disclosure: updatedThreat.information_disclosure,
-					denial_of_service: updatedThreat.denial_of_service,
-					elevation_of_privilege: updatedThreat.elevation_of_privilege,
-					mitigation_level: updatedThreat.mitigation_level,
+				damage_description: updatedThreat.damage_description || null,
+				spoofing: updatedThreat.spoofing,
+				tampering: updatedThreat.tampering,
+				repudiation: updatedThreat.repudiation,
+				information_disclosure: updatedThreat.information_disclosure,
+				denial_of_service: updatedThreat.denial_of_service,
+				elevation_of_privilege: updatedThreat.elevation_of_privilege,
+				mitigation_level: updatedThreat.mitigation_level,
 				disabled: updatedThreat.disabled,
 				card_id: editSelectedCardId || null
 			})
