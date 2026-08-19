@@ -40,7 +40,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
 )
 
-CANONICAL_MODEL_ID = 35
+DEFAULT_CANONICAL_MODEL_ID = 37
 DEFAULT_THREAT_COUNT = 10
 MIN_THREAT_COUNT = 8
 MAX_THREAT_COUNT = 12
@@ -74,10 +74,12 @@ class ThreatSelectorService:
         db_url: str,
         dry_run: bool = False,
         llm_model: str = "gpt-4o-mini",
+        canonical_model_id: int = DEFAULT_CANONICAL_MODEL_ID,
     ):
         self.db_url = db_url
         self.dry_run = dry_run
         self.llm_model = llm_model
+        self.canonical_model_id = canonical_model_id
         self.pool: Optional[asyncpg.Pool] = None
         self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.canonical_threats: List[Dict[str, Any]] = []
@@ -128,7 +130,7 @@ class ThreatSelectorService:
                     WHERE t.model_id = $1 AND p.panel = $2
                     ORDER BY t.id
                     """,
-                    CANONICAL_MODEL_ID,
+                    self.canonical_model_id,
                     panel,
                 )
                 logger.info("Loaded canonical threats for panel: %s", panel)
@@ -145,7 +147,7 @@ class ThreatSelectorService:
                     WHERE model_id = $1
                     ORDER BY id
                     """,
-                    CANONICAL_MODEL_ID,
+                    self.canonical_model_id,
                 )
 
         # Convert rows to dicts and normalize datetime fields
@@ -163,7 +165,7 @@ class ThreatSelectorService:
         
         self.canonical_threats = threats_list
         self.canonical_threats_loaded = True
-        logger.info("Loaded %d canonical threats from model_id=%d", len(self.canonical_threats), CANONICAL_MODEL_ID)
+        logger.info("Loaded %d canonical threats from model_id=%d", len(self.canonical_threats), self.canonical_model_id)
 
     async def get_device_profile(self, device_id: int) -> Dict[str, Any]:
         """Fetch device profile from products table."""

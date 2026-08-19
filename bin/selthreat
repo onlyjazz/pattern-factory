@@ -42,7 +42,7 @@ from typing import List
 backend_path = os.path.join(os.path.dirname(__file__), "..", "backend")
 sys.path.insert(0, backend_path)
 
-from services.threat_selector_service import ThreatSelectorService, DEFAULT_THREAT_COUNT, MIN_THREAT_COUNT, MAX_THREAT_COUNT
+from services.threat_selector_service import ThreatSelectorService, DEFAULT_THREAT_COUNT, MIN_THREAT_COUNT, MAX_THREAT_COUNT, DEFAULT_CANONICAL_MODEL_ID
 
 logger = logging.getLogger("selthreat")
 
@@ -68,6 +68,7 @@ async def select_command(args: argparse.Namespace) -> int:
         db_url=db_url,
         dry_run=args.dry_run,
         llm_model=args.model,
+        canonical_model_id=args.canonical_model_id,
     )
 
     try:
@@ -130,6 +131,7 @@ async def list_command(args: argparse.Namespace) -> int:
         db_url=db_url,
         dry_run=True,  # list is always a preview
         llm_model=args.model,
+        canonical_model_id=args.canonical_model_id,
     )
 
     try:
@@ -229,6 +231,12 @@ async def main() -> int:
         help="LLM model for threat selection (default: gpt-4o-mini; recommended: gpt-5.6-terra for larger context)",
     )
     select_parser.add_argument(
+        "--canonical-model-id",
+        type=int,
+        default=DEFAULT_CANONICAL_MODEL_ID,
+        help=f"Canonical basis set model ID (default: {DEFAULT_CANONICAL_MODEL_ID})",
+    )
+    select_parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Preview selections without writing to database",
@@ -258,6 +266,12 @@ async def main() -> int:
         "--model",
         default="gpt-4o-mini",
         help="LLM model for threat selection (default: gpt-4o-mini; recommended: gpt-5.6-terra for larger context)",
+    )
+    list_parser.add_argument(
+        "--canonical-model-id",
+        type=int,
+        default=DEFAULT_CANONICAL_MODEL_ID,
+        help=f"Canonical basis set model ID (default: {DEFAULT_CANONICAL_MODEL_ID})",
     )
     list_parser.add_argument(
         "--verbose",
