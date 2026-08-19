@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""
-CLI tool for generating a basis set of orthogonal dimensionless threats.
+"""CLI tool for generating a basis set of orthogonal dimensionless threats.
 
 Usage:
     ./bin/basis-threats generate
     ./bin/basis-threats generate --arms=2,3 --sample-per-arm=5
+    ./bin/basis-threats generate --product-id=5
     ./bin/basis-threats generate --dry-run
     ./bin/basis-threats generate --model=gpt-5.5 --card-id=UUID
     ./bin/basis-threats validate
@@ -25,9 +25,16 @@ Arguments:
   --arms ARMS
                         Comma-separated org arms (default: 2,3 for generate, 1 for validate).
                         Valid values: 1, 2, or 3.
+                        Mutually exclusive with --product-id.
+
+  --product-id ID       Product ID for single-product threat generation (generate mode only).
+                        Extracts threats for one device and inserts into active model.
+                        Useful for validation: compare BASIS_THREATS vs SELTHREAT for same product.
+                        Mutually exclusive with --arms.
 
   --sample-per-arm N    Number of devices sampled from each arm (default: 10).
                         Must be at least 1.
+                        Ignored when --product-id is used.
 
   --card-id UUID        Card UUID to assign threats to (default: 7513ebae-a266-49b1-a088-3afacec21a02).
 
