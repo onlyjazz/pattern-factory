@@ -2,6 +2,17 @@
 
 Pattern Factory's agent-driven architecture orchestrates natural language processing, data extraction, and threat modeling through a multi-workflow supervisor system. This document describes all agents, their responsibilities, decision flows, and database interactions.
 
+## Database Connection
+
+**Database name**: `pattern-factory` (with hyphen, not underscore)
+
+**Always query the live database with psql, not migration scripts.** Example:
+```bash
+psql -d pattern-factory -c "SELECT COUNT(*) FROM threat.threats WHERE model_id = 35"
+```
+
+Schemas: `public` (patterns, products, orgs, posts, people, categories, etc.), `threat` (threats, assets, vulnerabilities, countermeasures, models, etc.)
+
 ## Rules Organization
 
 This project uses **local AGENTS.md files** (not a centralized WARP.md) to document project-specific guidance:
