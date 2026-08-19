@@ -12,7 +12,7 @@ BASIS_THREATS:
     threats:
       - name: short canonical threat name
         description: specific concise explanation
-        probability: integer 1-5
+        probability: integer 0-100; probability of threat occurring in a single loss event
         damage_description: what harm occurs if this threat materializes
         spoofing: boolean
         tampering: boolean
@@ -33,19 +33,21 @@ SELTHREAT:
   version: selthreat-v1
   task: |
     Select the most plausible threats from a canonical basis set (1,800 threats)
-    for a specific FDA-cleared AI-enabled medical device. Return top 8-12 threats
-    scored by relevance to the device's intended use.
+    for a specific FDA-cleared AI-enabled medical device.
+    
+    Select 8 - 12 materially distinct threats, scored by relevance to the device's intended use.
+    Do not select multiple threats representing substantially the same failure mechanism unless 
+    they create different damage pathways or require different mitigations.
   classification_basis: |
     Threat selection is based on:
-    1. Device CLINICAL_CONTEXT (indicated_use, indications_for_use fields)
+    1. Device CLINICAL_CONTEXT (intended_use, indications_for_use fields)
     2. Device DESCRIPTION (device_description field)
     
   threat_matching_criteria: |
     Threats from the basis set are matched using:
     1. Threat NAME (semantic relevance to device indication)
-    2. Threat DESCRIPTION (full narrative matching device profile)
-    3. Threat DOMAIN (clinical, safety, cybersecurity, regulatory, operations)
-    4. Threat DAMAGE_DESCRIPTION (matching probable threat scenario)
+    2. Threat DOMAIN (clinical, safety, cybersecurity, regulatory, operations)
+    3. Threat DAMAGE_DESCRIPTION (matching probable threat scenario)
   initial_scoring_prompt: |
     You are a medical device security expert specializing in AI/ML-enabled medical devices and expert software engineer
     Your task is to select the most plausible threat scenarios for a given FDA-cleared medical device.
@@ -58,8 +60,8 @@ SELTHREAT:
     ]
   initial_scoring_instructions: |
     1. Review each threat's name and domain against the device profile
-    2. Rate each threat's plausibility on a scale of 1-10
-       (10 = highly plausible, 1 = not plausible)
+    2. Rate each threat's plausibility on a scale of 0-100
+       (100 = highly plausible, 0 = not plausible)
     3. Select the top N most plausible threats
     4. Return ONLY a valid JSON array
     Prioritize threats that match:
@@ -78,11 +80,12 @@ SELTHREAT:
   validation_scoring_instructions: |
     For each threat, read its description carefully and decide if it applies to
     this DEPLOYED DEVICE at runtime.
-    REJECT (do NOT include) threats about:
-    - Surgical/procedural blood loss (unless device performs surgery)
-    - Anesthesia-related risks (unless device involves anesthesia)
-    - Specific medical procedures (unless device performs/screens for them)
-    - Specific medical conditions (unless device screens/treats them)
+    Do not include threats that were derived from a device with a different clinical indication than the one in the intended_use field.
+    For example: 
+    - Don't include Surgical/procedural blood loss (unless device performs surgery)
+    - Don't include Anesthesia-related risks (unless device involves anesthesia)
+    - Don't include Specific medical procedures (unless device performs/screens for them)
+    - Don't include Specific medical conditions (unless device screens/treats them)
     KEEP threats about:
     - Data input/output risks
     - Model behavior (bias, drift, calibration)
