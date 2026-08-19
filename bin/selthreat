@@ -227,8 +227,8 @@ async def main() -> int:
     )
     select_parser.add_argument(
         "--model",
-        default="gpt-4o-mini",
-        help="LLM model for threat selection (default: gpt-4o-mini; recommended: gpt-5.6-terra for larger context)",
+        default="gpt-5.6-terra",
+        help="LLM model for threat selection (default: gpt-5.6-terra)",
     )
     select_parser.add_argument(
         "--canonical-model-id",
@@ -264,8 +264,8 @@ async def main() -> int:
     )
     list_parser.add_argument(
         "--model",
-        default="gpt-4o-mini",
-        help="LLM model for threat selection (default: gpt-4o-mini; recommended: gpt-5.6-terra for larger context)",
+        default="gpt-5.6-terra",
+        help="LLM model for threat selection (default: gpt-5.6-terra)",
     )
     list_parser.add_argument(
         "--canonical-model-id",

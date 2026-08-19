@@ -1301,8 +1301,8 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     )
     generate_parser.add_argument(
         "--model",
-        default=os.getenv("BASIS_THREATS_MODEL", "gpt-5.5"),
-        help="OpenAI model used for threat extraction (default: BASIS_THREATS_MODEL or gpt-5.5).",
+        default=os.getenv("BASIS_THREATS_MODEL", "gpt-5.6-terra"),
+        help="OpenAI model used for threat extraction (default: BASIS_THREATS_MODEL or gpt-5.6-terra).",
     )
     generate_parser.add_argument(
         "--product-id",
@@ -1344,8 +1344,8 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     )
     validate_parser.add_argument(
         "--model",
-        default=os.getenv("BASIS_THREATS_MODEL", "gpt-5.5"),
-        help="OpenAI model used for validation threat extraction (default: BASIS_THREATS_MODEL or gpt-5.5).",
+        default=os.getenv("BASIS_THREATS_MODEL", "gpt-5.6-terra"),
+        help="OpenAI model used for validation threat extraction (default: BASIS_THREATS_MODEL or gpt-5.6-terra).",
     )
     validate_parser.add_argument(
         "--version",
