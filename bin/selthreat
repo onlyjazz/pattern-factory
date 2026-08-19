@@ -1,28 +1,28 @@
 #!/usr/bin/env python3
-"""
-selthreat - Select and bulk-import threats from canonical basis set.
+"""selthreat - Select and bulk-import threats from canonical basis set.
 
 This tool selects the most plausible threats from the canonical basis set
-(model_id=35) for given FDA-cleared AI-enabled medical devices, then copies
+(model_id=37) for given FDA-cleared AI-enabled medical devices, then copies
 them into a target threat model.
 
 Usage:
-    ./bin/selthreat select --model-id=2 --device-id=5
-    ./bin/selthreat select --model-id=2 --device-ids=5,12,18 --count=10
-    ./bin/selthreat select --model-id=2 --device-id=5 --dry-run
-    ./bin/selthreat list --device-id=5 --count=8
-    ./bin/selthreat select --model-id=2 --device-id=5 --model=gpt-4o-mini
+    ./bin/selthreat select --model-id=2 --product-id=5
+    ./bin/selthreat select --model-id=2 --product-ids=5,12,18 --count=10
+    ./bin/selthreat select --model-id=2 --product-id=5 --dry-run
+    ./bin/selthreat list --product-id=5 --count=8
+    ./bin/selthreat select --model-id=2 --product-id=5 --model=gpt-4o-mini
 
 Commands:
-  select                Select and import threats for device(s) into a target model
+  select                Select and import threats for product(s) into a target model
   list                  Preview selected threats without importing
 
 Common Arguments:
-  --device-id ID        Single device/product ID to process
-  --device-ids IDS      Comma-separated list of device/product IDs
+  --product-id ID       Single product ID to process
+  --product-ids IDS     Comma-separated list of product IDs
   --model-id ID         Target threat model ID (required for 'select')
   --count N             Number of threats to select (default 10, min 8, max 12)
   --model MODEL         LLM model for threat selection (default: gpt-4o-mini)
+  --canonical-model-id  Canonical basis set model ID (default: 37)
   --dry-run             Preview selections without writing to database
   --verbose             Enable verbose logging
 
@@ -53,9 +53,9 @@ async def select_command(args: argparse.Namespace) -> int:
         logger.error("--model-id is required for the select command")
         return 1
 
-    device_ids = parse_device_ids(args)
-    if not device_ids:
-        logger.error("At least one device ID is required (--device-id or --device-ids)")
+    product_ids = parse_product_ids(args)
+    if not product_ids:
+        logger.error("At least one product ID is required (--product-id or --product-ids)")
         return 1
 
     threat_count = clamp_threat_count(args.count)
@@ -73,22 +73,22 @@ async def select_command(args: argparse.Namespace) -> int:
 
     try:
         await service.initialize()
-        logger.info("Processing %d device(s) with threat count %d", len(device_ids), threat_count)
+        logger.info("Processing %d product(s) with threat count %d", len(product_ids), threat_count)
 
         all_results = []
-        for i, device_id in enumerate(device_ids, 1):
-            logger.info("[%d/%d] Selecting threats for device_id=%d", i, len(device_ids), device_id)
+        for i, product_id in enumerate(product_ids, 1):
+            logger.info("[%d/%d] Selecting threats for product_id=%d", i, len(product_ids), product_id)
             try:
                 result = await service.select_threats_for_device(
                     target_model_id=args.model_id,
-                    device_id=device_id,
+                    device_id=product_id,
                     threat_count=threat_count,
                 )
                 all_results.append(result)
                 print_result(result)
                 print()  # blank line
             except Exception as e:
-                logger.error("Failed to select threats for device_id=%d: %s", device_id, str(e))
+                logger.error("Failed to select threats for product_id=%d: %s", product_id, str(e))
                 if not args.dry_run:
                     logger.error("Transaction rolled back; no threats inserted")
                     return 1
@@ -98,7 +98,7 @@ async def select_command(args: argparse.Namespace) -> int:
             total_selected = sum(r["threat_count_selected"] for r in all_results)
             total_inserted = sum(r["threat_count_inserted"] for r in all_results)
             logger.info(
-                "Summary: %d device(s) processed, %d threats selected, %d threats inserted",
+                "Summary: %d product(s) processed, %d threats selected, %d threats inserted",
                 len(all_results),
                 total_selected,
                 total_inserted,
@@ -117,8 +117,8 @@ async def select_command(args: argparse.Namespace) -> int:
 
 async def list_command(args: argparse.Namespace) -> int:
     """Execute the list subcommand."""
-    if args.device_id is None:
-        logger.error("--device-id is required for the list command")
+    if args.product_id is None:
+        logger.error("--product-id is required for the list command")
         return 1
 
     threat_count = clamp_threat_count(args.count)
@@ -136,10 +136,10 @@ async def list_command(args: argparse.Namespace) -> int:
 
     try:
         await service.initialize()
-        logger.info("Previewing threats for device_id=%d (threat_count=%d)", args.device_id, threat_count)
+        logger.info("Previewing threats for product_id=%d (threat_count=%d)", args.product_id, threat_count)
 
         result = await service.list_selected_threats(
-            device_id=args.device_id,
+            device_id=args.product_id,
             threat_count=threat_count,
         )
         print_result(result)
@@ -152,18 +152,18 @@ async def list_command(args: argparse.Namespace) -> int:
         await service.cleanup()
 
 
-def parse_device_ids(args: argparse.Namespace) -> List[int]:
-    """Parse device IDs from args."""
-    device_ids = []
-    if args.device_id is not None:
-        device_ids.append(args.device_id)
-    if hasattr(args, "device_ids") and args.device_ids:
+def parse_product_ids(args: argparse.Namespace) -> List[int]:
+    """Parse product IDs from args."""
+    product_ids = []
+    if args.product_id is not None:
+        product_ids.append(args.product_id)
+    if hasattr(args, "product_ids") and args.product_ids:
         try:
-            device_ids.extend([int(d.strip()) for d in args.device_ids.split(",")])
+            product_ids.extend([int(p.strip()) for p in args.product_ids.split(",")])
         except ValueError as e:
-            logger.error("Invalid device ID format: %s", str(e))
+            logger.error("Invalid product ID format: %s", str(e))
             return []
-    return device_ids
+    return product_ids
 
 
 def clamp_threat_count(count: int) -> int:
@@ -208,16 +208,16 @@ async def main() -> int:
         required=True,
         help="Target threat model ID",
     )
-    device_group = select_parser.add_mutually_exclusive_group(required=True)
-    device_group.add_argument(
-        "--device-id",
+    product_group = select_parser.add_mutually_exclusive_group(required=True)
+    product_group.add_argument(
+        "--product-id",
         type=int,
-        help="Single device/product ID",
+        help="Single product ID",
     )
-    device_group.add_argument(
-        "--device-ids",
+    product_group.add_argument(
+        "--product-ids",
         type=str,
-        help="Comma-separated device/product IDs",
+        help="Comma-separated product IDs",
     )
     select_parser.add_argument(
         "--count",
@@ -251,10 +251,10 @@ async def main() -> int:
     # list subcommand
     list_parser = subparsers.add_parser("list", help="Preview selected threats")
     list_parser.add_argument(
-        "--device-id",
+        "--product-id",
         type=int,
         required=True,
-        help="Device/product ID to preview",
+        help="Product ID to preview",
     )
     list_parser.add_argument(
         "--count",
