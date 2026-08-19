@@ -12,7 +12,7 @@ BASIS_THREATS:
     threats:
       - name: short canonical threat name
         description: specific concise explanation
-        probability: integer 1-5
+        probability: integer 0-100; probability of threat occurring in a single loss event
         damage_description: what harm occurs if this threat materializes
         spoofing: boolean
         tampering: boolean
@@ -28,3 +28,69 @@ BASIS_THREATS:
         - Third-party cloud or mobile dependency is compromised
         - Cloud or mobile dependency is compromised
       keep: Cloud or mobile dependency is compromised
+
+SELTHREAT:
+  version: selthreat-v1
+  task: |
+    Select the most plausible threats from a canonical basis set (1,800 threats)
+    for a specific FDA-cleared AI-enabled medical device.
+    
+    Select 8 - 12 materially distinct threats, scored by relevance to the device's intended use.
+    Do not select multiple threats representing substantially the same failure mechanism unless 
+    they create different damage pathways or require different mitigations.
+  classification_basis: |
+    Threat selection is based on:
+    1. Device CLINICAL_CONTEXT (intended_use, indications_for_use fields)
+    2. Device DESCRIPTION (device_description field)
+    
+  threat_matching_criteria: |
+    Threats from the basis set are matched using:
+    1. Threat NAME (semantic relevance to device indication)
+    2. Threat DOMAIN (clinical, safety, cybersecurity, regulatory, operations)
+    3. Threat DAMAGE_DESCRIPTION (matching probable threat scenario)
+  initial_scoring_prompt: |
+    You are a medical device security expert specializing in AI/ML-enabled medical devices and expert software engineer
+    Your task is to select the most plausible threat scenarios for a given FDA-cleared medical device.
+    Given a device profile and a list of canonical threat IDs with names, rate each threat's relevance.
+    Return a JSON array of the top threats with scores based on threat names and domains only.
+  initial_scoring_output: |
+    [
+      {"id": <int>, "tag": "<str>", "name": "<str>", "score": <float>},
+      ...
+    ]
+  initial_scoring_instructions: |
+    1. Review each threat's name and domain against the device profile
+    2. Rate each threat's plausibility on a scale of 0-100
+       (100 = highly plausible, 0 = not plausible)
+    3. Select the top N most plausible threats
+    4. Return ONLY a valid JSON array
+    Prioritize threats that match:
+    - The device's clinical domain and indication
+    - AI/ML-specific risks (training data, model degradation, adversarial inputs)
+    - Integration risks (interfaces, data exchange)
+    - Patient safety impact scenarios
+    - Regulatory compliance risks
+  validation_scoring_prompt: |
+    You are a medical device security expert.
+    You are given a device profile and a list of threats with full descriptions.
+    Determine which threats are genuinely applicable to this DEPLOYED DEVICE at runtime.
+    Return ONLY a JSON array of threat IDs that should be kept (NOT rejected).
+  validation_scoring_output: |
+    [<id1>, <id2>, ...]
+  validation_scoring_instructions: |
+    For each threat, read its description carefully and decide if it applies to
+    this DEPLOYED DEVICE at runtime.
+    Do not include threats that were derived from a device with a different clinical indication than the one in the intended_use field.
+    For example: 
+    - Don't include Surgical/procedural blood loss (unless device performs surgery)
+    - Don't include Anesthesia-related risks (unless device involves anesthesia)
+    - Don't include Specific medical procedures (unless device performs/screens for them)
+    - Don't include Specific medical conditions (unless device screens/treats them)
+    KEEP threats about:
+    - Data input/output risks
+    - Model behavior (bias, drift, calibration)
+    - Clinical decision support risks
+    - Cybersecurity at runtime
+    - Software security issues
+    - Access control, confidentiality, integrity and availability issues
+    Return only JSON array of IDs. No explanation.
