@@ -2,14 +2,15 @@
 """CLI tool for generating a basis set of orthogonal dimensionless threats.
 
 Usage:
-    ./bin/basis-threats generate
-    ./bin/basis-threats generate --arms=2,3 --sample-per-arm=5
-    ./bin/basis-threats generate --product-id=5
-    ./bin/basis-threats generate --dry-run
-    ./bin/basis-threats generate --model=gpt-5.5 --card-id=UUID
-    ./bin/basis-threats validate
-    ./bin/basis-threats validate --arms=1 --version=latest
-    ./bin/basis-threats validate --version=2
+    ./bin/genthreat generate
+    ./bin/genthreat generate --arms=2,3 --sample-per-arm=5
+    ./bin/genthreat generate --product-id=5
+    ./bin/genthreat generate --product-id=5 --model-id=36
+    ./bin/genthreat generate --product-id=5 --dry-run
+    ./bin/genthreat generate --model=gpt-5.5 --card-id=UUID
+    ./bin/genthreat validate
+    ./bin/genthreat validate --arms=1 --version=latest
+    ./bin/genthreat validate --version=2
 
 Environment Variables (required in .env):
     DATABASE_URL       PostgreSQL connection string
@@ -28,9 +29,13 @@ Arguments:
                         Mutually exclusive with --product-id.
 
   --product-id ID       Product ID for single-product threat generation (generate mode only).
-                        Extracts threats for one device and inserts into active model.
+                        Extracts threats for one device and inserts into target model.
                         Useful for validation: compare BASIS_THREATS vs SELTHREAT for same product.
                         Mutually exclusive with --arms.
+
+  --model-id ID         Target threat model ID for insertion (generate mode only).
+                        If not specified with --product-id, uses active model (default).
+                        Useful for flexible validation: insert to different model than active.
 
   --sample-per-arm N    Number of devices sampled from each arm (default: 10).
                         Must be at least 1.

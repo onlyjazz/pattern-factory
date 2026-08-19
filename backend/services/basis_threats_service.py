@@ -71,12 +71,14 @@ class BasisThreatsService:
         dry_run: bool = False,
         sample_per_arm: int = 10,
         card_id: str = CARD_ID,
+        target_model_id: Optional[int] = None,
     ):
         self.db_url = db_url
         self.model_name = model_name
         self.dry_run = dry_run
         self.sample_per_arm = sample_per_arm
         self.card_id = card_id
+        self.target_model_id = target_model_id
         self.pool: Optional[asyncpg.Pool] = None
         self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.prompt_config = load_basis_threats_prompt_config()
@@ -817,9 +819,19 @@ class BasisThreatsService:
 
         return inserted
 
-    async def process_generate_single_product(self, product_id: int) -> Dict[str, Any]:
-        """Generate threats for a single product and insert into active model."""
-        model_id = await self.get_active_model_id()
+    async def process_generate_single_product(self, product_id: int, target_model_id: Optional[int] = None) -> Dict[str, Any]:
+        """Generate threats for a single product and insert into target model.
+        
+        Args:
+            product_id: Product ID to process
+            target_model_id: Target threat model ID for insertion. If not provided, uses active model.
+        """
+        if target_model_id is not None:
+            model_id = target_model_id
+        elif self.target_model_id is not None:
+            model_id = self.target_model_id
+        else:
+            model_id = await self.get_active_model_id()
         await self.validate_card_id()
         version = await self.get_next_run_version(model_id)
         existing_basis_threats = await self.fetch_existing_basis_threats(model_id)
@@ -1299,6 +1311,12 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         help="Product ID for single-product threat generation (alternative to --arms). Used for validation.",
     )
     generate_parser.add_argument(
+        "--model-id",
+        type=int,
+        default=None,
+        help="Target threat model ID for insertion (default: uses active model).",
+    )
+    generate_parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Generate and print counts without inserting threats.",
@@ -1399,13 +1417,15 @@ async def main() -> None:
         dry_run=getattr(args, "dry_run", False),
         sample_per_arm=sample_per_arm,
         card_id=args.card_id,
+        target_model_id=getattr(args, "model_id", None),
     )
 
     try:
         await service.initialize()
         if args.mode == "generate":
             if hasattr(args, "product_id") and args.product_id:
-                await service.process_generate_single_product(args.product_id)
+                target_model_id = getattr(args, "model_id", None)
+                await service.process_generate_single_product(args.product_id, target_model_id=target_model_id)
             else:
                 await service.process_generate(arms)
         else:
