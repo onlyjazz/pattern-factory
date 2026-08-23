@@ -13,6 +13,12 @@ psql -d pattern-factory -c "SELECT COUNT(*) FROM threat.threats WHERE model_id =
 
 Schemas: `public` (patterns, products, orgs, posts, people, categories, etc.), `threat` (threats, assets, vulnerabilities, countermeasures, models, etc.)
 
+## Agent Continuity Rule (CRITICAL)
+
+**When you return from the terminal or paste test output, treat it as a continuation of active work, not a new interaction.** If context is unclear from the message alone, immediately call `search_conversation_history` to recover prior task context instead of asking the user to repeat themselves. This prevents losing mid-task progress when developers escape to run tests, check logs, or verify output. Treat pasted query results, error messages, and command output as signals that the user is mid-stream, working on the branch specified in their git HEAD.
+
+---
+
 ## Rules Organization
 
 This project uses **local AGENTS.md files** (not a centralized WARP.md) to document project-specific guidance:

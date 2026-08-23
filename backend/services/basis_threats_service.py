@@ -958,6 +958,19 @@ class BasisThreatsService:
         results["deduped_candidate_threats"] = deduped_candidate_threats
         results["new_basis_threats"] = novel_threats
         results["matched_observations"] = matched_observations
+        
+        # Print single-product results
+        print(f"\nCandidate threats found before dedupe: {len(candidate_threats)}")
+        print(f"Existing basis threats for active model/card: {len(existing_basis_threats)}")
+        print(f"Run-unique candidate threats after dedupe: {len(deduped_candidate_threats)}")
+        print(f"New basis threats after existing-basis dedupe: {len(novel_threats)}")
+        if self.dry_run:
+            print(f"Dry run: {inserted_count} new basis threats not inserted")
+        else:
+            print(f"Inserted new basis threats: {inserted_count}")
+        print("\nInserted threat tags and names:")
+        for threat in novel_threats:
+            print(f"- {threat['tag']}: {threat['name']}")
 
         return results
 
@@ -1136,9 +1149,9 @@ class BasisThreatsService:
             print(f"Dry run: {inserted_count} new basis threats not inserted")
         else:
             print(f"Inserted new basis threats: {inserted_count}")
-        print("\nNew threat names found")
-        for threat_name in results["threat_names_found"]:
-            print(f"- {threat_name}")
+        print("\nInserted threat tags and names:")
+        for threat in novel_threats:
+            print(f"- {threat['tag']}: {threat['name']}")
 
         token_summary = self.print_run_token_summary(results["processed"])
         results["model"] = self.model_name

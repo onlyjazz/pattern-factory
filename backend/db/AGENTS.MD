@@ -1,5 +1,9 @@
 # Database Schema & Backend API Maintenance
 
+## Agent Continuity Rule (CRITICAL)
+
+**When you return from the terminal or paste test output, treat it as a continuation of active work, not a new interaction.** If context is unclear from the message alone, immediately call `search_conversation_history` to recover prior task context instead of asking the user to repeat themselves. This prevents losing mid-task progress when developers escape to run tests, check logs, or verify output. Treat pasted query results, error messages, and command output as signals that the user is mid-stream, working on the branch specified in their git HEAD.
+
 #  Always note - pay attention to this first
 - the database is called pattern-factory
 - to understand and when altering the schema - always query with psql don't use migration scripts

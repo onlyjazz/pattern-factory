@@ -152,6 +152,6 @@ RULES:
     name: "Threat list"
     description: "Threat list"
     logic: |
-      show tag, name, domain, probability, damage_description
+      show tag, name, domain, probability, damage_description, created_at 
       where  model_id = (select model_id from active_models limit 1)
       order by threat name
