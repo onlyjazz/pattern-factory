@@ -885,6 +885,13 @@ class BasisThreatsService:
             }
         )
         deduped_candidate_threats = self.dedupe_basis_threats(candidate_threats, version)
+        
+        # Map deduped threats by name key for matching against existing basis threats
+        deduped_by_name_key: Dict[str, Dict[str, Any]] = {}
+        for threat in deduped_candidate_threats:
+            key = self.name_key(threat["name"])
+            deduped_by_name_key[key] = threat
+        
         matched_observations = []
         unmatched_observations = []
         for observation in observations:
@@ -904,10 +911,20 @@ class BasisThreatsService:
             else:
                 unmatched_observations.append(observation)
 
-        novel_threats = self.dedupe_basis_threats(
-            [observation["generated_threat"] for observation in unmatched_observations],
-            version,
-        )
+        # Collect novel threats from the globally deduped set
+        # Do NOT dedupe again—use the deduped_candidate_threats directly
+        unmatched_name_keys = {
+            self.name_key(obs["generated_threat"]["name"])
+            for obs in unmatched_observations
+        }
+        novel_threats = [
+            threat for threat in deduped_candidate_threats
+            if self.name_key(threat["name"]) in unmatched_name_keys
+        ]
+        
+        # Re-assign tags to reflect product-specific numbering
+        for index, threat in enumerate(novel_threats, 1):
+            threat["tag"] = f"BASIS-{version}-{product_id}-{index:02d}"
         inserted_count = await self.insert_threats({"threats": novel_threats})
         inserted_threats = await self.fetch_threats_by_tags(
             model_id,
@@ -1014,6 +1031,7 @@ class BasisThreatsService:
                 }
             )
         deduped_candidate_threats = self.dedupe_basis_threats(candidate_threats, version)
+        
         matched_observations = []
         unmatched_observations = []
         for observation in observations:
@@ -1033,10 +1051,16 @@ class BasisThreatsService:
             else:
                 unmatched_observations.append(observation)
 
-        novel_threats = self.dedupe_basis_threats(
-            [observation["generated_threat"] for observation in unmatched_observations],
-            version,
-        )
+        # Collect novel threats from the globally deduped set
+        # Do NOT dedupe again—use the deduped_candidate_threats directly
+        unmatched_name_keys = {
+            self.name_key(obs["generated_threat"]["name"])
+            for obs in unmatched_observations
+        }
+        novel_threats = [
+            threat for threat in deduped_candidate_threats
+            if self.name_key(threat["name"]) in unmatched_name_keys
+        ]
         inserted_count = await self.insert_threats({"threats": novel_threats})
         inserted_threats = await self.fetch_threats_by_tags(
             model_id,
