@@ -819,167 +819,34 @@ class BasisThreatsService:
 
         return inserted
 
-    async def process_generate_single_product(self, product_id: int, target_model_id: Optional[int] = None) -> Dict[str, Any]:
-        """Generate threats for a single product and insert into target model.
-        
-        Args:
-            product_id: Product ID to process
-            target_model_id: Target threat model ID for insertion. If not provided, uses active model.
-        """
-        if target_model_id is not None:
-            model_id = target_model_id
-        elif self.target_model_id is not None:
-            model_id = self.target_model_id
-        else:
-            model_id = await self.get_active_model_id()
-        await self.validate_card_id()
-        version = await self.get_next_run_version(model_id)
-        existing_basis_threats = await self.fetch_existing_basis_threats(model_id)
+    async def process_generate_single_product(
+        self,
+        product_id: int,
+        target_model_id: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """Generate threats for one product through the standard run pipeline."""
         product = await self.get_single_product(product_id)
-        products = [product]
-
-        results: Dict[str, Any] = {
-            "mode": "generate",
-            "model_id": model_id,
-            "product_id": product_id,
-            "product_name": product["device"],
-            "card_id": self.card_id,
-            "version": version,
-            "dry_run": self.dry_run,
-            "existing_basis_threat_count": len(existing_basis_threats),
-            "processed": [],
-        }
-        candidate_threats: List[Dict[str, Any]] = []
-        observations: List[Dict[str, Any]] = []
-
-        print(f"\nGenerating threats for {product['device']} (product_id={product_id})")
-        threats_json = await self.extract_threats_for_product(product, model_id, version)
-        unique_count = len(threats_json["threats"])
-        candidate_threats.extend(threats_json["threats"])
-        usage = threats_json["openai_usage"]
-        for threat in threats_json["threats"]:
-            observations.append(
-                {
-                    "product_id": product["id"],
-                    "generated_threat": threat,
-                    "source_profile_hash": threats_json["source_profile_hash"],
-                    "source_token_estimate": threats_json["source_profile_tokens_estimate"],
-                    "prompt_tokens": usage.get("prompt_tokens"),
-                    "completion_tokens": usage.get("completion_tokens"),
-                    "total_tokens": usage.get("total_tokens"),
-                }
-            )
-        print(f"{product['device']}: {unique_count} unique threats found")
-        self.print_token_usage(threats_json)
-
-        results["processed"].append(
-            {
-                "product_id": product["id"],
-                "device": product["device"],
-                "arm": product["arm"],
-                "unique_threats": unique_count,
-                "inserted_threats": 0,
-                "source_profile_tokens_estimate": threats_json["source_profile_tokens_estimate"],
-                "openai_usage": threats_json["openai_usage"],
-                "threats": threats_json["threats"],
-            }
+        results = await self.process_generate(
+            arms=[product["arm"]],
+            products=[product],
+            target_model_id=target_model_id,
         )
-        deduped_candidate_threats = self.dedupe_basis_threats(candidate_threats, version)
-        
-        # Map deduped threats by name key for matching against existing basis threats
-        deduped_by_name_key: Dict[str, Dict[str, Any]] = {}
-        for threat in deduped_candidate_threats:
-            key = self.name_key(threat["name"])
-            deduped_by_name_key[key] = threat
-        
-        matched_observations = []
-        unmatched_observations = []
-        for observation in observations:
-            match = self.find_basis_match(
-                observation["generated_threat"],
-                existing_basis_threats,
-            )
-            if match:
-                matched_observations.append(
-                    {
-                        **observation,
-                        "threat_id": match["id"],
-                        "match_type": match["match_type"],
-                        "match_score": match["score"],
-                    }
-                )
-            else:
-                unmatched_observations.append(observation)
-
-        # Collect novel threats from the globally deduped set
-        # Do NOT dedupe again—use the deduped_candidate_threats directly
-        unmatched_name_keys = {
-            self.name_key(obs["generated_threat"]["name"])
-            for obs in unmatched_observations
-        }
-        novel_threats = [
-            threat for threat in deduped_candidate_threats
-            if self.name_key(threat["name"]) in unmatched_name_keys
-        ]
-        
-        # Re-assign tags to reflect product-specific numbering
-        for index, threat in enumerate(novel_threats, 1):
-            threat["tag"] = f"BASIS-{version}-{product_id}-{index:02d}"
-        inserted_count = await self.insert_threats({"threats": novel_threats})
-        inserted_threats = await self.fetch_threats_by_tags(
-            model_id,
-            [threat["tag"] for threat in novel_threats],
-        )
-        new_threat_ids_by_name_key = {
-            self.name_key(threat["name"]): threat["id"]
-            for threat in inserted_threats
-        }
-        for observation in unmatched_observations:
-            threat_key = self.name_key(observation["generated_threat"]["name"])
-            threat_id = new_threat_ids_by_name_key.get(threat_key)
-            if threat_id is None:
-                raise RuntimeError(
-                    f"Could not resolve inserted basis threat for {observation['generated_threat']['name']}"
-                )
-            matched_observations.append(
-                {
-                    **observation,
-                    "threat_id": threat_id,
-                    "match_type": "new",
-                    "match_score": 1.0,
-                }
-            )
-
-        results["candidate_threat_count"] = len(candidate_threats)
-        results["run_unique_candidate_threat_count"] = len(deduped_candidate_threats)
-        results["new_basis_threat_count"] = len(novel_threats)
-        results["final_inserted_threats"] = inserted_count
-        results["threat_names_found"] = [threat["name"] for threat in novel_threats]
-        results["deduped_candidate_threats"] = deduped_candidate_threats
-        results["new_basis_threats"] = novel_threats
-        results["matched_observations"] = matched_observations
-        
-        # Print single-product results
-        print(f"\nCandidate threats found before dedupe: {len(candidate_threats)}")
-        print(f"Existing basis threats for active model/card: {len(existing_basis_threats)}")
-        print(f"Run-unique candidate threats after dedupe: {len(deduped_candidate_threats)}")
-        print(f"New basis threats after existing-basis dedupe: {len(novel_threats)}")
-        if self.dry_run:
-            print(f"Dry run: {inserted_count} new basis threats not inserted")
-        else:
-            print(f"Inserted new basis threats: {inserted_count}")
-        print("\nInserted threat tags and names:")
-        for threat in novel_threats:
-            print(f"- {threat['tag']}: {threat['name']}")
-
+        results["product_id"] = product_id
+        results["product_name"] = product["device"]
         return results
 
-    async def process_generate(self, arms: List[int]) -> Dict[str, Any]:
-        model_id = await self.get_active_model_id()
+    async def process_generate(
+        self,
+        arms: List[int],
+        products: Optional[List[Dict[str, Any]]] = None,
+        target_model_id: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        model_id = target_model_id or self.target_model_id or await self.get_active_model_id()
         await self.validate_card_id()
         version = await self.get_next_run_version(model_id)
         existing_basis_threats = await self.fetch_existing_basis_threats(model_id)
-        products = await self.sample_products(arms)
+        if products is None:
+            products = await self.sample_products(arms)
         run_id = None
         if not self.dry_run:
             run_id = await self.create_basis_run(
@@ -988,7 +855,7 @@ class BasisThreatsService:
                 len(existing_basis_threats),
             )
 
-        if len(products) < self.sample_per_arm * len(arms):
+        if len(products) < self.sample_per_arm * len(arms) and len(products) != 1:
             logger.warning(
                 "Sample contains %s products; expected %s.",
                 len(products),
@@ -1430,7 +1297,7 @@ async def main() -> None:
         # Handle single product mode
         if args.mode == "generate" and hasattr(args, "product_id") and args.product_id:
             arms = None
-            sample_per_arm = None
+            sample_per_arm = 1
         else:
             arms = parse_arms(args.arms)
             sample_per_arm = validate_sample_per_arm(args.sample_per_arm)
