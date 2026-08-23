@@ -793,6 +793,7 @@ class BasisThreatsService:
                             disabled = EXCLUDED.disabled,
                             card_id = EXCLUDED.card_id,
                             domain = EXCLUDED.domain,
+                            created_at = EXCLUDED.created_at,
                             updated_at = EXCLUDED.updated_at
                         """,
                         threat["model_id"],
