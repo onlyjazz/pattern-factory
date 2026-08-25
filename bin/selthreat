@@ -5,12 +5,16 @@ This tool selects the most plausible threats from the canonical basis set
 (model_id=37) for given FDA-cleared AI-enabled medical devices, then copies
 them into a target threat model.
 
-Usage:
+Usage (select is the default command):
+    ./bin/selthreat --model-id=2 --product-id=5
+    ./bin/selthreat --model-id=2 --product-ids=5,12,18 --count=10
+    ./bin/selthreat --model-id=2 --product-id=5 --dry-run
+    ./bin/selthreat list --product-id=5 --count=8
+    ./bin/selthreat --model-id=2 --product-id=5 --model=gpt-4o-mini
+
+Or with explicit 'select' command:
     ./bin/selthreat select --model-id=2 --product-id=5
     ./bin/selthreat select --model-id=2 --product-ids=5,12,18 --count=10
-    ./bin/selthreat select --model-id=2 --product-id=5 --dry-run
-    ./bin/selthreat list --product-id=5 --count=8
-    ./bin/selthreat select --model-id=2 --product-id=5 --model=gpt-4o-mini
 
 Commands:
   select                Select and import threats for product(s) into a target model
@@ -25,6 +29,9 @@ Common Arguments:
   --canonical-model-id  Canonical basis set model ID (default: 37)
   --dry-run             Preview selections without writing to database
   --verbose             Enable verbose logging
+
+  --create-model        Create a new threat model named '{product-name}+SELTHREAT' and use it as target.
+                        Useful for isolated test runs comparing with genthreat output.
 
 Environment Variables (required in .env):
   DATABASE_URL          PostgreSQL connection string
@@ -49,13 +56,20 @@ logger = logging.getLogger("selthreat")
 
 async def select_command(args: argparse.Namespace) -> int:
     """Execute the select subcommand."""
-    if args.model_id is None:
-        logger.error("--model-id is required for the select command")
-        return 1
-
     product_ids = parse_product_ids(args)
     if not product_ids:
         logger.error("At least one product ID is required (--product-id or --product-ids)")
+        return 1
+
+    # Handle --create-model flag
+    target_model_id = args.model_id
+    if getattr(args, "create_model", False):
+        if len(product_ids) > 1:
+            logger.error("--create-model is only supported with a single --product-id")
+            return 1
+        # We'll create the model after initializing the service
+    elif target_model_id is None:
+        logger.error("--model-id is required for the select command (unless using --create-model)")
         return 1
 
     threat_count = clamp_threat_count(args.count)
@@ -73,14 +87,22 @@ async def select_command(args: argparse.Namespace) -> int:
 
     try:
         await service.initialize()
-        logger.info("Processing %d product(s) with threat count %d", len(product_ids), threat_count)
+        
+        # Create model if --create-model is specified
+        if getattr(args, "create_model", False):
+            product_id = product_ids[0]
+            device_profile = await service.get_device_profile(product_id)
+            product_name = device_profile["device"]
+            target_model_id = await service.create_model(product_name, suffix="SELTHREAT")
+        
+        logger.info("Processing %d product(s) with threat count %d into model_id=%d", len(product_ids), threat_count, target_model_id)
 
         all_results = []
         for i, product_id in enumerate(product_ids, 1):
             logger.info("[%d/%d] Selecting threats for product_id=%d", i, len(product_ids), product_id)
             try:
                 result = await service.select_threats_for_device(
-                    target_model_id=args.model_id,
+                    target_model_id=target_model_id,
                     device_id=product_id,
                     threat_count=threat_count,
                 )
@@ -193,6 +215,13 @@ def setup_logging(verbose: bool) -> None:
 
 async def main() -> int:
     """Main entry point."""
+    # Auto-prepend 'select' command if first arg is not a known command
+    argv = sys.argv[1:]
+    if argv and argv[0] not in {"select", "list", "-h", "--help"}:
+        argv = ["select", *argv]
+    elif not argv:
+        argv = ["select"]
+    
     parser = argparse.ArgumentParser(
         description="Select and bulk-import threats from canonical basis set",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -205,8 +234,8 @@ async def main() -> int:
     select_parser.add_argument(
         "--model-id",
         type=int,
-        required=True,
-        help="Target threat model ID",
+        default=None,
+        help="Target threat model ID (required unless using --create-model)",
     )
     product_group = select_parser.add_mutually_exclusive_group(required=True)
     product_group.add_argument(
@@ -246,6 +275,11 @@ async def main() -> int:
         action="store_true",
         help="Enable verbose logging",
     )
+    select_parser.add_argument(
+        "--create-model",
+        action="store_true",
+        help="Create a new threat model named '{product-name}+SELTHREAT' and use it as target.",
+    )
     select_parser.set_defaults(func=select_command)
 
     # list subcommand
@@ -280,7 +314,7 @@ async def main() -> int:
     )
     list_parser.set_defaults(func=list_command)
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     setup_logging(args.verbose)
 
     return await args.func(args)

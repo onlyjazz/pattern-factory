@@ -101,6 +101,39 @@ class ThreatSelectorService:
             await self.pool.close()
             logger.info("Database pool closed")
 
+    async def create_model(self, product_name: str, suffix: str = "SELTHREAT") -> int:
+        """Create a new threat model for test isolation.
+        
+        Args:
+            product_name: Name of the product or test identifier
+            suffix: Suffix to append (default: SELTHREAT for selthreat, GENTHREAT for genthreat)
+        
+        Returns:
+            The created model ID
+        """
+        if not self.pool:
+            raise RuntimeError("Service not initialized")
+        
+        model_name = f"{product_name}+{suffix}"
+        
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """
+                INSERT INTO threat.models (name, created_at, updated_at)
+                VALUES ($1, NOW(), NOW())
+                RETURNING id
+                """,
+                model_name,
+            )
+        
+        if not row:
+            raise RuntimeError(f"Failed to create model with name: {model_name}")
+        
+        model_id = int(row["id"])
+        logger.info("Created new threat model: name=%s id=%d", model_name, model_id)
+        print(f"\n✓ Created new threat model: {model_name} (id={model_id})")
+        return model_id
+
     async def load_canonical_threats(self, panel: Optional[str] = None) -> None:
         """Load canonical threats, optionally filtered by panel via provenance.
         

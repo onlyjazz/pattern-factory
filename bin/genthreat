@@ -50,6 +50,9 @@ Arguments:
                         Accepts positive integer or 'latest'.
 
   --dry-run             (generate only) Extract and print threat counts without inserting to database.
+
+  --create-model        (generate only) Create a new threat model named '{product-name}+GENTHREAT' and
+                        use it as the target. Returns the created model ID. Useful for isolated test runs.
 """
 
 import asyncio

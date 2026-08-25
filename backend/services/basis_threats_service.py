@@ -134,6 +134,39 @@ class BasisThreatsService:
         if not row or not row["card_exists"]:
             raise RuntimeError(f"Card id {self.card_id} does not exist in public.cards")
 
+    async def create_model(self, product_name: str, suffix: str = "GENTHREAT") -> int:
+        """Create a new threat model for test isolation.
+        
+        Args:
+            product_name: Name of the product or test identifier
+            suffix: Suffix to append (default: GENTHREAT for genthreat, SELTHREAT for selthreat)
+        
+        Returns:
+            The created model ID
+        """
+        if not self.pool:
+            raise RuntimeError("Service not initialized")
+        
+        model_name = f"{product_name}+{suffix}"
+        
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """
+                INSERT INTO threat.models (name, created_at, updated_at)
+                VALUES ($1, NOW(), NOW())
+                RETURNING id
+                """,
+                model_name,
+            )
+        
+        if not row:
+            raise RuntimeError(f"Failed to create model with name: {model_name}")
+        
+        model_id = int(row["id"])
+        logger.info("Created new threat model: name=%s id=%d", model_name, model_id)
+        print(f"\n✓ Created new threat model: {model_name} (id={model_id})")
+        return model_id
+
     async def get_next_run_version(self, model_id: int) -> int:
         if not self.pool:
             raise RuntimeError("Service not initialized")
@@ -1226,6 +1259,11 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         action="store_true",
         help="Generate and print counts without inserting threats.",
     )
+    generate_parser.add_argument(
+        "--create-model",
+        action="store_true",
+        help="Create a new threat model named '{product-name}+GENTHREAT' and use it as target. Useful for test isolation.",
+    )
 
     validate_parser = subparsers.add_parser(
         "validate",
@@ -1328,8 +1366,20 @@ async def main() -> None:
     try:
         await service.initialize()
         if args.mode == "generate":
+            # Handle --create-model flag
+            if hasattr(args, "create_model") and args.create_model:
+                if hasattr(args, "product_id") and args.product_id:
+                    # Fetch product name for model naming
+                    product = await service.get_single_product(args.product_id)
+                    product_name = product["device"]
+                    model_id = await service.create_model(product_name, suffix="GENTHREAT")
+                    service.target_model_id = model_id
+                else:
+                    logger.error("--create-model is only supported with --product-id")
+                    sys.exit(1)
+            
             if hasattr(args, "product_id") and args.product_id:
-                target_model_id = getattr(args, "model_id", None)
+                target_model_id = getattr(args, "model_id", None) or service.target_model_id
                 await service.process_generate_single_product(args.product_id, target_model_id=target_model_id)
             else:
                 await service.process_generate(arms)
