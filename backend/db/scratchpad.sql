@@ -1,28 +1,2 @@
-select subtype, company, n from 
-(select substring(submission_number,1,1) as subtype, company, count(*) as n from products group by subtype, company)    
-where subtype != 'K' OR (subtype = 'K' AND n = 1)
-order by company, subtype;
 
-Update the orgs and people tables to reflect the following:
-Yann Gaston-Mathé is at Iktos
-James Hamrick is at Precision Oncology Alliance at Caris Life Sciences
-Aaron Brouser is at Natera
-Tim O'Connell is at Emtelligent
-Bar Rafaelli is at Carolina Lemke Berlin
-Martin Rapaport is at Rapaport Group
-
- org_id |       name        
---------+-------------------
-        | Yann Gaston-Mathé
-        | James Hamrick
-        | Aaron Brouser
-        | Tim O'Connell
-     14 | Alice Smith
-     15 | Enrique Diloné
-     17 | Tigran Arzumanov
-      3 | Aaron Brauser
-        | Bar Rafaeli
-        | Martin Rapaport
-
-
-      
+962,1334,1337,1407,1414,1467,1483,1427,571,573,632,1404,1435,42,158,397,518,651,1451,1500,24,606,654,1311,1476,1459,75,416,1215,1353,1356,1495,1497,65,85,350,396,405,528,667,115,199,223,402,640,815,1084,213,414,1336

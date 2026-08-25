@@ -7,7 +7,11 @@ BASIS_THREATS:
     device intended use, indications for use, and device description. Threats
     must be canonical, succinct, non-overlapping, and technology/risk oriented.
     Deduplicate semantically equivalent names; when in doubt keep the shorter
-    more succinct canonical name. Return only valid JSON.
+    more succinct canonical name. 
+    
+    Select 8 - 12 materially distinct threats, scored by relevance to the device's intended use.
+    
+    Return only valid JSON.
   output_contract:
     threats:
       - name: short canonical threat name
