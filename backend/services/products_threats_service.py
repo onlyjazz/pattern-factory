@@ -229,7 +229,7 @@ class ProductsThreatsService:
                       OR NULLIF(p.indications_for_use, '') IS NOT NULL
                       OR NULLIF(p.device_description, '') IS NOT NULL
                   )
-                ORDER BY p.submission_number, p.id
+                ORDER BY p.id
                 """,
                 start_id,
                 end_id,
@@ -271,7 +271,7 @@ class ProductsThreatsService:
                           OR NULLIF(p.indications_for_use, '') IS NOT NULL
                           OR NULLIF(p.device_description, '') IS NOT NULL
                       )
-                    ORDER BY o.arm, p.submission_number, p.id
+                    ORDER BY o.arm, p.id
                     """,
                     arms,
                 )
@@ -306,7 +306,7 @@ class ProductsThreatsService:
                     SELECT *
                     FROM ranked_products
                     WHERE arm_rank <= $2
-                    ORDER BY arm, submission_number, arm_rank
+                    ORDER BY arm, id
                     """,
                     arms,
                     self.sample_per_arm,
