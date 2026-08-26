@@ -81,3 +81,44 @@ Database access in routes is short-circuited by patching
 `backend.services.api.get_pg_pool` with an in-memory fake (see
 `backend/tests/conftest.py`). Run `python -m pytest` before committing any
 schema or model change.
+
+## Database Timestamp Defaults (CRITICAL)
+
+**Do NOT pass `created_at` and `updated_at` from Python to INSERT statements.**
+
+All tables define these fields with `DEFAULT now()`:
+```sql
+CREATE TABLE threat.threats (
+    ...,
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now(),
+    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now(),
+    ...
+);
+```
+
+PostgreSQL `now()` returns a naive (timezone-unaware) timestamp. Python's `datetime.now(timezone.utc)` returns timezone-aware. Passing timezone-aware objects causes:
+```
+can't subtract offset-naive and offset-aware datetimes
+```
+
+**Fix**: Omit timestamp fields from INSERT and let PostgreSQL use DEFAULT:
+```python
+# ❌ WRONG
+for threat in threats:
+    await conn.execute(
+        "INSERT INTO threat.threats (..., created_at, updated_at) "
+        "VALUES (..., $N::timestamp, $M::timestamp)",
+        ...,
+        datetime.now(timezone.utc),  # timezone-aware
+        datetime.now(timezone.utc)   # timezone-aware
+    )
+
+# ✅ CORRECT
+for threat in threats:
+    await conn.execute(
+        "INSERT INTO threat.threats (...) VALUES (...)",  # omit created_at, updated_at
+        ...
+    )
+```
+
+PostgreSQL will call `now()` server-side (naive timestamp in UTC), matching the schema definition.

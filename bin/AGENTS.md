@@ -77,3 +77,33 @@ await db.execute(
 ```
 
 ❌ **DO NOT** use `backend/db/log.py` (file is deleted, wrong schema)
+
+## Database Timestamp Defaults
+
+**CRITICAL: Do NOT pass `created_at` and `updated_at` from Python code to INSERT statements.**
+
+All tables in the threat schema (and most application tables) define these fields with `DEFAULT now()`:
+- `created_at TIMESTAMP DEFAULT now()`
+- `updated_at TIMESTAMP DEFAULT now()`
+
+When building INSERT payloads:
+- **OMIT** `created_at` and `updated_at` from the INSERT column list
+- **OMIT** these fields from the VALUES clause
+- Let PostgreSQL automatically populate them via DEFAULT
+- This avoids timezone-aware/naive datetime mismatch errors
+
+**Example**:
+```python
+# ❌ WRONG - causes type mismatch with PostgreSQL naive timestamps
+await conn.execute(
+    "INSERT INTO threat.threats (model_id, name, created_at, updated_at, ...) "
+    "VALUES ($1, $2, $3, $4, ...)",
+    model_id, name, datetime.now(timezone.utc), datetime.now(timezone.utc)
+)
+
+# ✅ CORRECT - let database handle timestamps
+await conn.execute(
+    "INSERT INTO threat.threats (model_id, name, ...) VALUES ($1, $2, ...)",
+    model_id, name
+)
+```
