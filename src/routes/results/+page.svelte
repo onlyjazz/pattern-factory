@@ -3,7 +3,8 @@
   import { onMount } from 'svelte';
   import { globalSearch } from '$lib/searchStore';
   import ExportCSV from '$lib/ExportCSV.svelte';
-import { API_BASE } from '$lib/config';
+  import { modeStore } from '$lib/modeStore';
+  import { API_BASE } from '$lib/config';
   
   let viewName = '';
   let viewTitle = 'Views';
@@ -238,6 +239,11 @@ import { API_BASE } from '$lib/config';
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   }
+  function getDownloadFileName(extension: 'csv' | 'json'): string {
+    const viewFileName = viewName || 'export';
+    const modelPrefix = $modeStore.activeModelName ? `${$modeStore.activeModelName}-` : '';
+    return `${modelPrefix}${viewFileName}.${extension}`;
+  }
 
   function downloadJSON() {
     const jsonData = JSON.stringify(filteredData, null, 2);
@@ -245,7 +251,7 @@ import { API_BASE } from '$lib/config';
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${viewName || 'export'}.json`;
+    link.download = getDownloadFileName('json');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -272,7 +278,7 @@ import { API_BASE } from '$lib/config';
           <div class="message">No data found</div>
         {:else}
           <div class="results-info">
-            <ExportCSV {data} fileName="{viewName || 'export'}.csv" />
+            <ExportCSV {data} fileName={getDownloadFileName('csv')} />
             <button class="button button_secondary" onclick={downloadJSON}>
               ⬇ JSON
             </button>
