@@ -118,14 +118,32 @@ class ProductsThreatsService:
         if not row or not row["card_exists"]:
             raise RuntimeError(f"Card id {self.card_id} does not exist in public.cards")
 
-    async def create_model(self, product_name: str, suffix: str = "PRODUCT") -> int:
-        """Create a new threat model for a single product."""
+    async def get_or_create_model_for_submission(self, submission_number: str, device_name: str, suffix: str = "PRODUCT") -> int:
+        """Get existing model for submission_number or create new one.
+        
+        Prevents duplicate models for products with same submission_number.
+        """
         if not self.pool:
             raise RuntimeError("Service not initialized")
         
-        model_name = f"{product_name}+{suffix}"
+        model_name = f"{device_name}+{suffix}"
         
         async with self.pool.acquire() as conn:
+            # Try to find existing model by submission_number in name
+            if submission_number:
+                existing_id = await conn.fetchval(
+                    """
+                    SELECT id FROM threat.models
+                    WHERE name LIKE $1
+                    LIMIT 1
+                    """,
+                    f"%{submission_number}%"
+                )
+                if existing_id:
+                    logger.info("Model already exists for submission_number=%s: id=%d", submission_number, existing_id)
+                    return existing_id
+            
+            # Create new model
             row = await conn.fetchrow(
                 """
                 INSERT INTO threat.models (name, created_at, updated_at)
@@ -211,7 +229,7 @@ class ProductsThreatsService:
                       OR NULLIF(p.indications_for_use, '') IS NOT NULL
                       OR NULLIF(p.device_description, '') IS NOT NULL
                   )
-                ORDER BY p.id
+                ORDER BY p.submission_number, p.id
                 """,
                 start_id,
                 end_id,
@@ -253,7 +271,7 @@ class ProductsThreatsService:
                           OR NULLIF(p.indications_for_use, '') IS NOT NULL
                           OR NULLIF(p.device_description, '') IS NOT NULL
                       )
-                    ORDER BY o.arm, p.id
+                    ORDER BY o.arm, p.submission_number, p.id
                     """,
                     arms,
                 )
@@ -288,7 +306,7 @@ class ProductsThreatsService:
                     SELECT *
                     FROM ranked_products
                     WHERE arm_rank <= $2
-                    ORDER BY arm, arm_rank
+                    ORDER BY arm, submission_number, arm_rank
                     """,
                     arms,
                     self.sample_per_arm,
@@ -512,11 +530,13 @@ class ProductsThreatsService:
         return inserted
 
     async def process_product(self, product: Dict[str, Any]) -> Dict[str, Any]:
-        """Process a single product: create model, extract threats, insert."""
+        """Process a single product: get/create model, extract threats, insert."""
         product_id = product["id"]
         device_name = product["device"]
+        submission_number = product.get("submission_number", "")
         
-        model_id = await self.create_model(device_name, suffix="PRODUCT")
+        # Get or reuse existing model for this submission_number
+        model_id = await self.get_or_create_model_for_submission(submission_number, device_name, suffix="PRODUCT")
         print(f"  Model ID: {model_id}")
         
         threats_json = await self.extract_threats_for_product(product, model_id)
