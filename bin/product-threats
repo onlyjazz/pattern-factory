@@ -1,0 +1,47 @@
+#!/bin/bash
+#
+# product-threats - Extract threats for individual products with isolated models
+#
+# Usage:
+#   ./product-threats --product-id <id>                        # Single product
+#   ./product-threats --product-id-range 1-1525                # All products in range
+#   ./product-threats --arms 2,3 --all-in-arms                 # All products in arms
+#   ./product-threats --arms 2,3 --sample-per-arm 10           # Sample 10 per arm
+#   ./product-threats --arms 1,2,3 --all-in-arms --dry-run     # Dry run
+#
+# Options:
+#   --product-id <id>              Process single product
+#   --product-id-range <start>-<end>
+#                                  Process all products in ID range (e.g., 1-1525)
+#   --arms <list>                  Comma-separated arms (1,2,3)
+#   --all-in-arms                  Process all products in arms (ignores --sample-per-arm)
+#   --sample-per-arm <n>           Products per arm when not using --all-in-arms (default: 10)
+#   --model <name>                 OpenAI model (default: gpt-5.6-terra)
+#   --card-id <uuid>               Card UUID (default: 7513ebae-a266-49b1-a088-3afacec21a02)
+#   --dry-run                      Show counts without inserting
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+BACKEND_DIR="$PROJECT_ROOT/backend"
+
+# Load environment
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    export $(grep -v '^#' "$PROJECT_ROOT/.env" | xargs)
+fi
+
+# Check required environment variables
+if [ -z "${DATABASE_URL:-}" ]; then
+    echo "Error: DATABASE_URL not set" >&2
+    exit 1
+fi
+
+if [ -z "${OPENAI_API_KEY:-}" ]; then
+    echo "Error: OPENAI_API_KEY not set" >&2
+    exit 1
+fi
+
+# Run the service
+cd "$BACKEND_DIR"
+python -m services.products_threats_service "$@"
