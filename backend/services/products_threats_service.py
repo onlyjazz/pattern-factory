@@ -20,7 +20,7 @@ import logging
 import os
 import re
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -376,7 +376,7 @@ class ProductsThreatsService:
             name = self.clean_text(raw_threat.get("name"))
             if not name:
                 continue
-            now_iso = datetime.utcnow().isoformat()
+            now_iso = datetime.now(timezone.utc).isoformat()
 
             candidate = {
                 "model_id": model_id,
@@ -787,16 +787,16 @@ async def main() -> None:
         if mode_count > 1:
             raise ValueError("Only one of --product-id, --product-id-range, or --arms can be specified")
         
+        # Initialize all variables upfront to avoid UnboundLocalError
         product_id_range = None
+        arms = None
+        sample_per_arm = 1
+        
         if args.product_id_range is not None:
             product_id_range = parse_product_id_range(args.product_id_range)
-            sample_per_arm = 1
         elif args.arms is not None:
             arms = parse_arms(args.arms)
             sample_per_arm = validate_sample_per_arm(args.sample_per_arm)
-        else:
-            arms = None
-            sample_per_arm = 1
     except ValueError as exc:
         logger.error(str(exc))
         sys.exit(1)
