@@ -20,7 +20,7 @@ import logging
 import os
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -376,7 +376,6 @@ class ProductsThreatsService:
             name = self.clean_text(raw_threat.get("name"))
             if not name:
                 continue
-            now_iso = datetime.now(timezone.utc).isoformat()
 
             candidate = {
                 "model_id": model_id,
@@ -392,8 +391,6 @@ class ProductsThreatsService:
                 "elevation_of_privilege": self.parse_bool(raw_threat.get("elevation_of_privilege")),
                 "mitigation_level": self.clamp_int(raw_threat.get("mitigation_level"), minimum=0, maximum=5, default=0),
                 "disabled": self.parse_bool(raw_threat.get("disabled")),
-                "created_at": now_iso,
-                "updated_at": now_iso,
                 "card_id": self.card_id,
                 "version": 1,
                 "domain": self.clean_text(raw_threat.get("domain")) or "clinical",
@@ -470,12 +467,11 @@ class ProductsThreatsService:
                             damage_description, spoofing, tampering, repudiation,
                             information_disclosure, denial_of_service,
                             elevation_of_privilege, mitigation_level, disabled,
-                            created_at, updated_at, card_id, version, domain
+                            card_id, version, domain
                         )
                         VALUES (
                             $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-                            $11, $12, $13, $14, $15::timestamp,
-                            $16::timestamp, $17::uuid, $18, $19
+                            $11, $12, $13, $14, $15::uuid, $16, $17
                         )
                         ON CONFLICT (model_id, tag) DO UPDATE SET
                             name = EXCLUDED.name,
@@ -491,9 +487,7 @@ class ProductsThreatsService:
                             mitigation_level = EXCLUDED.mitigation_level,
                             disabled = EXCLUDED.disabled,
                             card_id = EXCLUDED.card_id,
-                            domain = EXCLUDED.domain,
-                            created_at = EXCLUDED.created_at,
-                            updated_at = EXCLUDED.updated_at
+                            domain = EXCLUDED.domain
                         """,
                         threat["model_id"],
                         threat["tag"],
@@ -509,8 +503,6 @@ class ProductsThreatsService:
                         threat["elevation_of_privilege"],
                         threat["mitigation_level"],
                         threat["disabled"],
-                        datetime.fromisoformat(threat["created_at"]),
-                        datetime.fromisoformat(threat["updated_at"]),
                         threat["card_id"],
                         threat["version"],
                         threat["domain"],
