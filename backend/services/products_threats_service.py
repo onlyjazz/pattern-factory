@@ -118,10 +118,11 @@ class ProductsThreatsService:
         if not row or not row["card_exists"]:
             raise RuntimeError(f"Card id {self.card_id} does not exist in public.cards")
 
-    async def get_or_create_model_for_submission(self, submission_number: str, device_name: str, suffix: str = "PRODUCT") -> int:
+    async def get_or_create_model_for_submission(self, submission_number: str, device_name: str, product_id: int, suffix: str = "PRODUCT") -> int:
         """Get existing model for submission_number or create new one.
         
         Prevents duplicate models for products with same submission_number.
+        Sets product_id in threat.models to track which product the model is for.
         """
         if not self.pool:
             raise RuntimeError("Service not initialized")
@@ -140,24 +141,25 @@ class ProductsThreatsService:
                     f"%{submission_number}%"
                 )
                 if existing_id:
-                    logger.info("Model already exists for submission_number=%s: id=%d", submission_number, existing_id)
+                    logger.info("Model already exists for submission_number=%s: id=%d, product_id=%d", submission_number, existing_id, product_id)
                     return existing_id
             
-            # Create new model
+            # Create new model with product_id
             row = await conn.fetchrow(
                 """
-                INSERT INTO threat.models (name, created_at, updated_at)
-                VALUES ($1, NOW(), NOW())
+                INSERT INTO threat.models (name, product_id, created_at, updated_at)
+                VALUES ($1, $2, NOW(), NOW())
                 RETURNING id
                 """,
                 model_name,
+                product_id,
             )
         
         if not row:
             raise RuntimeError(f"Failed to create model with name: {model_name}")
         
         model_id = int(row["id"])
-        logger.info("Created new threat model: name=%s id=%d", model_name, model_id)
+        logger.info("Created new threat model: name=%s id=%d product_id=%d", model_name, model_id, product_id)
         return model_id
 
     async def get_single_product(self, product_id: int) -> Dict[str, Any]:
@@ -536,7 +538,7 @@ class ProductsThreatsService:
         submission_number = product.get("submission_number", "")
         
         # Get or reuse existing model for this submission_number
-        model_id = await self.get_or_create_model_for_submission(submission_number, device_name, suffix="PRODUCT")
+        model_id = await self.get_or_create_model_for_submission(submission_number, device_name, product_id, suffix="PRODUCT")
         print(f"  Model ID: {model_id}")
         
         threats_json = await self.extract_threats_for_product(product, model_id)
