@@ -163,7 +163,11 @@ class ProductsThreatsService:
         return model_id
 
     async def get_single_product(self, product_id: int) -> Dict[str, Any]:
-        """Fetch a single product by ID."""
+        """Fetch a single product by ID.
+        
+        Requires product to exist. If device_description is empty, creates a fallback
+        from company + device name to ensure LLM has context for threat extraction.
+        """
         if not self.pool:
             raise RuntimeError("Service not initialized")
 
@@ -186,21 +190,29 @@ class ProductsThreatsService:
                 WHERE p.id = $1
                   AND p.deleted_at IS NULL
                   AND o.deleted_at IS NULL
-                  AND (
-                      NULLIF(p.intended_use, '') IS NOT NULL
-                      OR NULLIF(p.indications_for_use, '') IS NOT NULL
-                      OR NULLIF(p.device_description, '') IS NOT NULL
-                  )
                 """,
                 product_id,
             )
 
         if not row:
-            raise ValueError(f"Product {product_id} not found or missing device profile")
-        return dict(row)
+            raise ValueError(f"Product {product_id} not found")
+        
+        result = dict(row)
+        
+        # If device_description is empty, create fallback from company + device
+        if not result.get("device_description"):
+            company = result.get("company", "Unknown") or "Unknown"
+            device = result.get("device", "Device") or "Device"
+            result["device_description"] = f"{company} {device}"
+            logger.info(f"Product {product_id}: Using fallback device_description: {result['device_description']}")
+        
+        return result
 
     async def get_products_in_range(self, start_id: int, end_id: int) -> List[Dict[str, Any]]:
-        """Fetch all products within a given ID range."""
+        """Fetch all products within a given ID range.
+        
+        Returns products with fallback device_description if needed.
+        """
         if not self.pool:
             raise RuntimeError("Service not initialized")
         if start_id > end_id:
@@ -226,11 +238,6 @@ class ProductsThreatsService:
                   AND p.id <= $2
                   AND p.deleted_at IS NULL
                   AND o.deleted_at IS NULL
-                  AND (
-                      NULLIF(p.intended_use, '') IS NOT NULL
-                      OR NULLIF(p.indications_for_use, '') IS NOT NULL
-                      OR NULLIF(p.device_description, '') IS NOT NULL
-                  )
                 ORDER BY p.id
                 """,
                 start_id,
@@ -238,10 +245,25 @@ class ProductsThreatsService:
             )
 
         if not rows:
-            raise ValueError(f"No products found in range {start_id}-{end_id} with device profile")
-        return [dict(row) for row in rows]
+            raise ValueError(f"No products found in range {start_id}-{end_id}")
+        
+        # Apply fallback device_description for products missing it
+        results = []
+        for row in rows:
+            result = dict(row)
+            if not result.get("device_description"):
+                company = result.get("company", "Unknown") or "Unknown"
+                device = result.get("device", "Device") or "Device"
+                result["device_description"] = f"{company} {device}"
+            results.append(result)
+        
+        return results
 
     async def sample_products(self, arms: List[int], all_in_arms: bool = False) -> List[Dict[str, Any]]:
+        """Sample products from specified arms.
+        
+        Returns products with fallback device_description if needed.
+        """
         if not self.pool:
             raise RuntimeError("Service not initialized")
         if not arms:
@@ -268,11 +290,6 @@ class ProductsThreatsService:
                     WHERE p.deleted_at IS NULL
                       AND o.deleted_at IS NULL
                       AND o.arm = ANY($1::int[])
-                      AND (
-                          NULLIF(p.intended_use, '') IS NOT NULL
-                          OR NULLIF(p.indications_for_use, '') IS NOT NULL
-                          OR NULLIF(p.device_description, '') IS NOT NULL
-                      )
                     ORDER BY p.id
                     """,
                     arms,
@@ -299,11 +316,6 @@ class ProductsThreatsService:
                         WHERE p.deleted_at IS NULL
                           AND o.deleted_at IS NULL
                           AND o.arm = ANY($1::int[])
-                          AND (
-                              NULLIF(p.intended_use, '') IS NOT NULL
-                              OR NULLIF(p.indications_for_use, '') IS NOT NULL
-                              OR NULLIF(p.device_description, '') IS NOT NULL
-                          )
                     )
                     SELECT *
                     FROM ranked_products
@@ -314,7 +326,17 @@ class ProductsThreatsService:
                     self.sample_per_arm,
                 )
 
-        return [dict(row) for row in rows]
+        # Apply fallback device_description for products missing it
+        results = []
+        for row in rows:
+            result = dict(row)
+            if not result.get("device_description"):
+                company = result.get("company", "Unknown") or "Unknown"
+                device = result.get("device", "Device") or "Device"
+                result["device_description"] = f"{company} {device}"
+            results.append(result)
+        
+        return results
 
     async def extract_threats_for_product(
         self,
