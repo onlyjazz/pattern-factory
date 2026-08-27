@@ -165,8 +165,8 @@ class ProductsThreatsService:
     async def get_single_product(self, product_id: int) -> Dict[str, Any]:
         """Fetch a single product by ID.
         
-        Requires product to exist. If device_description is empty, creates a fallback
-        from company + device name to ensure LLM has context for threat extraction.
+        Requires product to exist with valid org. If device_description is empty,
+        creates a fallback from company + device name to ensure LLM has context.
         """
         if not self.pool:
             raise RuntimeError("Service not initialized")
@@ -195,7 +195,7 @@ class ProductsThreatsService:
             )
 
         if not row:
-            raise ValueError(f"Product {product_id} not found")
+            raise ValueError(f"Product {product_id} not found or missing org")
         
         result = dict(row)
         
@@ -590,14 +590,18 @@ class ProductsThreatsService:
         self,
         arms: Optional[List[int]] = None,
         product_id: Optional[int] = None,
+        product_ids: Optional[List[int]] = None,
         product_id_range: Optional[tuple[int, int]] = None,
     ) -> Dict[str, Any]:
-        """Process products: single, range, or arm-based sampling."""
+        """Process products: single, multiple, range, or arm-based sampling."""
         await self.validate_card_id()
         
         if product_id is not None:
             products = [await self.get_single_product(product_id)]
             mode_desc = f"single product (id={product_id})"
+        elif product_ids is not None:
+            products = [await self.get_single_product(pid) for pid in product_ids]
+            mode_desc = f"{len(product_ids)} specific products"
         elif product_id_range is not None:
             start_id, end_id = product_id_range
             products = await self.get_products_in_range(start_id, end_id)
@@ -609,7 +613,7 @@ class ProductsThreatsService:
             else:
                 mode_desc = f"{self.sample_per_arm} products per arm from arms {arms}"
         else:
-            raise ValueError("Either --product-id, --product-id-range, or --arms must be specified")
+            raise ValueError("Either --product-id, --product-ids, --product-id-range, or --arms must be specified")
         
         if not products:
             raise ValueError("No products found to process")
@@ -728,6 +732,11 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         help="Product ID for single-product threat generation.",
     )
     parser.add_argument(
+        "--product-ids",
+        default=None,
+        help="Comma-separated product IDs for batch threat generation (e.g., 6,7,9,12).",
+    )
+    parser.add_argument(
         "--product-id-range",
         default=None,
         help="Product ID range for batch threat generation (e.g., 1-1525).",
@@ -815,20 +824,24 @@ async def main() -> None:
         
         mode_count = sum([
             args.product_id is not None,
+            args.product_ids is not None,
             args.product_id_range is not None,
             args.arms is not None,
         ])
         if mode_count == 0:
-            raise ValueError("Either --product-id, --product-id-range, or --arms must be specified")
+            raise ValueError("Either --product-id, --product-ids, --product-id-range, or --arms must be specified")
         if mode_count > 1:
-            raise ValueError("Only one of --product-id, --product-id-range, or --arms can be specified")
+            raise ValueError("Only one of --product-id, --product-ids, --product-id-range, or --arms can be specified")
         
         # Initialize all variables upfront to avoid UnboundLocalError
+        product_ids = None
         product_id_range = None
         arms = None
         sample_per_arm = 1
         
-        if args.product_id_range is not None:
+        if args.product_ids is not None:
+            product_ids = [int(x.strip()) for x in args.product_ids.split(",") if x.strip()]
+        elif args.product_id_range is not None:
             product_id_range = parse_product_id_range(args.product_id_range)
         elif args.arms is not None:
             arms = parse_arms(args.arms)
@@ -860,6 +873,7 @@ async def main() -> None:
         await service.process_products(
             arms=arms,
             product_id=args.product_id,
+            product_ids=product_ids,
             product_id_range=product_id_range,
         )
     finally:
