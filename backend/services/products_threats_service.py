@@ -249,7 +249,7 @@ class ProductsThreatsService:
 
         async with self.pool.acquire() as conn:
             if all_in_arms:
-                # Fetch ALL products in the specified arms
+                # Fetch ALL products in the specified arms, ordered by product ID
                 rows = await conn.fetch(
                     """
                     SELECT
@@ -273,7 +273,7 @@ class ProductsThreatsService:
                           OR NULLIF(p.indications_for_use, '') IS NOT NULL
                           OR NULLIF(p.device_description, '') IS NOT NULL
                       )
-                    ORDER BY o.arm, p.id
+                    ORDER BY p.id
                     """,
                     arms,
                 )
