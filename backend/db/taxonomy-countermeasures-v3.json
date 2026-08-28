@@ -1,0 +1,1219 @@
+{
+  "Adversarial / Model Evasion": {
+    "entry_points": [
+      "EP03",
+      "EP05",
+      "EP06",
+      "EP07",
+      "EP12",
+      "EP13",
+      "EP16"
+    ],
+    "countermeasures": [
+      {
+        "name": "Adversarial Training & Robust Optimization",
+        "type": "Preventive",
+        "description": "Train or fine-tune the model with adversarial examples or robust optimization techniques so it becomes less sensitive to small input perturbations.",
+        "implementation_notes": "Use established libraries and validate that clinical performance metrics remain acceptable.",
+        "residual_risk": "Strong adaptive attacks may still succeed; robustness is rarely absolute."
+      },
+      {
+        "name": "Input Sanitization & Anomaly Detection",
+        "type": "Detective / Preventive",
+        "description": "Detect and reject or flag statistically anomalous inputs before they reach the model.",
+        "implementation_notes": "Statistical or autoencoder-based detectors on image/signal features.",
+        "residual_risk": "Sophisticated attacks can evade detectors; false positives may disrupt workflow."
+      },
+      {
+        "name": "Certified Robustness / Randomized Smoothing",
+        "type": "Preventive",
+        "description": "Apply techniques that provide formal guarantees on robustness within a defined radius.",
+        "implementation_notes": "Computationally expensive; suitable mainly for high-risk decisions.",
+        "residual_risk": "Guarantees are limited to specific threat models and radii."
+      },
+      {
+        "name": "Ensemble or Multi-Model Consensus",
+        "type": "Preventive / Detective",
+        "description": "Require agreement across multiple independently trained models before issuing a high-stakes output.",
+        "implementation_notes": "Increases compute and latency.",
+        "residual_risk": "Correlated failures possible if models share training data or architecture."
+      },
+      {
+        "name": "Human-in-the-Loop Review for Borderline Cases",
+        "type": "Corrective",
+        "description": "Route low-confidence or flagged predictions to a clinician for confirmation.",
+        "implementation_notes": "Define clear thresholds and escalation paths.",
+        "residual_risk": "Depends on clinician availability and attention."
+      }
+    ]
+  },
+  "Data / Model Poisoning & Integrity": {
+    "entry_points": [
+      "EP09",
+      "EP10",
+      "EP11",
+      "EP12",
+      "EP13",
+      "EP16"
+    ],
+    "countermeasures": [
+      {
+        "name": "Strict Training Data Provenance & Access Controls",
+        "type": "Preventive",
+        "description": "Maintain audited, access-controlled pipelines for all training and fine-tuning data.",
+        "implementation_notes": "Versioned datasets, cryptographic hashes, role-based access.",
+        "residual_risk": "Insider threats or compromised upstream sources remain possible."
+      },
+      {
+        "name": "Data Validation & Outlier Filtering",
+        "type": "Preventive / Detective",
+        "description": "Automatically detect and quarantine suspicious or statistically anomalous samples before training.",
+        "implementation_notes": "Statistical tests, embedding-space outlier detection.",
+        "residual_risk": "Subtle poisoning can still pass filters."
+      },
+      {
+        "name": "Secure Model Registry & Signing",
+        "type": "Preventive",
+        "description": "Store models in a signed, access-controlled registry; verify signatures before deployment.",
+        "implementation_notes": "Integrate with existing CI/CD and SBOM practices.",
+        "residual_risk": "Compromised signing keys break the control."
+      },
+      {
+        "name": "Periodic Retraining from Trusted Baselines",
+        "type": "Corrective",
+        "description": "Retrain or roll back to known-good model versions on a defined schedule or after detected anomalies.",
+        "implementation_notes": "Requires reproducible training pipelines.",
+        "residual_risk": "Detection lag before rollback occurs."
+      },
+      {
+        "name": "Differential Privacy or Noise Injection during Training",
+        "type": "Preventive",
+        "description": "Limit the influence of any single training example.",
+        "implementation_notes": "Trade-off with model utility; tune privacy budget carefully.",
+        "residual_risk": "Strong privacy can degrade performance on rare conditions."
+      }
+    ]
+  },
+  "Privacy / Confidentiality / Consent": {
+    "entry_points": [
+      "EP02",
+      "EP04",
+      "EP05",
+      "EP06",
+      "EP07",
+      "EP08",
+      "EP12",
+      "EP13",
+      "EP14",
+      "EP16"
+    ],
+    "countermeasures": [
+      {
+        "name": "Differential Privacy (Training & Query)",
+        "type": "Preventive",
+        "description": "Apply DP mechanisms during training and/or at inference to bound information leakage.",
+        "implementation_notes": "Choose appropriate ε; validate clinical utility.",
+        "residual_risk": "Utility loss; composition of queries can erode protection."
+      },
+      {
+        "name": "Output Perturbation / Confidence Calibration",
+        "type": "Preventive",
+        "description": "Add calibrated noise or suppress overly precise outputs that enable inversion.",
+        "implementation_notes": "Especially useful for generative or high-dimensional outputs.",
+        "residual_risk": "May reduce clinical usefulness of fine-grained results."
+      },
+      {
+        "name": "Access Control & Query Auditing",
+        "type": "Preventive / Detective",
+        "description": "Restrict who can query the model and log all inference requests with purpose binding.",
+        "implementation_notes": "Integrate with hospital identity systems.",
+        "residual_risk": "Insider abuse still possible."
+      },
+      {
+        "name": "Model Hardening against Membership Inference",
+        "type": "Preventive",
+        "description": "Use regularization, distillation, or adversarial training targeted at membership inference.",
+        "implementation_notes": "Test with standard MIA attack suites.",
+        "residual_risk": "Newer attacks may bypass current defenses."
+      },
+      {
+        "name": "Data Minimization & Purpose Limitation",
+        "type": "Preventive",
+        "description": "Train and operate with the minimum necessary personal data; avoid retaining raw identifiers.",
+        "implementation_notes": "Align with privacy regulations and institutional policies.",
+        "residual_risk": "Some clinical use cases require richer data."
+      }
+    ]
+  },
+  "Performance Drift & Robustness": {
+    "entry_points": [
+      "EP03",
+      "EP05",
+      "EP06",
+      "EP12",
+      "EP13",
+      "EP16"
+    ],
+    "countermeasures": [
+      {
+        "name": "Continuous Performance Monitoring",
+        "type": "Detective",
+        "description": "Track key metrics (accuracy, sensitivity, specificity, calibration) on live or shadow data.",
+        "implementation_notes": "Define alert thresholds and statistical process control limits.",
+        "residual_risk": "Detection lag; requires representative monitoring data."
+      },
+      {
+        "name": "Domain Adaptation / Scheduled Retraining",
+        "type": "Corrective",
+        "description": "Retrain or adapt the model when drift is detected or on a fixed cadence.",
+        "implementation_notes": "Requires approved change-control process (e.g., PCCP).",
+        "residual_risk": "Retraining can introduce new failure modes."
+      },
+      {
+        "name": "Out-of-Distribution Detection",
+        "type": "Detective",
+        "description": "Flag inputs that fall outside the training distribution before relying on the prediction.",
+        "implementation_notes": "Use uncertainty estimation or dedicated OOD detectors.",
+        "residual_risk": "Threshold tuning is difficult; false alarms possible."
+      },
+      {
+        "name": "Robustness Testing Across Sites & Populations",
+        "type": "Preventive",
+        "description": "Validate performance on data from multiple institutions and demographic groups before release.",
+        "implementation_notes": "Part of premarket and post-market evidence.",
+        "residual_risk": "Cannot cover every future shift."
+      },
+      {
+        "name": "Fallback to Conservative Clinical Pathways",
+        "type": "Corrective",
+        "description": "When drift or low confidence is detected, default to standard non-AI workflows.",
+        "implementation_notes": "Pre-define the fallback rules with clinical stakeholders.",
+        "residual_risk": "Fallback itself may have capacity limits."
+      }
+    ]
+  },
+  "Bias & Fairness Failures": {
+    "entry_points": [
+      "EP03",
+      "EP05",
+      "EP12",
+      "EP13",
+      "EP16"
+    ],
+    "countermeasures": [
+      {
+        "name": "Stratified Performance Evaluation",
+        "type": "Detective / Preventive",
+        "description": "Measure and report metrics across relevant demographic and clinical subgroups.",
+        "implementation_notes": "Require minimum sample sizes per group.",
+        "residual_risk": "Some subgroups remain under-powered."
+      },
+      {
+        "name": "Reweighting / Resampling / Fairness Constraints",
+        "type": "Preventive",
+        "description": "Adjust training to reduce performance disparities.",
+        "implementation_notes": "Multiple technical approaches exist; validate overall utility.",
+        "residual_risk": "Fairness–accuracy trade-offs are common."
+      },
+      {
+        "name": "Ongoing Bias Monitoring in Production",
+        "type": "Detective",
+        "description": "Continuously track subgroup performance on live data.",
+        "implementation_notes": "Privacy-preserving aggregation often required.",
+        "residual_risk": "Delayed detection of emerging bias."
+      },
+      {
+        "name": "Clinical Oversight of High-Impact Decisions",
+        "type": "Corrective",
+        "description": "Require human review for predictions that could disproportionately affect certain groups.",
+        "implementation_notes": "Define clear escalation criteria.",
+        "residual_risk": "Human reviewers can also carry bias."
+      },
+      {
+        "name": "Transparent Reporting of Limitations",
+        "type": "Preventive",
+        "description": "Clearly document known performance differences in labeling and instructions for use.",
+        "implementation_notes": "Regulatory expectation in many jurisdictions.",
+        "residual_risk": "Users may still overlook the information."
+      }
+    ]
+  },
+  "Operational / Workflow Integration Failures": {
+    "entry_points": [
+      "EP01",
+      "EP02",
+      "EP03",
+      "EP04",
+      "EP05",
+      "EP06",
+      "EP07",
+      "EP14",
+      "EP15"
+    ],
+    "countermeasures": [
+      {
+        "name": "Early Clinical Workflow Mapping",
+        "type": "Preventive",
+        "description": "Conduct structured workflow analysis with end users before final design lock.",
+        "implementation_notes": "Include nurses, technicians, and IT stakeholders.",
+        "residual_risk": "Workflows change over time."
+      },
+      {
+        "name": "Seamless EHR / PACS Integration Testing",
+        "type": "Preventive",
+        "description": "Validate end-to-end data flow and latency under realistic hospital conditions.",
+        "implementation_notes": "Use staging environments that mirror production.",
+        "residual_risk": "Site-specific configurations still cause issues."
+      },
+      {
+        "name": "Graceful Degradation Modes",
+        "type": "Corrective",
+        "description": "Design the system to continue providing partial value when upstream data or services fail.",
+        "implementation_notes": "Define what “degraded” means clinically.",
+        "residual_risk": "Users may not notice degradation."
+      },
+      {
+        "name": "Change Management & Training Programs",
+        "type": "Preventive",
+        "description": "Provide role-specific training and update materials when the device or workflow changes.",
+        "implementation_notes": "Track completion and competency.",
+        "residual_risk": "Training decays; staff turnover is high."
+      },
+      {
+        "name": "Real-time Status Dashboards",
+        "type": "Detective",
+        "description": "Surface system health, data freshness, and integration status to clinical and IT users.",
+        "implementation_notes": "Keep the interface simple.",
+        "residual_risk": "Alert fatigue if poorly tuned."
+      }
+    ]
+  },
+  "Human Factors & Misuse": {
+    "entry_points": [
+      "EP01",
+      "EP02",
+      "EP07",
+      "EP14",
+      "EP15"
+    ],
+    "countermeasures": [
+      {
+        "name": "Human Factors Engineering & Usability Testing",
+        "type": "Preventive",
+        "description": "Conduct formal usability studies with representative users under realistic conditions.",
+        "implementation_notes": "Follow recognized standards (e.g., IEC 62366).",
+        "residual_risk": "Lab testing does not capture all real-world pressures."
+      },
+      {
+        "name": "Clear Confidence & Uncertainty Display",
+        "type": "Preventive",
+        "description": "Present model confidence and known limitations in a clinically understandable way.",
+        "implementation_notes": "Avoid over-precision.",
+        "residual_risk": "Users may still over-trust high-confidence outputs."
+      },
+      {
+        "name": "Alert Management & Fatigue Controls",
+        "type": "Preventive",
+        "description": "Design alert thresholds, prioritization, and suppression rules carefully.",
+        "implementation_notes": "Involve clinical safety committees.",
+        "residual_risk": "Over-suppression can hide true positives."
+      },
+      {
+        "name": "Mandatory Confirmation for High-Risk Actions",
+        "type": "Corrective",
+        "description": "Require explicit clinician confirmation before acting on certain AI recommendations.",
+        "implementation_notes": "Balance safety with workflow friction.",
+        "residual_risk": "Confirmation can become rote."
+      },
+      {
+        "name": "Post-deployment Use Monitoring",
+        "type": "Detective",
+        "description": "Track patterns of override, acceptance, and near-miss events.",
+        "implementation_notes": "Combine quantitative logs with qualitative feedback.",
+        "residual_risk": "Under-reporting is common."
+      }
+    ]
+  },
+  "Availability / Service Continuity": {
+    "entry_points": [
+      "EP01",
+      "EP04",
+      "EP05",
+      "EP06",
+      "EP07",
+      "EP08",
+      "EP09",
+      "EP11",
+      "EP14",
+      "EP16"
+    ],
+    "countermeasures": [
+      {
+        "name": "Redundancy & Failover Architecture",
+        "type": "Preventive",
+        "description": "Deploy critical components with geographic or instance-level redundancy.",
+        "implementation_notes": "Align with hospital business-continuity plans.",
+        "residual_risk": "Correlated failures (e.g., cloud region outage)."
+      },
+      {
+        "name": "Rate Limiting & Resource Isolation",
+        "type": "Preventive",
+        "description": "Protect inference endpoints from resource exhaustion.",
+        "implementation_notes": "Apply at API gateway and model-serving layers.",
+        "residual_risk": "Legitimate traffic spikes can still be affected."
+      },
+      {
+        "name": "Health Checks & Automated Recovery",
+        "type": "Detective / Corrective",
+        "description": "Continuously monitor service health and restart or fail over automatically.",
+        "implementation_notes": "Define clear recovery time objectives.",
+        "residual_risk": "Recovery may not be instantaneous."
+      },
+      {
+        "name": "Offline / Cached Fallback Mode",
+        "type": "Corrective",
+        "description": "Provide a limited local capability when connectivity or central services are lost.",
+        "implementation_notes": "Suitable mainly for certain device types.",
+        "residual_risk": "Offline mode has reduced functionality."
+      },
+      {
+        "name": "Capacity Planning & Load Testing",
+        "type": "Preventive",
+        "description": "Regularly test under expected and peak clinical loads.",
+        "implementation_notes": "Include realistic data volumes and concurrent users.",
+        "residual_risk": "Future growth can exceed plans."
+      }
+    ]
+  },
+  "Unauthorized Access & Privilege Issues": {
+    "entry_points": [
+      "EP01",
+      "EP02",
+      "EP04",
+      "EP05",
+      "EP06",
+      "EP07",
+      "EP08",
+      "EP09",
+      "EP12",
+      "EP14",
+      "EP15"
+    ],
+    "countermeasures": [
+      {
+        "name": "Strong Authentication & MFA",
+        "type": "Preventive",
+        "description": "Require multi-factor authentication for administrative and high-privilege functions.",
+        "implementation_notes": "Integrate with enterprise identity providers.",
+        "residual_risk": "MFA fatigue or social engineering."
+      },
+      {
+        "name": "Least-Privilege Access & Role-Based Controls",
+        "type": "Preventive",
+        "description": "Grant only the minimum permissions required for each role.",
+        "implementation_notes": "Regular access reviews.",
+        "residual_risk": "Privilege creep over time."
+      },
+      {
+        "name": "Comprehensive Audit Logging",
+        "type": "Detective",
+        "description": "Log authentication events, configuration changes, and privileged actions.",
+        "implementation_notes": "Protect logs from tampering; retain per policy.",
+        "residual_risk": "Logs are only useful if monitored."
+      },
+      {
+        "name": "Network Segmentation & Zero-Trust Principles",
+        "type": "Preventive",
+        "description": "Isolate device and model-serving components from general hospital networks.",
+        "implementation_notes": "Micro-segmentation where feasible.",
+        "residual_risk": "Complex environments are hard to segment perfectly."
+      },
+      {
+        "name": "Just-in-Time Privileged Access",
+        "type": "Preventive",
+        "description": "Elevate privileges only for limited time windows with approval.",
+        "implementation_notes": "Useful for maintenance and support accounts.",
+        "residual_risk": "Emergency access procedures can be abused."
+      }
+    ]
+  },
+  "Supply Chain / Third-Party Dependencies": {
+    "entry_points": [
+      "EP09",
+      "EP10",
+      "EP11",
+      "EP13",
+      "EP16"
+    ],
+    "countermeasures": [
+      {
+        "name": "Software Bill of Materials (SBOM) & Component Tracking",
+        "type": "Preventive / Detective",
+        "description": "Maintain an up-to-date SBOM for all software and model components.",
+        "implementation_notes": "Automate generation and vulnerability scanning.",
+        "residual_risk": "Incomplete or outdated SBOMs reduce value."
+      },
+      {
+        "name": "Signed Updates & Secure Delivery",
+        "type": "Preventive",
+        "description": "Cryptographically sign all model and software updates; verify before installation.",
+        "implementation_notes": "Protect signing keys rigorously.",
+        "residual_risk": "Compromised keys undermine the control."
+      },
+      {
+        "name": "Vendor Risk Assessment & Contractual Controls",
+        "type": "Preventive",
+        "description": "Evaluate third-party model and software suppliers for security practices.",
+        "implementation_notes": "Include right-to-audit and notification clauses.",
+        "residual_risk": "Smaller vendors may have limited maturity."
+      },
+      {
+        "name": "Staged Rollout & Canary Deployments",
+        "type": "Corrective / Preventive",
+        "description": "Deploy updates to a small cohort first and monitor before full release.",
+        "implementation_notes": "Define clear rollback criteria.",
+        "residual_risk": "Some issues appear only at scale."
+      },
+      {
+        "name": "Vulnerability Monitoring & Rapid Patching Process",
+        "type": "Detective / Corrective",
+        "description": "Continuously monitor for new vulnerabilities in dependencies and have a tested patch process.",
+        "implementation_notes": "Align with FDA post-market cybersecurity expectations.",
+        "residual_risk": "Zero-days and slow vendor patches remain challenges."
+      }
+    ]
+  },
+  "Data Quality & Representativeness": {
+    "entry_points": [
+      "EP03",
+      "EP05",
+      "EP12",
+      "EP13",
+      "EP16"
+    ],
+    "countermeasures": [
+      {
+        "name": "Automated Input Data Validation",
+        "type": "Preventive / Detective",
+        "description": "Check incoming clinical data for completeness, format, range validity, and basic consistency.",
+        "implementation_notes": "Reject or flag non-conformant inputs.",
+        "residual_risk": "Semantic errors can still pass syntactic checks."
+      },
+      {
+        "name": "Data Quality Dashboards & Feedback Loops",
+        "type": "Detective",
+        "description": "Surface data-quality metrics to clinical and technical owners.",
+        "implementation_notes": "Close the loop with data-producing departments.",
+        "residual_risk": "Requires organizational ownership."
+      },
+      {
+        "name": "Representative Dataset Curation",
+        "type": "Preventive",
+        "description": "Intentionally construct training and validation sets that reflect the intended use population.",
+        "implementation_notes": "Document inclusion/exclusion criteria and known gaps.",
+        "residual_risk": "Future population shifts are inevitable."
+      },
+      {
+        "name": "Missing-Data Handling Strategies",
+        "type": "Preventive",
+        "description": "Define and validate explicit policies for missing or partial inputs.",
+        "implementation_notes": "Prefer clinically safe defaults.",
+        "residual_risk": "Imputation can introduce bias."
+      },
+      {
+        "name": "Site-Specific Calibration or Fine-Tuning",
+        "type": "Corrective",
+        "description": "Allow controlled local adaptation when data characteristics differ significantly.",
+        "implementation_notes": "Must stay within regulatory change-control boundaries.",
+        "residual_risk": "Local models can drift from the validated baseline."
+      }
+    ]
+  },
+  "Explainability / Transparency Gaps": {
+    "entry_points": [
+      "EP02",
+      "EP05",
+      "EP07",
+      "EP13",
+      "EP16"
+    ],
+    "countermeasures": [
+      {
+        "name": "Clinically Meaningful Explanation Methods",
+        "type": "Preventive",
+        "description": "Provide explanations (e.g., feature attributions, similar cases, rule approximations) that clinicians can actually use.",
+        "implementation_notes": "Validate that explanations improve decision quality.",
+        "residual_risk": "Many explanation methods are themselves imperfect or unstable."
+      },
+      {
+        "name": "Uncertainty Quantification",
+        "type": "Preventive",
+        "description": "Surface reliable confidence or uncertainty estimates with every prediction.",
+        "implementation_notes": "Calibrate thoroughly.",
+        "residual_risk": "Users may still misinterpret confidence."
+      },
+      {
+        "name": "Model Cards & Clear Documentation",
+        "type": "Preventive",
+        "description": "Maintain concise, accessible documentation of intended use, performance, limitations, and failure modes.",
+        "implementation_notes": "Keep documentation synchronized with model versions.",
+        "residual_risk": "Documentation is often ignored under time pressure."
+      },
+      {
+        "name": "Explanation Consistency Monitoring",
+        "type": "Detective",
+        "description": "Track whether explanations remain stable for similar inputs over time.",
+        "implementation_notes": "Useful for detecting model or data drift.",
+        "residual_risk": "Extra computational overhead."
+      },
+      {
+        "name": "Training on Explanation Use",
+        "type": "Preventive",
+        "description": "Train clinical users on how to interpret and when to question model explanations.",
+        "implementation_notes": "Include in onboarding and refresher programs.",
+        "residual_risk": "Training effectiveness varies."
+      }
+    ]
+  },
+  "Patient Safety / Physical Harm": {
+    "entry_points": [
+      "EP01",
+      "EP02",
+      "EP03",
+      "EP04",
+      "EP05",
+      "EP06",
+      "EP07",
+      "EP09",
+      "EP12",
+      "EP14",
+      "EP15",
+      "EP16"
+    ],
+    "countermeasures": [
+      {
+        "name": "Hazard Analysis & Safety Risk Controls",
+        "type": "Preventive",
+        "description": "Identify credible hazardous situations and implement design controls that reduce the probability or severity of patient harm.",
+        "implementation_notes": "Link hazards, foreseeable sequences of events, risk controls, verification evidence, and residual-risk acceptance in the risk-management file.",
+        "residual_risk": "Unanticipated use conditions or combinations of failures can still produce harm."
+      },
+      {
+        "name": "Independent Safety Limits & Interlocks",
+        "type": "Preventive",
+        "description": "Enforce hard safety bounds independently of the primary software or model decision path.",
+        "implementation_notes": "Use independent range checks, dose/energy limits, watchdogs, mechanical stops, or secondary validation where appropriate.",
+        "residual_risk": "Incorrectly specified limits or common-mode failures can defeat the safeguard."
+      },
+      {
+        "name": "Fail-Safe / Safe-State Behavior",
+        "type": "Corrective",
+        "description": "Move the device or workflow to a clinically safe state when critical faults or uncertainty are detected.",
+        "implementation_notes": "Define the safe state for each operating mode and verify transitions under fault conditions.",
+        "residual_risk": "A safe state may still interrupt treatment or be unavailable in time-critical situations."
+      },
+      {
+        "name": "Clinical Alarm & Escalation Controls",
+        "type": "Detective / Corrective",
+        "description": "Detect safety-relevant failures and escalate them promptly to an appropriate clinician or operator.",
+        "implementation_notes": "Prioritize alarms by clinical urgency and validate alarm comprehension and response time.",
+        "residual_risk": "Alarm fatigue, delayed response, or unavailable staff can reduce effectiveness."
+      },
+      {
+        "name": "Safety Verification Under Fault Conditions",
+        "type": "Preventive / Detective",
+        "description": "Test device behavior under realistic single faults, degraded inputs, misuse, and foreseeable combinations of failures.",
+        "implementation_notes": "Include boundary conditions, interrupted workflows, corrupted inputs, sensor faults, and recovery behavior.",
+        "residual_risk": "Testing cannot exhaust all real-world combinations."
+      }
+    ]
+  },
+  "Healthcare Worker / Bystander Safety": {
+    "entry_points": [
+      "EP01",
+      "EP02",
+      "EP03",
+      "EP14",
+      "EP15"
+    ],
+    "countermeasures": [
+      {
+        "name": "Occupational Hazard Assessment",
+        "type": "Preventive",
+        "description": "Identify hazards to clinicians, technicians, caregivers, maintenance staff, and bystanders during normal use and servicing.",
+        "implementation_notes": "Include electrical, mechanical, radiation, thermal, biological, ergonomic, and environmental hazards as applicable.",
+        "residual_risk": "Rare service or misuse scenarios may not be fully characterized."
+      },
+      {
+        "name": "Physical Guards, Isolation & Interlocks",
+        "type": "Preventive",
+        "description": "Use physical or logical safeguards to prevent personnel exposure to hazardous device states.",
+        "implementation_notes": "Examples include covers, lockouts, access interlocks, shielding, and maintenance-mode restrictions.",
+        "residual_risk": "Safeguards may be bypassed during servicing or emergency operation."
+      },
+      {
+        "name": "Service and Maintenance Safety Procedures",
+        "type": "Preventive",
+        "description": "Define controlled procedures for installation, calibration, repair, cleaning, and maintenance.",
+        "implementation_notes": "Include competency requirements, lockout/tagout where relevant, and verification after service.",
+        "residual_risk": "Procedural controls depend on human compliance."
+      },
+      {
+        "name": "Exposure Monitoring & Incident Detection",
+        "type": "Detective",
+        "description": "Monitor for conditions that could expose staff or bystanders to unsafe energy, substances, or device behavior.",
+        "implementation_notes": "Use sensors, self-tests, event logs, or environmental monitoring where practical.",
+        "residual_risk": "Some harmful exposures may occur before detection."
+      },
+      {
+        "name": "Emergency Shutdown / Isolation",
+        "type": "Corrective",
+        "description": "Provide a clear method to stop or isolate hazardous operation without creating a greater clinical hazard.",
+        "implementation_notes": "Make emergency controls accessible, unambiguous, and periodically tested.",
+        "residual_risk": "Shutdown may itself interrupt necessary care."
+      }
+    ]
+  },
+  "Data Loss / Destruction / Corruption": {
+    "entry_points": [
+      "EP01",
+      "EP04",
+      "EP05",
+      "EP06",
+      "EP09",
+      "EP10",
+      "EP11",
+      "EP12",
+      "EP14",
+      "EP15"
+    ],
+    "countermeasures": [
+      {
+        "name": "Versioned Backups & Point-in-Time Recovery",
+        "type": "Corrective",
+        "description": "Maintain protected backups of clinically and operationally important data with tested restoration procedures.",
+        "implementation_notes": "Use immutable or isolated backup copies where feasible and define recovery-point objectives.",
+        "residual_risk": "Recent data may still be lost between recovery points."
+      },
+      {
+        "name": "Integrity Checks & Transactional Writes",
+        "type": "Preventive / Detective",
+        "description": "Detect incomplete, corrupted, or inconsistent writes and prevent partially committed clinical state.",
+        "implementation_notes": "Use checksums, database constraints, transactions, journaling, and schema validation.",
+        "residual_risk": "Semantically incorrect but structurally valid data can remain undetected."
+      },
+      {
+        "name": "Redundant Storage & Replication",
+        "type": "Preventive",
+        "description": "Replicate important data across independent storage domains to tolerate local failure.",
+        "implementation_notes": "Avoid correlated failure modes and monitor replication lag and health.",
+        "residual_risk": "Corruption can replicate if not detected early."
+      },
+      {
+        "name": "Deletion Protection & Retention Controls",
+        "type": "Preventive",
+        "description": "Prevent accidental or unauthorized deletion of records, logs, models, and configuration.",
+        "implementation_notes": "Use role restrictions, soft deletion, retention locks, and approval for destructive operations.",
+        "residual_risk": "Privileged compromise or misconfigured retention can still cause loss."
+      },
+      {
+        "name": "Routine Restore & Disaster-Recovery Testing",
+        "type": "Detective / Corrective",
+        "description": "Regularly verify that backups, replicas, and recovery procedures can restore usable data within required time objectives.",
+        "implementation_notes": "Test complete recovery workflows, not only backup job completion.",
+        "residual_risk": "A real incident may differ materially from test scenarios."
+      }
+    ]
+  },
+  "Cloud / External Service Dependency": {
+    "entry_points": [
+      "EP04",
+      "EP05",
+      "EP06",
+      "EP07",
+      "EP08",
+      "EP11",
+      "EP14",
+      "EP16"
+    ],
+    "countermeasures": [
+      {
+        "name": "Dependency Inventory & Criticality Mapping",
+        "type": "Preventive",
+        "description": "Maintain an inventory of cloud, SaaS, API, identity, messaging, and remote-processing dependencies and their clinical criticality.",
+        "implementation_notes": "Document owner, purpose, failure mode, SLA, data exchanged, and fallback for each dependency.",
+        "residual_risk": "Undocumented transitive dependencies may remain."
+      },
+      {
+        "name": "Timeouts, Circuit Breakers & Graceful Degradation",
+        "type": "Preventive / Corrective",
+        "description": "Prevent external service failures from cascading through the device or clinical workflow.",
+        "implementation_notes": "Use bounded retries, explicit timeouts, circuit breakers, cached state, and reduced-function modes.",
+        "residual_risk": "Degraded mode may not support all clinically important functions."
+      },
+      {
+        "name": "Multi-Zone / Multi-Region Resilience for Critical Services",
+        "type": "Preventive",
+        "description": "Avoid single cloud availability-zone or region dependencies for clinically critical functions.",
+        "implementation_notes": "Validate failover, state replication, and operational procedures.",
+        "residual_risk": "Provider-wide or account-level failures can still affect all regions."
+      },
+      {
+        "name": "External Service Health Monitoring",
+        "type": "Detective",
+        "description": "Continuously measure dependency health, latency, error rates, and data freshness.",
+        "implementation_notes": "Alert on clinically meaningful degradation rather than infrastructure noise alone.",
+        "residual_risk": "Detection does not guarantee timely recovery."
+      },
+      {
+        "name": "Provider Exit / Substitution Plan",
+        "type": "Corrective / Preventive",
+        "description": "Maintain a feasible path to replace or bypass a critical external provider.",
+        "implementation_notes": "Address data export, alternate vendors, configuration portability, credentials, and validation requirements.",
+        "residual_risk": "Migration may be slow or operationally difficult during an active outage."
+      }
+    ]
+  },
+  "Clinical Decision / Diagnostic / Treatment Error": {
+    "entry_points": [
+      "EP02",
+      "EP03",
+      "EP05",
+      "EP06",
+      "EP07",
+      "EP12",
+      "EP13",
+      "EP16"
+    ],
+    "countermeasures": [
+      {
+        "name": "Independent Clinical Plausibility Checks",
+        "type": "Preventive / Detective",
+        "description": "Check outputs against clinically plausible ranges, known contraindications, and consistency with available patient context.",
+        "implementation_notes": "Keep safety rules independently testable from the primary model or algorithm.",
+        "residual_risk": "Novel or unusual cases may legitimately violate expected patterns."
+      },
+      {
+        "name": "Human Confirmation for High-Consequence Decisions",
+        "type": "Corrective",
+        "description": "Require qualified review before acting on outputs that can directly cause diagnosis, triage, treatment, or intervention.",
+        "implementation_notes": "Define which actions require confirmation and avoid making confirmation a meaningless click-through.",
+        "residual_risk": "Clinicians may inherit or amplify the original error."
+      },
+      {
+        "name": "Reference-Standard Validation",
+        "type": "Preventive",
+        "description": "Validate clinically important outputs against an appropriate reference standard under intended-use conditions.",
+        "implementation_notes": "Include clinically meaningful performance endpoints, not only technical accuracy metrics.",
+        "residual_risk": "Reference standards themselves may contain uncertainty or bias."
+      },
+      {
+        "name": "Result Provenance & Context Display",
+        "type": "Preventive",
+        "description": "Present enough source, timing, patient, device, and confidence context for users to judge whether a result is applicable.",
+        "implementation_notes": "Make stale, incomplete, or out-of-scope inputs conspicuous.",
+        "residual_risk": "Users can still overlook or misinterpret context."
+      },
+      {
+        "name": "Outcome / Near-Miss Surveillance",
+        "type": "Detective / Corrective",
+        "description": "Monitor adverse outcomes, overrides, disagreements, and near misses to identify systematic decision errors after deployment.",
+        "implementation_notes": "Feed findings into CAPA, labeling, model updates, and risk-management review.",
+        "residual_risk": "Outcome attribution can be difficult and reporting incomplete."
+      }
+    ]
+  },
+  "Regulatory / Quality-System Compliance": {
+    "entry_points": [
+      "EP01",
+      "EP05",
+      "EP06",
+      "EP09",
+      "EP10",
+      "EP11",
+      "EP12",
+      "EP13",
+      "EP14",
+      "EP16"
+    ],
+    "countermeasures": [
+      {
+        "name": "Requirements-to-Control Traceability",
+        "type": "Preventive",
+        "description": "Map applicable regulatory, quality, safety, cybersecurity, and privacy requirements to implemented controls and objective evidence.",
+        "implementation_notes": "Maintain traceability through design changes and software releases.",
+        "residual_risk": "Requirements can be misinterpreted or change over time."
+      },
+      {
+        "name": "Controlled Documentation & Records",
+        "type": "Preventive",
+        "description": "Maintain approved, version-controlled procedures, specifications, risk records, test evidence, and required operational records.",
+        "implementation_notes": "Define ownership, approval, retention, and change-control rules.",
+        "residual_risk": "Documentation may lag actual practice."
+      },
+      {
+        "name": "Audit Readiness & Evidence Retention",
+        "type": "Detective / Preventive",
+        "description": "Retain accessible evidence needed to demonstrate compliance, investigate incidents, and support inspections.",
+        "implementation_notes": "Periodically sample records for completeness and retrievability.",
+        "residual_risk": "Evidence can be incomplete despite formal processes."
+      },
+      {
+        "name": "CAPA / Nonconformance Process",
+        "type": "Corrective",
+        "description": "Systematically investigate significant failures, determine root cause, implement corrective action, and verify effectiveness.",
+        "implementation_notes": "Use risk-based escalation criteria and trend recurring issues.",
+        "residual_risk": "Poor root-cause analysis can result in ineffective CAPA."
+      },
+      {
+        "name": "Regulatory Change Assessment",
+        "type": "Preventive",
+        "description": "Assess whether product, model, infrastructure, intended-use, or supplier changes trigger new validation, documentation, or regulatory obligations.",
+        "implementation_notes": "Integrate the assessment into engineering and release workflows.",
+        "residual_risk": "Novel changes may fall into ambiguous regulatory territory."
+      }
+    ]
+  },
+  "Accountability / Auditability / Non-Repudiation": {
+    "entry_points": [
+      "EP01",
+      "EP02",
+      "EP04",
+      "EP05",
+      "EP06",
+      "EP07",
+      "EP08",
+      "EP09",
+      "EP12",
+      "EP14",
+      "EP16"
+    ],
+    "countermeasures": [
+      {
+        "name": "Tamper-Evident Audit Logging",
+        "type": "Detective",
+        "description": "Record security-, clinical-, and configuration-relevant actions in a way that makes unauthorized modification detectable.",
+        "implementation_notes": "Protect log integrity, synchronize time, and restrict log administration.",
+        "residual_risk": "Events not instrumented cannot be reconstructed."
+      },
+      {
+        "name": "Unique User / Service Identity",
+        "type": "Preventive",
+        "description": "Attribute material actions to unique human or machine identities rather than shared accounts.",
+        "implementation_notes": "Use managed service identities and prohibit shared privileged credentials where practical.",
+        "residual_risk": "Credential theft can still misattribute actions."
+      },
+      {
+        "name": "Configuration & Model Provenance",
+        "type": "Preventive / Detective",
+        "description": "Record which software, model, rules, configuration, and data versions produced a clinically relevant output.",
+        "implementation_notes": "Use immutable version identifiers and release manifests.",
+        "residual_risk": "External inputs may lack equivalent provenance."
+      },
+      {
+        "name": "Time Synchronization & Event Correlation",
+        "type": "Detective",
+        "description": "Maintain reliable timestamps so events across device, cloud, network, and clinical systems can be correlated.",
+        "implementation_notes": "Monitor clock drift and define behavior when trustworthy time is unavailable.",
+        "residual_risk": "Offline systems may temporarily lose synchronization."
+      },
+      {
+        "name": "Log Review & Investigation Procedures",
+        "type": "Detective / Corrective",
+        "description": "Define how audit records are reviewed, escalated, preserved, and used during safety, security, and compliance investigations.",
+        "implementation_notes": "Prioritize high-value events and automate correlation where possible.",
+        "residual_risk": "High event volume can obscure relevant evidence."
+      }
+    ]
+  },
+  "Interoperability / Communication Failure": {
+    "entry_points": [
+      "EP03",
+      "EP04",
+      "EP05",
+      "EP06",
+      "EP12",
+      "EP15",
+      "EP16"
+    ],
+    "countermeasures": [
+      {
+        "name": "Interface Contract & Schema Validation",
+        "type": "Preventive / Detective",
+        "description": "Validate messages, fields, units, identifiers, ranges, and required semantics at system boundaries.",
+        "implementation_notes": "Version interface contracts and reject or quarantine incompatible messages.",
+        "residual_risk": "Semantically wrong values can still conform to a schema."
+      },
+      {
+        "name": "End-to-End Integration Testing",
+        "type": "Preventive",
+        "description": "Test complete workflows across devices, EHR, PACS, LIS, gateways, cloud services, and other connected systems.",
+        "implementation_notes": "Include site-specific configuration, latency, network interruption, retries, and duplicate messages.",
+        "residual_risk": "Production environments may contain untested combinations."
+      },
+      {
+        "name": "Patient / Study / Encounter Identity Reconciliation",
+        "type": "Preventive / Detective",
+        "description": "Verify that exchanged data is bound to the correct patient, study, encounter, specimen, or procedure.",
+        "implementation_notes": "Use stable identifiers and explicit mismatch handling.",
+        "residual_risk": "Errors originating upstream may be difficult to resolve automatically."
+      },
+      {
+        "name": "Acknowledgement, Retry & Idempotency Controls",
+        "type": "Preventive / Corrective",
+        "description": "Ensure interrupted communications do not silently drop, duplicate, or reorder clinically important transactions.",
+        "implementation_notes": "Use durable queues, delivery acknowledgements, idempotent processing, and bounded retry policies.",
+        "residual_risk": "Network partitions can still delay time-sensitive data."
+      },
+      {
+        "name": "Interface Health & Data-Freshness Monitoring",
+        "type": "Detective",
+        "description": "Detect stalled interfaces, abnormal error rates, stale data, or unexpected message-volume changes.",
+        "implementation_notes": "Expose clinically relevant status to operators and downstream applications.",
+        "residual_risk": "Monitoring may detect but not automatically correct interoperability defects."
+      }
+    ]
+  },
+  "Intellectual Property / Proprietary Asset Loss": {
+    "entry_points": [
+      "EP01",
+      "EP06",
+      "EP07",
+      "EP08",
+      "EP09",
+      "EP10",
+      "EP11",
+      "EP12",
+      "EP13",
+      "EP14",
+      "EP15",
+      "EP16"
+    ],
+    "countermeasures": [
+      {
+        "name": "Access Segmentation for Proprietary Assets",
+        "type": "Preventive",
+        "description": "Restrict models, source code, algorithms, proprietary datasets, keys, and design artifacts to authorized roles and systems.",
+        "implementation_notes": "Separate development, production, support, and customer-access paths.",
+        "residual_risk": "Authorized insiders may still exfiltrate information."
+      },
+      {
+        "name": "Encryption & Key Protection",
+        "type": "Preventive",
+        "description": "Protect proprietary assets in transit and at rest with appropriately managed encryption keys.",
+        "implementation_notes": "Use hardware-backed or managed key services for high-value secrets where practical.",
+        "residual_risk": "Compromised endpoints can access decrypted data."
+      },
+      {
+        "name": "Model / API Extraction Resistance",
+        "type": "Preventive / Detective",
+        "description": "Limit automated extraction or replication of proprietary model behavior through exposed interfaces.",
+        "implementation_notes": "Use authentication, quotas, anomaly detection, response minimization, and contract controls.",
+        "residual_risk": "Legitimate usage can still reveal significant model behavior."
+      },
+      {
+        "name": "Repository & Artifact Monitoring",
+        "type": "Detective",
+        "description": "Monitor source repositories, build artifacts, model registries, and data stores for unauthorized access or bulk export.",
+        "implementation_notes": "Alert on unusual clones, downloads, token use, or cross-boundary transfers.",
+        "residual_risk": "Low-and-slow theft may evade thresholds."
+      },
+      {
+        "name": "Secret and Credential Scanning",
+        "type": "Preventive / Detective",
+        "description": "Detect credentials, private keys, proprietary data, and sensitive configuration accidentally embedded in code or distributable artifacts.",
+        "implementation_notes": "Scan commits, CI artifacts, containers, packages, and release images.",
+        "residual_risk": "Custom or obfuscated sensitive material may not match scanning rules."
+      }
+    ]
+  },
+  "Financial / Commercial / Contractual Loss": {
+    "entry_points": [
+      "EP01",
+      "EP04",
+      "EP05",
+      "EP06",
+      "EP07",
+      "EP09",
+      "EP10",
+      "EP11",
+      "EP14",
+      "EP16"
+    ],
+    "countermeasures": [
+      {
+        "name": "Business Impact & Criticality Analysis",
+        "type": "Preventive",
+        "description": "Identify failure scenarios that can create material revenue, contractual, recall, service-credit, remediation, or customer-retention impact.",
+        "implementation_notes": "Tie technical dependencies to business processes and quantify impact where feasible.",
+        "residual_risk": "Indirect commercial effects are difficult to estimate precisely."
+      },
+      {
+        "name": "Contractual Risk Allocation",
+        "type": "Preventive",
+        "description": "Define responsibilities, warranties, incident obligations, service levels, liability boundaries, and supplier remedies contractually.",
+        "implementation_notes": "Align contract terms with realistic technical controls and insurance coverage.",
+        "residual_risk": "Contractual recovery may be slow or incomplete."
+      },
+      {
+        "name": "Business Continuity & Revenue-Critical Recovery",
+        "type": "Corrective",
+        "description": "Prioritize recovery of services, functions, and customers according to financial and contractual criticality.",
+        "implementation_notes": "Integrate commercial priorities into disaster-recovery exercises.",
+        "residual_risk": "Large-scale incidents can exceed continuity assumptions."
+      },
+      {
+        "name": "Incident Cost Tracking & Escalation",
+        "type": "Detective / Corrective",
+        "description": "Track direct and projected incident costs so management can escalate remediation before losses compound.",
+        "implementation_notes": "Include support burden, customer credits, lost sales, legal cost, recall exposure, and engineering effort.",
+        "residual_risk": "Long-tail losses can emerge after the incident closes."
+      },
+      {
+        "name": "Customer / Supplier Concentration Controls",
+        "type": "Preventive",
+        "description": "Reduce dependence on single customers, providers, channels, or suppliers where failure would create disproportionate commercial damage.",
+        "implementation_notes": "Use alternate suppliers, portability, negotiated protections, or contingency capacity where justified.",
+        "residual_risk": "Some specialized dependencies may have no practical substitute."
+      }
+    ]
+  },
+  "Reputation / Trust Damage": {
+    "entry_points": [
+      "EP01",
+      "EP04",
+      "EP05",
+      "EP06",
+      "EP07",
+      "EP09",
+      "EP11",
+      "EP13",
+      "EP14",
+      "EP16"
+    ],
+    "countermeasures": [
+      {
+        "name": "Transparent Incident Communication Plan",
+        "type": "Corrective",
+        "description": "Prepare factual, timely communication workflows for customers, clinicians, patients, regulators, and partners after material incidents.",
+        "implementation_notes": "Predefine ownership, approval paths, notification thresholds, and evidence requirements.",
+        "residual_risk": "Communication cannot fully reverse loss of trust after a serious event."
+      },
+      {
+        "name": "Safety / Security Claim Review",
+        "type": "Preventive",
+        "description": "Review public, sales, clinical, and regulatory claims to ensure they accurately reflect validated capabilities and limitations.",
+        "implementation_notes": "Use cross-functional approval for high-risk claims.",
+        "residual_risk": "External parties may still interpret accurate statements differently."
+      },
+      {
+        "name": "Customer-Facing Reliability & Security Evidence",
+        "type": "Preventive",
+        "description": "Provide credible evidence of testing, monitoring, response capability, and corrective action to customers and partners.",
+        "implementation_notes": "Keep evidence current and consistent with actual product state.",
+        "residual_risk": "Evidence loses value if operational performance contradicts it."
+      },
+      {
+        "name": "Complaint / Sentiment Trend Monitoring",
+        "type": "Detective",
+        "description": "Monitor complaints, support tickets, adverse-event signals, customer escalations, and other trust indicators for emerging patterns.",
+        "implementation_notes": "Link trend thresholds to quality and management escalation.",
+        "residual_risk": "Public trust can deteriorate faster than formal monitoring detects."
+      },
+      {
+        "name": "Post-Incident Corrective Action Disclosure",
+        "type": "Corrective",
+        "description": "When appropriate, communicate verified corrective actions and prevention measures after a significant failure.",
+        "implementation_notes": "Coordinate legal, regulatory, quality, security, and commercial stakeholders.",
+        "residual_risk": "Stakeholders may remain skeptical despite effective remediation."
+      }
+    ]
+  },
+  "Environmental / Power / Infrastructure Failure": {
+    "entry_points": [
+      "EP01",
+      "EP03",
+      "EP04",
+      "EP06",
+      "EP14",
+      "EP15"
+    ],
+    "countermeasures": [
+      {
+        "name": "Power Conditioning & Backup Power",
+        "type": "Preventive / Corrective",
+        "description": "Protect critical functions from power loss, brownouts, surges, and unstable facility power.",
+        "implementation_notes": "Use batteries, UPS, graceful shutdown, and validated restart behavior as appropriate.",
+        "residual_risk": "Extended outages may exceed backup duration."
+      },
+      {
+        "name": "Environmental Operating-Range Monitoring",
+        "type": "Detective / Preventive",
+        "description": "Detect temperature, humidity, vibration, electromagnetic, or other environmental conditions outside validated limits.",
+        "implementation_notes": "Alarm, derate, or enter a safe state when limits are exceeded.",
+        "residual_risk": "Rapid excursions can cause damage before response."
+      },
+      {
+        "name": "Hardware Watchdogs & Self-Test",
+        "type": "Detective / Corrective",
+        "description": "Detect hardware or low-level software faults and recover or place the system in a safe state.",
+        "implementation_notes": "Include startup, periodic, and event-triggered diagnostics.",
+        "residual_risk": "Common-mode hardware failures may defeat diagnostics."
+      },
+      {
+        "name": "Infrastructure Dependency Mapping",
+        "type": "Preventive",
+        "description": "Identify facility, network, power, cooling, time, DNS, storage, and other infrastructure required for safe operation.",
+        "implementation_notes": "Define criticality, monitoring, and fallback for each dependency.",
+        "residual_risk": "Site-specific dependencies may be discovered only after deployment."
+      },
+      {
+        "name": "Recovery after Power / Infrastructure Interruption",
+        "type": "Corrective",
+        "description": "Ensure restart preserves data integrity, configuration, patient association, and safe clinical state.",
+        "implementation_notes": "Test abrupt power loss and partial dependency recovery.",
+        "residual_risk": "Interrupted procedures may require manual reconciliation."
+      }
+    ]
+  },
+  "UNDEFINED": {
+    "entry_points": [],
+    "countermeasures": [
+      {
+        "name": "Manual Threat Review",
+        "type": "Detective",
+        "description": "Route threats that do not map reliably to an established countermeasure class for expert review.",
+        "implementation_notes": "Capture why classification failed and whether the taxonomy, threat wording, or classifier should be changed.",
+        "residual_risk": "Manual review is slower and can be inconsistent."
+      },
+      {
+        "name": "Apply Baseline Security & Safety Controls",
+        "type": "Preventive",
+        "description": "Until a threat is classified, maintain the product's standard baseline controls rather than inventing a threat-specific mitigation.",
+        "implementation_notes": "Use the organization's approved minimum security, privacy, safety, and quality baseline.",
+        "residual_risk": "Baseline controls may not address the threat's actual mechanism."
+      },
+      {
+        "name": "Request Additional Threat Context",
+        "type": "Corrective",
+        "description": "Obtain or generate additional information needed to determine the affected asset, failure mechanism, and plausible damage.",
+        "implementation_notes": "Prefer clarifying threat text over forcing a low-confidence class assignment.",
+        "residual_risk": "Additional context may still be insufficient."
+      },
+      {
+        "name": "Taxonomy Gap Tracking",
+        "type": "Detective",
+        "description": "Track recurring undefined threats to identify missing or poorly scoped countermeasure classes.",
+        "implementation_notes": "Review UNDEFINED frequency and semantic clusters after each classification batch.",
+        "residual_risk": "Rare but important classes may take time to emerge statistically."
+      },
+      {
+        "name": "Conservative Escalation for High-Severity Unknowns",
+        "type": "Corrective",
+        "description": "Escalate undefined threats with potentially high patient, privacy, security, or business impact for priority analysis.",
+        "implementation_notes": "Use severity and uncertainty rather than classifier confidence alone.",
+        "residual_risk": "Conservative escalation can create review workload."
+      }
+    ]
+  }
+}

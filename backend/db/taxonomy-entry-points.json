@@ -1,0 +1,84 @@
+{
+  "entry_points": [
+    {
+      "id": "EP01",
+      "name": "Physical Device",
+      "description": "Physical access to the medical device, appliance, workstation, embedded hardware, or its enclosure."
+    },
+    {
+      "id": "EP02",
+      "name": "Local User Interface",
+      "description": "On-device or locally attached interfaces used by clinicians, operators, technicians, or patients."
+    },
+    {
+      "id": "EP03",
+      "name": "Sensor / Acquisition Interface",
+      "description": "Sensors, imaging inputs, physiological signals, acquisition hardware, and device-to-sensor communication paths."
+    },
+    {
+      "id": "EP04",
+      "name": "Clinical Network",
+      "description": "Hospital, clinic, laboratory, or other healthcare delivery networks to which the product connects."
+    },
+    {
+      "id": "EP05",
+      "name": "EHR / PACS / LIS Interface",
+      "description": "Interfaces to clinical information systems including EHR, PACS, RIS, LIS, and related interoperability services."
+    },
+    {
+      "id": "EP06",
+      "name": "Cloud API / Backend",
+      "description": "Internet-facing or private APIs, cloud services, databases, processing services, and backend infrastructure."
+    },
+    {
+      "id": "EP07",
+      "name": "Web / Mobile Application",
+      "description": "Browser-based, mobile, tablet, or companion applications used to access product functionality or data."
+    },
+    {
+      "id": "EP08",
+      "name": "Identity / Authentication",
+      "description": "Login, SSO, identity-provider, credential, token, session, authorization, and account-recovery interfaces."
+    },
+    {
+      "id": "EP09",
+      "name": "Software / Firmware Update",
+      "description": "Mechanisms used to distribute, verify, install, activate, or roll back software, firmware, configuration, or model updates."
+    },
+    {
+      "id": "EP10",
+      "name": "Third-Party Software / Library",
+      "description": "Third-party packages, libraries, operating-system components, containers, SDKs, and other incorporated software dependencies."
+    },
+    {
+      "id": "EP11",
+      "name": "Vendor / Supply Chain",
+      "description": "External vendors, development partners, manufacturers, service providers, build systems, and upstream supply-chain processes."
+    },
+    {
+      "id": "EP12",
+      "name": "Data Import / File Interface",
+      "description": "Files, removable datasets, uploads, exports, DICOM objects, documents, configuration files, and other imported data."
+    },
+    {
+      "id": "EP13",
+      "name": "Model / Training Data Pipeline",
+      "description": "Training, fine-tuning, validation, labeling, feature engineering, model registry, and training-data ingestion pipelines."
+    },
+    {
+      "id": "EP14",
+      "name": "Administrative / Support Interface",
+      "description": "Privileged administration, maintenance, remote support, diagnostics, service tooling, and operational management interfaces."
+    },
+    {
+      "id": "EP15",
+      "name": "Removable Media / Peripheral",
+      "description": "USB devices, external storage, serial devices, printers, displays, and other locally connected peripherals."
+    },
+    {
+      "id": "EP16",
+      "name": "External AI / Model Service",
+      "description": "Externally hosted AI, foundation-model, inference, embedding, decision-support, or other model-as-a-service dependencies."
+    }
+  ]
+}
