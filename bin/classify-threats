@@ -1,0 +1,17 @@
+#!/bin/bash
+# Wrapper for threat classification CLI (PAT-330)
+# Usage: ./bin/classify-threats --threat-ids=1,50 --model-id=35
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+BACKEND_DIR="$PROJECT_ROOT/backend"
+
+# Ensure .env is loaded
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    export $(cat "$PROJECT_ROOT/.env" | grep -v '^#' | xargs)
+fi
+
+# Run the Python CLI
+cd "$BACKEND_DIR" && python3 -m services.cli_threat_classifier "$@"

@@ -314,6 +314,31 @@ class CountermeasureUpdate(BaseModel):
 
 
 # -------------------------------------------------------------------------
+# Countermeasure Classes (PAT-330: Control Types)
+# -------------------------------------------------------------------------
+class CountermeasureClassCreate(BaseModel):
+    """Create a new countermeasure control class (PAT-330)."""
+    class_name: str  # e.g., "Patient Safety / Physical Harm"
+    tag: str  # e.g., "PATIENT_SAFETY_PHYSICAL_HARM"
+    description: str | None = None
+
+
+class CountermeasureClassUpdate(BaseModel):
+    """Update a countermeasure control class."""
+    class_name: str | None = None
+    tag: str | None = None
+    description: str | None = None
+
+
+class CountermeasureClassRead(BaseModel):
+    """Read response for countermeasure control class."""
+    id: int
+    class_name: str
+    tag: str
+    description: str | None = None
+
+
+# -------------------------------------------------------------------------
 # Products (FDA-Cleared AI-Enabled Medical Devices)
 # -------------------------------------------------------------------------
 class ProductCreate(BaseModel):
