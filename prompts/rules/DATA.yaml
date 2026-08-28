@@ -190,6 +190,7 @@ DATA:
           - version
           - domain
           - tag
+          - product_id
 
         basis_runs:
           - id
@@ -255,6 +256,21 @@ DATA:
           - updated_at
           - version
           - yearly_cost
+          - class_id
+
+        countermeasure_class:
+          - id
+          - class
+          - tag
+          - description
+          - created_at
+          - updated_at
+
+        threat_countermeasure_classes:
+          - id
+          - threat_id
+          - class_id
+          - created_at
 
         entrypoints:
           - id

@@ -45,23 +45,41 @@ DEFAULT_MIN_CONFIDENCE = 0.6
 async def fetch_threat_info(
     pool: asyncpg.Pool,
     threat_ids: List[int],
-    model_id: int,
+    model_id: Optional[int] = None,
 ) -> List[Dict[str, Any]]:
-    """Fetch threat name, description, domain for a batch of threat IDs."""
+    """Fetch threat name, description, domain for a batch of threat IDs.
+    
+    Args:
+        pool: AsyncPG connection pool
+        threat_ids: List of threat IDs
+        model_id: Optional model ID filter (None = fetch across all models)
+    """
     if not threat_ids:
         return []
     
     # Build parameterized query
     id_list = ",".join(f"${i+1}" for i in range(len(threat_ids)))
-    query = f"""
-        SELECT id, name, description, domain, probability
-        FROM threat.threats
-        WHERE model_id = ${len(threat_ids)+1} AND id IN ({id_list})
-        ORDER BY id
-    """
     
-    async with pool.acquire() as conn:
-        rows = await conn.fetch(query, *threat_ids, model_id)
+    if model_id is not None:
+        # Single model filter
+        query = f"""
+            SELECT id, name, description, domain, probability, model_id
+            FROM threat.threats
+            WHERE model_id = ${len(threat_ids)+1} AND id IN ({id_list})
+            ORDER BY id
+        """
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(query, *threat_ids, model_id)
+    else:
+        # Multi-model: no model_id filter
+        query = f"""
+            SELECT id, name, description, domain, probability, model_id
+            FROM threat.threats
+            WHERE id IN ({id_list})
+            ORDER BY id
+        """
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(query, *threat_ids)
     
     return [dict(row) for row in rows]
 
@@ -138,18 +156,22 @@ Rules:
 
 async def classify_threats_batch(
     threat_ids: List[int],
-    model_id: int,
-    db_pool: asyncpg.Pool,
-    openai_client: OpenAI,
+    model_id: Optional[int] = None,
+    db_pool: asyncpg.Pool = None,
+    openai_client: OpenAI = None,
     min_confidence: float = DEFAULT_MIN_CONFIDENCE,
     batch_size: int = 50,
 ) -> Dict[int, List[str]]:
     """
     Classify a batch of threats to countermeasure control classes.
     
+    For multi-model classification (model_id=None), groups threats by model_id
+    and processes each model separately, upserting incrementally to avoid
+    overwhelming memory and to persist results continuously.
+    
     Args:
         threat_ids: List of threat IDs to classify
-        model_id: Threat model ID context
+        model_id: Optional threat model ID filter (None = multi-model classification)
         db_pool: AsyncPG connection pool
         openai_client: OpenAI API client
         min_confidence: Minimum confidence threshold (0.0-1.0)
@@ -163,7 +185,7 @@ async def classify_threats_batch(
     
     logger.info(f"Classifying {len(threat_ids)} threats to control classes")
     
-    # Fetch all threats and classes
+    # Fetch all threats
     threats = await fetch_threat_info(db_pool, threat_ids, model_id)
     class_map = await fetch_countermeasure_classes(db_pool)
     
@@ -176,6 +198,60 @@ async def classify_threats_batch(
         return {}
     
     logger.info(f"Loaded {len(threats)} threats and {len(class_map)} classes")
+    
+    # For multi-model classification, group threats by model_id and process each model
+    threat_to_classes: Dict[int, List[str]] = {}
+    total_upserted = 0
+    
+    if model_id is None:
+        # Multi-model: group by model_id and process each group
+        threats_by_model: Dict[int, List[Dict[str, Any]]] = {}
+        for threat in threats:
+            m_id = threat.get("model_id")
+            if m_id not in threats_by_model:
+                threats_by_model[m_id] = []
+            threats_by_model[m_id].append(threat)
+        
+        logger.info(f"Multi-model classification: {len(threats_by_model)} models found")
+        
+        # Process each model separately and upsert immediately
+        for m_id, model_threats in sorted(threats_by_model.items()):
+            logger.info(f"  Processing model_id={m_id} with {len(model_threats)} threats")
+            model_classifications = await _classify_threat_batch_single_model(
+                model_threats,
+                class_map,
+                openai_client,
+            )
+            
+            # Upsert immediately after each model to avoid memory buildup
+            inserted, _ = await upsert_threat_classifications(
+                db_pool,
+                model_classifications,
+                class_map,
+            )
+            total_upserted += inserted
+            logger.info(f"  ✓ Upserted {inserted} classifications for model_id={m_id}")
+            
+            threat_to_classes.update(model_classifications)
+    else:
+        # Single model: process all at once
+        threat_to_classes = await _classify_threat_batch_single_model(
+            threats,
+            class_map,
+            openai_client,
+        )
+    
+    return threat_to_classes
+
+
+async def _classify_threat_batch_single_model(
+    threats: List[Dict[str, Any]],
+    class_map: Dict[str, Tuple[int, str]],
+    openai_client: OpenAI,
+) -> Dict[int, List[str]]:
+    """Classify threats for a single model using LLM."""
+    if not threats:
+        return {}
     
     # Build and execute LLM call
     system_prompt, user_prompt = _build_classification_prompt(threats, class_map)

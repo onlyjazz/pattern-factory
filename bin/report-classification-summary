@@ -1,0 +1,118 @@
+#!/bin/bash
+# PAT-330: Threat Classification Summary Report
+# Run after ./classify-threats completes
+
+set -e
+
+DB_URL="${DATABASE_URL:-postgresql://pattern_factory@localhost/pattern-factory}"
+
+echo "=== PAT-330: Threat Classification Summary Report ===="
+echo ""
+echo "Report generated: $(date)"
+echo ""
+
+# 1. Overall statistics
+echo "## 1. CLASSIFICATION COVERAGE"
+psql -d pattern-factory << 'EOF'
+SELECT 
+    COUNT(DISTINCT threat_id) as total_threats_classified,
+    COUNT(*) as total_class_assignments,
+    ROUND(COUNT(*)::float / COUNT(DISTINCT threat_id), 2) as avg_classes_per_threat,
+    COUNT(DISTINCT t.model_id) as models_with_classifications
+FROM threat.threat_countermeasure_classes tcc
+JOIN threat.threats t ON tcc.threat_id = t.id;
+EOF
+
+echo ""
+echo "## 2. CLASS DISTRIBUTION (Top 15)"
+psql -d pattern-factory << 'EOF'
+SELECT 
+    cc.tag,
+    cc.class,
+    COUNT(*) as threat_count,
+    ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER(), 2) as pct_of_total
+FROM threat.threat_countermeasure_classes tcc
+JOIN threat.countermeasure_class cc ON tcc.class_id = cc.id
+WHERE cc.tag != 'UNDEFINED'
+GROUP BY cc.tag, cc.class
+ORDER BY threat_count DESC
+LIMIT 15;
+EOF
+
+echo ""
+echo "## 3. MULTI-CLASS ASSIGNMENT DISTRIBUTION"
+psql -d pattern-factory << 'EOF'
+WITH threat_class_counts AS (
+    SELECT threat_id, COUNT(DISTINCT class_id) as class_count
+    FROM threat.threat_countermeasure_classes
+    GROUP BY threat_id
+)
+SELECT 
+    class_count,
+    COUNT(*) as threat_count,
+    ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER(), 2) as pct
+FROM threat_class_counts
+GROUP BY class_count
+ORDER BY class_count;
+EOF
+
+echo ""
+echo "## 4. UNDEFINED THREATS (if any)"
+psql -d pattern-factory << 'EOF'
+SELECT 
+    COUNT(DISTINCT threat_id) as undefined_threat_count
+FROM threat.threat_countermeasure_classes tcc
+JOIN threat.countermeasure_class cc ON tcc.class_id = cc.id
+WHERE cc.tag = 'UNDEFINED';
+EOF
+
+echo ""
+echo "## 5. THREAT VIEW SAMPLE (threat_id IN 4884-4890)"
+psql -d pattern-factory << 'EOF'
+SELECT 
+    model_id,
+    model_name,
+    threat_id,
+    threat_name,
+    class_tag,
+    countermeasure_name
+FROM threat.v_threat_countermeasures_with_class
+WHERE threat_id IN (4884, 4885, 4886, 4887, 4888, 4889, 4890)
+ORDER BY threat_id, class_tag, countermeasure_name
+LIMIT 30;
+EOF
+
+echo ""
+echo "## 6. MODELS WITH HIGHEST THREAT COUNTS"
+psql -d pattern-factory << 'EOF'
+SELECT 
+    t.model_id,
+    m.name as model_name,
+    COUNT(DISTINCT t.id) as threat_count
+FROM threat.threats t
+JOIN threat.models m ON t.model_id = m.id
+WHERE EXISTS (
+    SELECT 1 FROM threat.threat_countermeasure_classes tcc 
+    WHERE tcc.threat_id = t.id
+)
+GROUP BY t.model_id, m.name
+ORDER BY threat_count DESC
+LIMIT 10;
+EOF
+
+echo ""
+echo "## 7. VIEW QUERY TEST (for RULE usage)"
+echo "Testing view with semantic query:"
+psql -d pattern-factory << 'EOF'
+-- Example RULE query: threats with CLINICAL_DECISION_DIAGNOSTIC_TREATMENT_ERROR control
+-- that affect PATIENT_SAFETY_PHYSICAL_HARM
+SELECT 
+    COUNT(DISTINCT t.threat_id) as unique_threats,
+    COUNT(*) as total_rows
+FROM threat.v_threat_countermeasures_with_class t
+WHERE t.class_tag IN ('CLINICAL_DECISION_DIAGNOSTIC_TREATMENT_ERROR', 'PATIENT_SAFETY_PHYSICAL_HARM');
+EOF
+
+echo ""
+echo "✅ Classification Summary Report Complete"
+echo ""

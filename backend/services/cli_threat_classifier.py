@@ -78,8 +78,8 @@ async def main():
     parser.add_argument(
         "--model-id",
         type=int,
-        default=DEFAULT_MODEL_ID,
-        help=f"Threat model ID (default: {DEFAULT_MODEL_ID})",
+        default=None,
+        help="Threat model ID (optional; if omitted, classify across all models in threat range)",
     )
     parser.add_argument(
         "--min-confidence",
@@ -108,7 +108,10 @@ async def main():
         sys.exit(1)
     
     logger.info(f"Classifying {len(threat_ids)} threats: {threat_ids[:10]}...")
-    logger.info(f"Model ID: {args.model_id}, Min Confidence: {args.min_confidence}")
+    if args.model_id:
+        logger.info(f"Model ID: {args.model_id}, Min Confidence: {args.min_confidence}")
+    else:
+        logger.info(f"Multi-model classification across threat range, Min Confidence: {args.min_confidence}")
     
     # Initialize database pool and OpenAI client
     pool = await asyncpg.create_pool(args.db_url, min_size=1, max_size=5)
@@ -121,7 +124,7 @@ async def main():
         
         threat_to_classes = await classify_threats_batch(
             threat_ids=threat_ids,
-            model_id=args.model_id,
+            model_id=args.model_id,  # Can be None for multi-model
             db_pool=pool,
             openai_client=openai_client,
             min_confidence=args.min_confidence,
