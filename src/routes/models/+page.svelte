@@ -26,6 +26,11 @@ import { API_BASE } from '$lib/config';
 	let sortField: keyof Model | null = null;
 	let sortDirection: 'asc' | 'desc' = 'asc';
 	
+	let showProductModal = false;
+	let selectedProduct: any = null;
+	let productModalLoading = false;
+	let productModalError: string | null = null;
+	
 	const apiBase = API_BASE;
 	
 	onMount(async () => {
@@ -61,10 +66,11 @@ import { API_BASE } from '$lib/config';
 		const active = filteredModels.filter(m => m.id === activeId);
 		const rest = filteredModels.filter(m => m.id !== activeId);
 
-		if (sortField) {
+		if (sortField !== null) {
+			const field = sortField; // capture for closure
 			rest.sort((a, b) => {
-				const aVal = a[sortField] || '';
-				const bVal = b[sortField] || '';
+				const aVal = a[field] || '';
+				const bVal = b[field] || '';
 				const comparison = String(aVal).localeCompare(String(bVal));
 				return sortDirection === 'asc' ? comparison : -comparison;
 			});
@@ -163,6 +169,30 @@ import { API_BASE } from '$lib/config';
 			error = e instanceof Error ? e.message : 'Failed to delete model';
 		}
 	}
+	
+	async function handleProductIdClick(productId: number | null | undefined, e: Event) {
+		if (!productId) return;
+		e.stopPropagation();
+		
+		try {
+			productModalError = null;
+			productModalLoading = true;
+			const response = await fetch(`${apiBase}/products/${productId}`);
+			if (!response.ok) throw new Error('Failed to fetch product');
+			selectedProduct = await response.json();
+			showProductModal = true;
+		} catch (e) {
+			productModalError = e instanceof Error ? e.message : 'Failed to load product';
+		} finally {
+			productModalLoading = false;
+		}
+	}
+	
+	function closeProductModal() {
+		showProductModal = false;
+		selectedProduct = null;
+		productModalError = null;
+	}
 
 </script>
 
@@ -210,6 +240,9 @@ import { API_BASE } from '$lib/config';
 									<th class="tal sortable" class:sorted-asc={sortField === 'company' && sortDirection === 'asc'} class:sorted-desc={sortField === 'company' && sortDirection === 'desc'} onclick={() => toggleSort('company')}>
 										Company
 									</th>
+									<th class="tal sortable" class:sorted-asc={sortField === 'product_id' && sortDirection === 'asc'} class:sorted-desc={sortField === 'product_id' && sortDirection === 'desc'} onclick={() => toggleSort('product_id')}>
+										Product ID
+									</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'description' && sortDirection === 'asc'} class:sorted-desc={sortField === 'description' && sortDirection === 'desc'} onclick={() => toggleSort('description')}>
 										Description
 									</th>
@@ -224,6 +257,20 @@ import { API_BASE } from '$lib/config';
 										<td class="tal">{m.version || '-'}</td>
 										<td class="tal">{m.author || '-'}</td>
 										<td class="tal">{m.company || '-'}</td>
+										<td class="tal">
+											{#if m.product_id}
+												<button
+													type="button"
+													class="product-id-link"
+													onclick={(e) => handleProductIdClick(m.product_id, e)}
+													title="View product details"
+												>
+													{m.product_id}
+												</button>
+											{:else}
+												-
+											{/if}
+										</td>
 										<td class="tal">{m.description || '-'}</td>
 
 										<td class="tar" onclick={(e) => e.stopPropagation()}>
@@ -362,6 +409,57 @@ import { API_BASE } from '$lib/config';
 	</div>
 {/if}
 
+<!-- PRODUCT MODAL -->
+{#if showProductModal}
+	<div class="modal-overlay" onclick={closeProductModal} onkeydown={(e) => e.key === 'Escape' && closeProductModal()} role="presentation">
+		<div class="modal-content" role="dialog" aria-labelledby="product-modal-title" tabindex="0" onclick={(e) => e.stopPropagation()}>
+			<div class="modal-header">
+				<h2 id="product-modal-title" class="heading heading_2">Product Details</h2>
+				<button
+					type="button"
+					class="modal-close"
+					onclick={closeProductModal}
+					title="Close"
+				>
+					×
+				</button>
+			</div>
+
+			<div class="modal-body">
+				{#if productModalLoading}
+					<div class="message">Loading product details...</div>
+				{:else if productModalError}
+					<div class="message message-error error-margin">Error: {productModalError}</div>
+				{:else if selectedProduct}
+					<div class="product-details">
+						<div class="detail-field">
+							<label for="submission-number">Submission Number</label>
+							<p id="submission-number">{selectedProduct.submission_number || '-'}</p>
+						</div>
+						<div class="detail-field">
+							<label for="company">Company</label>
+							<p id="company">{selectedProduct.company || '-'}</p>
+						</div>
+						<div class="detail-field full">
+							<label for="device-description">Device Description</label>
+							<p id="device-description">{selectedProduct.device_description || '-'}</p>
+						</div>
+					</div>
+				{/if}
+			</div>
+
+			<div class="modal-footer">
+				<button
+					type="button"
+					class="button button_secondary"
+					onclick={closeProductModal}
+				>
+					Close
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <style>
 	:global(.button_small) {
@@ -519,5 +617,41 @@ import { API_BASE } from '$lib/config';
 	textarea.input__text {
 		font-family: inherit;
 		resize: vertical;
+	}
+
+	.product-id-link {
+		color: #0066cc;
+		cursor: pointer;
+		text-decoration: underline;
+	}
+
+	.product-details {
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+	}
+
+	.product-details .detail-field {
+		display: grid;
+		grid-template-columns: 150px 1fr;
+		align-items: flex-start;
+		gap: 10px;
+	}
+
+	.product-details .detail-field.full {
+		grid-column: 1 / -1;
+		grid-template-columns: 150px 1fr;
+	}
+
+	.product-details label {
+		font-weight: 600;
+		color: #333;
+	}
+
+	.product-details p {
+		margin: 0;
+		color: #666;
+		line-height: 1.4;
+		word-wrap: break-word;
 	}
 </style>

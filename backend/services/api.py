@@ -955,7 +955,7 @@ async def get_models():
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
-            SELECT id, name, version, author, company, category, keywords, description, created_at, updated_at
+            SELECT id, name, version, author, company, category, keywords, description, product_id, created_at, updated_at
             FROM threat.models
             ORDER BY created_at DESC
         """)
@@ -988,7 +988,7 @@ async def get_model(model_id: int):
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
-            "SELECT id, name, version, author, company, category, keywords, description, created_at, updated_at FROM threat.models WHERE id = $1",
+            "SELECT id, name, version, author, company, category, keywords, description, product_id, created_at, updated_at FROM threat.models WHERE id = $1",
             model_id
         )
     if not row:
@@ -1012,7 +1012,7 @@ async def update_model(model_id: int, patch: ModelUpdate):
                 keywords = COALESCE($6, keywords),
                 description = COALESCE($7, description)
             WHERE id = $8
-            RETURNING id, name, version, author, company, category, keywords, description, created_at, updated_at
+            RETURNING id, name, version, author, company, category, keywords, description, product_id, created_at, updated_at
             """,
             patch.name,
             patch.version,

@@ -99,6 +99,7 @@ export interface Model {
     category?: string | null;
     keywords?: string | null;
     description?: string | null;
+    product_id?: number | null;
     created_at?: string;
     updated_at?: string;
 }

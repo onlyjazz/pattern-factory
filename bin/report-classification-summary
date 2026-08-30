@@ -17,7 +17,7 @@ psql -d pattern-factory << 'EOF'
 SELECT 
     COUNT(DISTINCT threat_id) as total_threats_classified,
     COUNT(*) as total_class_assignments,
-    ROUND(COUNT(*)::float / COUNT(DISTINCT threat_id), 2) as avg_classes_per_threat,
+    ROUND((COUNT(*)::numeric / COUNT(DISTINCT threat_id))::numeric, 2) as avg_classes_per_threat,
     COUNT(DISTINCT t.model_id) as models_with_classifications
 FROM threat.threat_countermeasure_classes tcc
 JOIN threat.threats t ON tcc.threat_id = t.id;
@@ -30,7 +30,7 @@ SELECT
     cc.tag,
     cc.class,
     COUNT(*) as threat_count,
-    ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER(), 2) as pct_of_total
+    ROUND((100.0 * COUNT(*) / SUM(COUNT(*)) OVER())::numeric, 2) as pct_of_total
 FROM threat.threat_countermeasure_classes tcc
 JOIN threat.countermeasure_class cc ON tcc.class_id = cc.id
 WHERE cc.tag != 'UNDEFINED'
@@ -50,7 +50,7 @@ WITH threat_class_counts AS (
 SELECT 
     class_count,
     COUNT(*) as threat_count,
-    ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER(), 2) as pct
+    ROUND((100.0 * COUNT(*) / SUM(COUNT(*)) OVER())::numeric, 2) as pct
 FROM threat_class_counts
 GROUP BY class_count
 ORDER BY class_count;
