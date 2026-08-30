@@ -1,6 +1,0 @@
-#!/bin/bash
-
-BACKUP_DIR="/Users/dl/Library/Mobile Documents/com~apple~CloudDocs/PostgreSQL Backups"
-mkdir -p "$BACKUP_DIR"
-
-pg_dump -d pattern-factory --no-password -Fc -f "$BACKUP_DIR/pattern-factory-backup-$(date +%Y%m%d-%H%M%S).dump"
