@@ -234,8 +234,8 @@ import { API_BASE } from '$lib/config';
 									<th class="tal sortable" class:sorted-asc={sortField === 'version' && sortDirection === 'asc'} class:sorted-desc={sortField === 'version' && sortDirection === 'desc'} onclick={() => toggleSort('version')}>
 										Version
 									</th>
-									<th class="tal sortable" class:sorted-asc={sortField === 'author' && sortDirection === 'asc'} class:sorted-desc={sortField === 'author' && sortDirection === 'desc'} onclick={() => toggleSort('author')}>
-										Author
+									<th class="tal sortable" class:sorted-asc={sortField === 'created_at' && sortDirection === 'asc'} class:sorted-desc={sortField === 'created_at' && sortDirection === 'desc'} onclick={() => toggleSort('created_at')}>
+										Created At
 									</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'company' && sortDirection === 'asc'} class:sorted-desc={sortField === 'company' && sortDirection === 'desc'} onclick={() => toggleSort('company')}>
 										Company
@@ -255,7 +255,7 @@ import { API_BASE } from '$lib/config';
 									<tr class="model-row clickable" class:active-model={$modeStore.activeModel === m.id} onclick={() => handleActivate(m.id, m.name)}>
 										<td class="tal"><strong>{m.name}</strong></td>
 										<td class="tal">{m.version || '-'}</td>
-										<td class="tal">{m.author || '-'}</td>
+										<td class="tal">{m.created_at ? new Date(m.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '-'}</td>
 										<td class="tal">{m.company || '-'}</td>
 										<td class="tal">
 											{#if m.product_id}

@@ -184,7 +184,7 @@ import { API_BASE } from '$lib/config';
                   <td class="threat-domain">{threat.domain || '-'}</td>
                   <td class="threat-description">{threat.damage_description || '-'}</td>
                   <td class="center">{threat.probability || '-'}</td>
-                  <td class="date">{threat.created_at ? new Date(threat.created_at).toLocaleDateString() : '-'}</td>
+                  <td class="date">{threat.created_at ? new Date(threat.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '-'}</td>
                 </tr>
               {/each}
             </tbody>
