@@ -33,6 +33,16 @@ import { API_BASE } from '$lib/config';
 	
 	const apiBase = API_BASE;
 	
+	function formatUSD(value: number | null | undefined): string {
+		if (!value) return '-';
+		return new Intl.NumberFormat('en-US', {
+			style: 'currency',
+			currency: 'USD',
+			minimumFractionDigits: 0,
+			maximumFractionDigits: 0
+		}).format(value);
+	}
+	
 	onMount(async () => {
 		try {
 			const response = await fetch(`${apiBase}/models`);
@@ -179,7 +189,22 @@ import { API_BASE } from '$lib/config';
 			productModalLoading = true;
 			const response = await fetch(`${apiBase}/products/${productId}`);
 			if (!response.ok) throw new Error('Failed to fetch product');
-			selectedProduct = await response.json();
+			let product = await response.json();
+			
+			// Fetch org data if org_id exists
+			if (product.org_id) {
+				try {
+					const orgResponse = await fetch(`${apiBase}/orgs/${product.org_id}`);
+					if (orgResponse.ok) {
+						const orgData = await orgResponse.json();
+						product = { ...product, org: orgData };
+					}
+				} catch (orgError) {
+					console.warn('Failed to fetch org data:', orgError);
+				}
+			}
+			
+			selectedProduct = product;
 			showProductModal = true;
 		} catch (e) {
 			productModalError = e instanceof Error ? e.message : 'Failed to load product';
@@ -231,9 +256,6 @@ import { API_BASE } from '$lib/config';
 									<th class="tal sortable" class:sorted-asc={sortField === 'name' && sortDirection === 'asc'} class:sorted-desc={sortField === 'name' && sortDirection === 'desc'} onclick={() => toggleSort('name')}>
 										Name
 									</th>
-									<th class="tal sortable" class:sorted-asc={sortField === 'version' && sortDirection === 'asc'} class:sorted-desc={sortField === 'version' && sortDirection === 'desc'} onclick={() => toggleSort('version')}>
-										Version
-									</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'created_at' && sortDirection === 'asc'} class:sorted-desc={sortField === 'created_at' && sortDirection === 'desc'} onclick={() => toggleSort('created_at')}>
 										Created At
 									</th>
@@ -254,7 +276,6 @@ import { API_BASE } from '$lib/config';
 								{#each filteredModels as m (m.id)}
 									<tr class="model-row clickable" class:active-model={$modeStore.activeModel === m.id} onclick={() => handleActivate(m.id, m.name)}>
 										<td class="tal"><strong>{m.name}</strong></td>
-										<td class="tal">{m.version || '-'}</td>
 										<td class="tal">{m.created_at ? new Date(m.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '-'}</td>
 										<td class="tal">{m.company || '-'}</td>
 										<td class="tal">
@@ -444,6 +465,28 @@ import { API_BASE } from '$lib/config';
 							<label for="device-description">Device Description</label>
 							<p id="device-description">{selectedProduct.device_description || '-'}</p>
 						</div>
+						<div class="detail-field full">
+							<label for="intended-use">Intended Use</label>
+							<p id="intended-use">{selectedProduct.intended_use || '-'}</p>
+						</div>
+						<div class="detail-field full">
+							<label for="superiority">Superiority</label>
+							<p id="superiority">{selectedProduct.superiority || '-'}</p>
+						</div>
+						{#if selectedProduct.org}
+							<div class="detail-field">
+								<label for="funding">Funding</label>
+								<p id="funding">{formatUSD(selectedProduct.org.funding)}</p>
+							</div>
+							<div class="detail-field">
+								<label for="estimated-annual-sales">Estimated Annual Sales</label>
+								<p id="estimated-annual-sales">{formatUSD(selectedProduct.org.estimated_annual_sales)}</p>
+							</div>
+							<div class="detail-field">
+								<label for="size">Size (Valuation)</label>
+								<p id="size">{formatUSD(selectedProduct.org.size)}</p>
+							</div>
+						{/if}
 					</div>
 				{/if}
 			</div>
