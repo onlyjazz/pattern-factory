@@ -350,20 +350,27 @@ DATA:
           - updated_at
         
         threat_impact:
+          - threat_id  
+          - model_id
           - threat_tag
           - threat_name
-          - probability
-          - yearly_cost
-          - var_before_mitigation
-          - var_after_mitigation
-          - mitigation_level
-          - residual_risk_pct
-          - residual_risk_level
+          - threat_probability
+          - affected_asset_count
+          - gross_sle
+          - current_sle
+          - current_mitigation_pct
+          - current_residual_exposure_pct
+          - target_sle
+          - target_mitigation_pct
+          - target_residual_exposure_pct
         
         threat_countermeasures:
+          - model_id
+          - threat_id
           - threat_tag
           - threat_name
-          - probability
+          - threat_probability
+          - countermeasure_id
           - countermeasure_tag
           - countermeasure_name
           - mitigation_level

@@ -97,9 +97,7 @@ RULES:
     name: "Residual Risk"
     description: "Threat Impact after applying countermeasures"
     logic: |
-      select threat_tag, threat_name, probability, mitigation_level, yearly_cost as 'Cost of mitigation', var_before_mitigation, var_after_mitigation,
-      residual_risk_level as 'Residual Risk'
-      from threat.threat_impact;
+     select threat_name, threat_probability, affected_asset_count, gross_sle, current_sle, target_mitigation_percent 
 
   - rule_code: VULNEXPLOIT
     name: "Exploitability"
