@@ -299,6 +299,9 @@ class CountermeasureCreate(BaseModel):
     implemented: bool = False
     disabled: bool = False
     model_id: int = 1
+    implementation_notes: str | None = None
+    effectiveness: str | None = None
+    mitigation_level: int | None = None
 
 
 class CountermeasureUpdate(BaseModel):
@@ -311,6 +314,9 @@ class CountermeasureUpdate(BaseModel):
     include_recurring_cost: bool | None = None
     implemented: bool | None = None
     disabled: bool | None = None
+    implementation_notes: str | None = None
+    effectiveness: str | None = None
+    mitigation_level: int | None = None
 
 
 # -------------------------------------------------------------------------

@@ -1,0 +1,47 @@
+#!/bin/bash
+# =============================================================================
+# countermeasure-threats - Propagate countermeasure mitigation_level to threat pairs
+#
+# Updates threat.countermeasure_threat.mitigation_level from
+# threat.countermeasures.mitigation_level for all matching pairs.
+#
+# Large dataset (241K pairs) is processed in batches with progress reporting,
+# dry-run support, and configurable limits for testing before full execution.
+#
+# Usage:
+#   ./bin/countermeasure-threats [options]
+#
+# Options:
+#   --model-id ID      Filter by model ID (optional, default: all)
+#   --batch-size N     Batch size for updates (default: 1000)
+#   --limit N         Process at most N pairs (for testing; default: no limit)
+#   --dry-run         Validate without writing to database
+#   -v, --verbose     Detailed diagnostics
+#   -h, --help        Show this help message
+#
+# Examples:
+#   ./bin/countermeasure-threats --dry-run         # Validate without writing
+#   ./bin/countermeasure-threats --limit 100       # Test: update 100 pairs
+#   ./bin/countermeasure-threats --limit 100 -v    # Test with verbose output
+#   ./bin/countermeasure-threats                   # Full: update all 241K pairs
+#
+# Required environment (loaded from .env in the project root):
+#   DATABASE_URL: PostgreSQL connection string
+#
+# Logs are written to stdout and /tmp/countermeasure_threats.log.
+# =============================================================================
+
+# Show help if requested
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    # Print the header comment block (skip the shebang), stripping the leading "# "
+    awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "$0"
+    exit 0
+fi
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Run from the project root so .env and sys.path resolution match
+cd "$PROJECT_ROOT" || exit 1
+exec python "$PROJECT_ROOT/backend/scripts/propagate_countermeasure_mitigation.py" "$@"

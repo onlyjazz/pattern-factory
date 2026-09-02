@@ -1,0 +1,407 @@
+{
+  "valuation_basis": "company_value",
+  "valuation_formula": "asset_value = company_value * valuation_percentage / 100",
+  "total_percentage": 100,
+  "assets": [
+    {
+      "id": "A1",
+      "name": "Product / Clinical IP",
+      "valuation_percentage": 20,
+      "description": "Algorithms, models, device design, proprietary know-how, technical differentiation, and clinically valuable intellectual property.",
+      "countermeasure_classes": [
+        {
+          "class_name": "Adversarial / Model Evasion",
+          "damage": 70
+        },
+        {
+          "class_name": "Data / Model Poisoning & Integrity",
+          "damage": 90
+        },
+        {
+          "class_name": "Performance Drift & Robustness",
+          "damage": 80
+        },
+        {
+          "class_name": "Data Quality & Representativeness",
+          "damage": 70
+        },
+        {
+          "class_name": "Explainability / Transparency Gaps",
+          "damage": 60
+        },
+        {
+          "class_name": "Supply Chain / Third-Party Dependencies",
+          "damage": 70
+        },
+        {
+          "class_name": "Intellectual Property / Proprietary Asset Loss",
+          "damage": 100
+        }
+      ]
+    },
+    {
+      "id": "A2",
+      "name": "Regulatory / Market Authorization",
+      "valuation_percentage": 15,
+      "description": "FDA clearance or approval, other market authorizations, validated claims, quality evidence, and regulatory position supporting market access.",
+      "countermeasure_classes": [
+        {
+          "class_name": "Privacy / Confidentiality / Consent",
+          "damage": 85
+        },
+        {
+          "class_name": "Performance Drift & Robustness",
+          "damage": 75
+        },
+        {
+          "class_name": "Bias & Fairness Failures",
+          "damage": 80
+        },
+        {
+          "class_name": "Data Quality & Representativeness",
+          "damage": 75
+        },
+        {
+          "class_name": "Explainability / Transparency Gaps",
+          "damage": 70
+        },
+        {
+          "class_name": "Patient Safety / Physical Harm",
+          "damage": 100
+        },
+        {
+          "class_name": "Healthcare Worker / Bystander Safety",
+          "damage": 90
+        },
+        {
+          "class_name": "Clinical Decision / Diagnostic / Treatment Error",
+          "damage": 100
+        },
+        {
+          "class_name": "Regulatory / Quality-System Compliance",
+          "damage": 100
+        },
+        {
+          "class_name": "Accountability / Auditability / Non-Repudiation",
+          "damage": 85
+        }
+      ]
+    },
+    {
+      "id": "A3",
+      "name": "Revenue / Customer Franchise",
+      "valuation_percentage": 20,
+      "description": "Existing revenue, customers, contracts, installed base, procurement relationships, renewals, and commercial franchise.",
+      "countermeasure_classes": [
+        {
+          "class_name": "Operational / Workflow Integration Failures",
+          "damage": 85
+        },
+        {
+          "class_name": "Human Factors & Misuse",
+          "damage": 65
+        },
+        {
+          "class_name": "Availability / Service Continuity",
+          "damage": 90
+        },
+        {
+          "class_name": "Supply Chain / Third-Party Dependencies",
+          "damage": 75
+        },
+        {
+          "class_name": "Cloud / External Service Dependency",
+          "damage": 75
+        },
+        {
+          "class_name": "Interoperability / Communication Failure",
+          "damage": 75
+        },
+        {
+          "class_name": "Financial / Commercial / Contractual Loss",
+          "damage": 100
+        },
+        {
+          "class_name": "Reputation / Trust Damage",
+          "damage": 85
+        },
+        {
+          "class_name": "Environmental / Power / Infrastructure Failure",
+          "damage": 70
+        }
+      ]
+    },
+    {
+      "id": "A4",
+      "name": "Clinical / Patient Data",
+      "valuation_percentage": 10,
+      "description": "Clinical datasets, patient data under stewardship, training and evaluation datasets, measurements, images, and other valuable health data.",
+      "countermeasure_classes": [
+        {
+          "class_name": "Data / Model Poisoning & Integrity",
+          "damage": 90
+        },
+        {
+          "class_name": "Privacy / Confidentiality / Consent",
+          "damage": 100
+        },
+        {
+          "class_name": "Unauthorized Access & Privilege Issues",
+          "damage": 95
+        },
+        {
+          "class_name": "Data Quality & Representativeness",
+          "damage": 85
+        },
+        {
+          "class_name": "Data Loss / Destruction / Corruption",
+          "damage": 100
+        },
+        {
+          "class_name": "Accountability / Auditability / Non-Repudiation",
+          "damage": 80
+        }
+      ]
+    },
+    {
+      "id": "A5",
+      "name": "Brand / Trust",
+      "valuation_percentage": 10,
+      "description": "Trust and reputation with clinicians, patients, hospitals, regulators, partners, investors, and the market.",
+      "countermeasure_classes": [
+        {
+          "class_name": "Privacy / Confidentiality / Consent",
+          "damage": 90
+        },
+        {
+          "class_name": "Bias & Fairness Failures",
+          "damage": 80
+        },
+        {
+          "class_name": "Human Factors & Misuse",
+          "damage": 65
+        },
+        {
+          "class_name": "Availability / Service Continuity",
+          "damage": 70
+        },
+        {
+          "class_name": "Unauthorized Access & Privilege Issues",
+          "damage": 75
+        },
+        {
+          "class_name": "Patient Safety / Physical Harm",
+          "damage": 100
+        },
+        {
+          "class_name": "Healthcare Worker / Bystander Safety",
+          "damage": 85
+        },
+        {
+          "class_name": "Data Loss / Destruction / Corruption",
+          "damage": 75
+        },
+        {
+          "class_name": "Clinical Decision / Diagnostic / Treatment Error",
+          "damage": 95
+        },
+        {
+          "class_name": "Regulatory / Quality-System Compliance",
+          "damage": 90
+        },
+        {
+          "class_name": "Reputation / Trust Damage",
+          "damage": 100
+        }
+      ]
+    },
+    {
+      "id": "A6",
+      "name": "Operations / Service Delivery",
+      "valuation_percentage": 5,
+      "description": "Ability to manufacture, deploy, operate, support, maintain, and continuously deliver the product or clinical service.",
+      "countermeasure_classes": [
+        {
+          "class_name": "Operational / Workflow Integration Failures",
+          "damage": 100
+        },
+        {
+          "class_name": "Human Factors & Misuse",
+          "damage": 75
+        },
+        {
+          "class_name": "Availability / Service Continuity",
+          "damage": 100
+        },
+        {
+          "class_name": "Unauthorized Access & Privilege Issues",
+          "damage": 80
+        },
+        {
+          "class_name": "Supply Chain / Third-Party Dependencies",
+          "damage": 90
+        },
+        {
+          "class_name": "Data Loss / Destruction / Corruption",
+          "damage": 90
+        },
+        {
+          "class_name": "Cloud / External Service Dependency",
+          "damage": 90
+        },
+        {
+          "class_name": "Accountability / Auditability / Non-Repudiation",
+          "damage": 70
+        },
+        {
+          "class_name": "Interoperability / Communication Failure",
+          "damage": 90
+        },
+        {
+          "class_name": "Environmental / Power / Infrastructure Failure",
+          "damage": 90
+        }
+      ]
+    },
+    {
+      "id": "A7",
+      "name": "Safety",
+      "valuation_percentage": 15,
+      "description": "Sustain safety of patients and medical staff",
+      "countermeasure_classes": [
+        {
+          "class_name": "Adversarial / Model Evasion",
+          "damage": 90
+        },
+        {
+          "class_name": "Data / Model Poisoning & Integrity",
+          "damage": 95
+        },
+        {
+          "class_name": "Performance Drift & Robustness",
+          "damage": 95
+        },
+        {
+          "class_name": "Bias & Fairness Failures",
+          "damage": 75
+        },
+        {
+          "class_name": "Operational / Workflow Integration Failures",
+          "damage": 85
+        },
+        {
+          "class_name": "Human Factors & Misuse",
+          "damage": 90
+        },
+        {
+          "class_name": "Availability / Service Continuity",
+          "damage": 90
+        },
+        {
+          "class_name": "Unauthorized Access & Privilege Issues",
+          "damage": 85
+        },
+        {
+          "class_name": "Supply Chain / Third-Party Dependencies",
+          "damage": 80
+        },
+        {
+          "class_name": "Data Quality & Representativeness",
+          "damage": 95
+        },
+        {
+          "class_name": "Patient Safety / Physical Harm",
+          "damage": 100
+        },
+        {
+          "class_name": "Healthcare Worker / Bystander Safety",
+          "damage": 100
+        },
+        {
+          "class_name": "Data Loss / Destruction / Corruption",
+          "damage": 80
+        },
+        {
+          "class_name": "Cloud / External Service Dependency",
+          "damage": 75
+        },
+        {
+          "class_name": "Clinical Decision / Diagnostic / Treatment Error",
+          "damage": 100
+        },
+        {
+          "class_name": "Interoperability / Communication Failure",
+          "damage": 85
+        },
+        {
+          "class_name": "Environmental / Power / Infrastructure Failure",
+          "damage": 90
+        }
+      ]
+    },
+    {
+      "id": "A8",
+      "name": "Strategic / Enterprise Value",
+      "valuation_percentage": 5,
+      "description": "Strategic partnerships, future pipeline, competitive position, platform value, growth options, and broader enterprise value not captured elsewhere.",
+      "countermeasure_classes": [
+        {
+          "class_name": "Adversarial / Model Evasion",
+          "damage": 75
+        },
+        {
+          "class_name": "Data / Model Poisoning & Integrity",
+          "damage": 85
+        },
+        {
+          "class_name": "Privacy / Confidentiality / Consent",
+          "damage": 75
+        },
+        {
+          "class_name": "Performance Drift & Robustness",
+          "damage": 80
+        },
+        {
+          "class_name": "Bias & Fairness Failures",
+          "damage": 75
+        },
+        {
+          "class_name": "Availability / Service Continuity",
+          "damage": 75
+        },
+        {
+          "class_name": "Supply Chain / Third-Party Dependencies",
+          "damage": 85
+        },
+        {
+          "class_name": "Explainability / Transparency Gaps",
+          "damage": 65
+        },
+        {
+          "class_name": "Patient Safety / Physical Harm",
+          "damage": 100
+        },
+        {
+          "class_name": "Clinical Decision / Diagnostic / Treatment Error",
+          "damage": 95
+        },
+        {
+          "class_name": "Regulatory / Quality-System Compliance",
+          "damage": 100
+        },
+        {
+          "class_name": "Intellectual Property / Proprietary Asset Loss",
+          "damage": 100
+        },
+        {
+          "class_name": "Financial / Commercial / Contractual Loss",
+          "damage": 100
+        },
+        {
+          "class_name": "Reputation / Trust Damage",
+          "damage": 95
+        }
+      ]
+    }
+  ]
+}

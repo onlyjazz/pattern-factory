@@ -41,6 +41,12 @@
     },
     {
       "id": "A7",
+      "name": "Safety",
+      "valuation_percentage": 15,
+      "description": "Sustain safety of patients and medical staff"
+    },
+    {
+      "id": "A8",
       "name": "Strategic / Enterprise Value",
       "valuation_percentage": 10,
       "description": "Strategic partnerships, future pipeline, competitive position, platform value, growth options, and broader enterprise value not captured elsewhere."
