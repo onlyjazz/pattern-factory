@@ -21,9 +21,28 @@ RULES:
 
   - rule_code: LIST_ORGS 
     name: "Companies"
-    description: "List of companies with their details"
+    description: "Companies with 1 product and annual revenue from 10 to 100M"
     logic: |
-      show me id, name, funding, estimated_annual_sales, description, date_founded, date_funded, size from orgs
+      SELECT 
+          o.name, 
+          o.funding, 
+          o.estimated_annual_sales, 
+          o.arm, 
+          o.size,
+          COUNT(p.id) AS product_count,
+          COALESCE(MAX(p.superiority), '') AS superiority,
+          TO_CHAR(MAX(date_of_final_decision), 'YYYY-MM-DD') as date_of_final_decision 
+      FROM 
+          public.orgs o
+      JOIN 
+          public.products p ON o.id = p.org_id
+      WHERE
+          o.estimated_annual_sales BETWEEN 10000000 AND 100000000 AND
+          (o.arm = 2 OR o.arm = 3)
+      GROUP BY 
+          o.name, o.funding, o.estimated_annual_sales, o.arm, o.size
+      HAVING 
+          COUNT(p.id) = 1;
 
   - rule_code: PATTERNS_BY_GUEST
     name: "Patterns by Guest"
@@ -97,7 +116,8 @@ RULES:
     name: "Residual Risk"
     description: "Threat Impact after applying countermeasures"
     logic: |
-     select threat_name, threat_probability, affected_asset_count, gross_sle, current_sle, target_mitigation_percent 
+     select threat_name, threat_probability, affected_asset_count, gross_sle, current_sle, 
+     target_mitigation_percent 
 
   - rule_code: VULNEXPLOIT
     name: "Exploitability"
