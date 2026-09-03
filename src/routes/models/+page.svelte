@@ -312,7 +312,7 @@ import { API_BASE } from '$lib/config';
 <!-- ADD MODAL -->
 {#if showAddModal}
 	<div class="modal-overlay" onclick={closeAddModal} onkeydown={(e) => e.key === 'Escape' && closeAddModal()} role="presentation">
-		<div class="modal-content" role="dialog" aria-labelledby="add-modal-title" tabindex="0" onclick={(e) => e.stopPropagation()}>
+		<div class="modal-content" role="dialog" aria-labelledby="add-modal-title" tabindex="0" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
 			<div class="modal-header">
 				<h2 id="add-modal-title" class="heading heading_2">Add Model</h2>
 				<button
@@ -433,7 +433,7 @@ import { API_BASE } from '$lib/config';
 <!-- PRODUCT MODAL -->
 {#if showProductModal}
 	<div class="modal-overlay" onclick={closeProductModal} onkeydown={(e) => e.key === 'Escape' && closeProductModal()} role="presentation">
-		<div class="modal-content" role="dialog" aria-labelledby="product-modal-title" tabindex="0" onclick={(e) => e.stopPropagation()}>
+		<div class="modal-content" role="dialog" aria-labelledby="product-modal-title" tabindex="0" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
 			<div class="modal-header">
 				<h2 id="product-modal-title" class="heading heading_2">Product Details</h2>
 				<button
