@@ -36,6 +36,7 @@ class OrgCreate(BaseModel):
     study_arm: str | None = None
     randomization_seed: int | None = None
     randomized_at: str | None = None
+    status_id: int = 1
 
 
 class OrgUpdate(BaseModel):
@@ -58,6 +59,7 @@ class OrgUpdate(BaseModel):
     study_arm: str | None = None
     randomization_seed: int | None = None
     randomized_at: str | None = None
+    status_id: int | None = None
 
 
 # -------------------------------------------------------------------------
@@ -383,3 +385,34 @@ class ProductUpdate(BaseModel):
     superiority: str | None = None
     org_id: int | None = None
     process_flag: bool | None = None
+
+
+# -------------------------------------------------------------------------
+# People (Guests)
+# -------------------------------------------------------------------------
+class PersonCreate(BaseModel):
+    """Create a new person (guest)."""
+    name: str
+    description: str | None = None
+    linkedin_url: str | None = None
+    job_description: str | None = None
+    content_source: str | None = None
+    org_id: int | None = None
+    post_id: int | None = None
+    content_url: str | None = None
+    email: str | None = None
+    company_url: str | None = None
+
+
+class PersonUpdate(BaseModel):
+    """Update a person (guest)."""
+    name: str | None = None
+    description: str | None = None
+    linkedin_url: str | None = None
+    job_description: str | None = None
+    content_source: str | None = None
+    org_id: int | None = None
+    post_id: int | None = None
+    content_url: str | None = None
+    email: str | None = None
+    company_url: str | None = None

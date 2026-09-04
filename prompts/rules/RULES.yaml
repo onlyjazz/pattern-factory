@@ -19,12 +19,26 @@ RULES:
       show me posts with  pattern_name, episode_name and episode_url where content_source is 'podcast'
       Use the content_source field to determine if the pattern is from a podcast episode ('podcast')
 
+  - rule_code: ALL_ORGS
+    name: All Companies
+    description: "All companies"
+    logic: |
+      SELECT 
+          o.name, s.name AS status, o.estimated_annual_sales, o.arm,o.size,
+          COUNT(p.id) AS product_count
+      FROM 
+          public.orgs o
+      JOIN public.products p ON o.id = p.org_id
+      JOIN public.statuses s ON o.status_id = s.id
+      GROUP BY 
+          o.name, s.name,o.estimated_annual_sales, o.arm,o.size;
+
   - rule_code: LIST_ORGS 
-    name: "Companies"
+    name: "Focus companies"
     description: "Companies with 1 product and annual revenue from 10 to 100M"
     logic: |
       SELECT 
-          o.name, 
+          o.name, o.status,
           o.funding, 
           o.estimated_annual_sales, 
           o.arm, 

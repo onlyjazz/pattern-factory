@@ -4,6 +4,14 @@
  */
 
 /**
+ * Status for tracking organization lifecycle
+ */
+export interface Status {
+  id: number;
+  name: string; // e.g., "active", "closed"
+}
+
+/**
  * Organization representing a company or entity
  */
 export interface Organization {
@@ -21,6 +29,7 @@ export interface Organization {
   estimated_annual_sales?: number; // Estimated annual revenue in dollars
   employees?: number; // Number of employees
   headquarters?: string; // Headquarters location (city, country)
+  status_id?: number; // Foreign key to statuses (1=active, 2=closed)
   created_at?: string; // ISO timestamp
   updated_at?: string; // ISO timestamp
   deleted_at?: string | null; // ISO timestamp or null for active records
@@ -102,6 +111,10 @@ export interface Person {
   job_description?: string;
   org_id?: number; // Foreign key to organizations
   content_source?: string; // e.g., "linkedin", "twitter", "website"
+  post_id?: number; // Foreign key to posts
+  content_url?: string; // Source URL
+  email?: string; // Email address
+  company_url?: string; // Company website URL
   created_at?: string; // ISO timestamp
   updated_at?: string; // ISO timestamp
   deleted_at?: string | null; // ISO timestamp or null for active records
