@@ -955,9 +955,14 @@ async def get_models():
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
-            SELECT id, name, version, author, company, category, keywords, description, product_id, created_at, updated_at
-            FROM threat.models
-            ORDER BY created_at DESC
+            SELECT 
+                m.id, m.name, m.version, m.author, m.category, m.keywords, m.description, m.product_id, m.created_at, m.updated_at,
+                p.intended_use,
+                o.name as org_name
+            FROM threat.models m
+            LEFT JOIN public.products p ON m.product_id = p.id
+            LEFT JOIN public.orgs o ON p.org_id = o.id
+            ORDER BY m.created_at DESC
         """)
     return [dict(r) for r in rows]
 
@@ -987,10 +992,16 @@ async def get_model(model_id: int):
     """Get a single model."""
     pool = get_pg_pool()
     async with pool.acquire() as conn:
-        row = await conn.fetchrow(
-            "SELECT id, name, version, author, company, category, keywords, description, product_id, created_at, updated_at FROM threat.models WHERE id = $1",
-            model_id
-        )
+        row = await conn.fetchrow("""
+            SELECT 
+                m.id, m.name, m.version, m.author, m.category, m.keywords, m.description, m.product_id, m.created_at, m.updated_at,
+                p.intended_use,
+                o.name as org_name
+            FROM threat.models m
+            LEFT JOIN public.products p ON m.product_id = p.id
+            LEFT JOIN public.orgs o ON p.org_id = o.id
+            WHERE m.id = $1
+        """, model_id)
     if not row:
         raise HTTPException(status_code=404, detail="Model not found")
     return dict(row)

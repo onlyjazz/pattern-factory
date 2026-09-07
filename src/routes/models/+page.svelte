@@ -62,7 +62,9 @@ import { API_BASE } from '$lib/config';
 			const matchesSearch = m.name.toLowerCase().includes($globalSearch.toLowerCase()) ||
 				(m.description?.toLowerCase().includes($globalSearch.toLowerCase())) ||
 				(m.author?.toLowerCase().includes($globalSearch.toLowerCase())) ||
-				(m.company?.toLowerCase().includes($globalSearch.toLowerCase()));
+				(m.company?.toLowerCase().includes($globalSearch.toLowerCase())) ||
+				(m.org_name?.toLowerCase().includes($globalSearch.toLowerCase())) ||
+				(m.intended_use?.toLowerCase().includes($globalSearch.toLowerCase()));
 			return matchesSearch;
 		});
 		sortModels();
@@ -251,33 +253,30 @@ import { API_BASE } from '$lib/config';
 				{:else}
 					<div class="table">
 						<table>
-							<thead>
-								<tr>
-									<th class="tal sortable" class:sorted-asc={sortField === 'name' && sortDirection === 'asc'} class:sorted-desc={sortField === 'name' && sortDirection === 'desc'} onclick={() => toggleSort('name')}>
-										Name
-									</th>
-									<th class="tal sortable" class:sorted-asc={sortField === 'created_at' && sortDirection === 'asc'} class:sorted-desc={sortField === 'created_at' && sortDirection === 'desc'} onclick={() => toggleSort('created_at')}>
-										Created At
-									</th>
-									<th class="tal sortable" class:sorted-asc={sortField === 'company' && sortDirection === 'asc'} class:sorted-desc={sortField === 'company' && sortDirection === 'desc'} onclick={() => toggleSort('company')}>
-										Company
-									</th>
-									<th class="tal sortable" class:sorted-asc={sortField === 'product_id' && sortDirection === 'asc'} class:sorted-desc={sortField === 'product_id' && sortDirection === 'desc'} onclick={() => toggleSort('product_id')}>
-										Product ID
-									</th>
-									<th class="tal sortable" class:sorted-asc={sortField === 'description' && sortDirection === 'asc'} class:sorted-desc={sortField === 'description' && sortDirection === 'desc'} onclick={() => toggleSort('description')}>
-										Description
-									</th>
-									<th class="tar">Actions</th>
-								</tr>
-							</thead>
+						<thead>
+							<tr>
+								<th class="tal sortable" class:sorted-asc={sortField === 'name' && sortDirection === 'asc'} class:sorted-desc={sortField === 'name' && sortDirection === 'desc'} onclick={() => toggleSort('name')}>
+									Name
+								</th>
+								<th class="tal sortable" class:sorted-asc={sortField === 'org_name' && sortDirection === 'asc'} class:sorted-desc={sortField === 'org_name' && sortDirection === 'desc'} onclick={() => toggleSort('org_name')}>
+									Organization
+								</th>
+								<th class="tal sortable" class:sorted-asc={sortField === 'intended_use' && sortDirection === 'asc'} class:sorted-desc={sortField === 'intended_use' && sortDirection === 'desc'} onclick={() => toggleSort('intended_use')}>
+									Intended Use
+								</th>
+								<th class="tal sortable" class:sorted-asc={sortField === 'product_id' && sortDirection === 'asc'} class:sorted-desc={sortField === 'product_id' && sortDirection === 'desc'} onclick={() => toggleSort('product_id')}>
+									Details
+								</th>
+								<th class="tar">Actions</th>
+							</tr>
+						</thead>
 
 							<tbody>
 								{#each filteredModels as m (m.id)}
 									<tr class="model-row clickable" class:active-model={$modeStore.activeModel === m.id} onclick={() => handleActivate(m.id, m.name)}>
 										<td class="tal"><strong>{m.name}</strong></td>
-										<td class="tal">{m.created_at ? new Date(m.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '-'}</td>
-										<td class="tal">{m.company || '-'}</td>
+										<td class="tal">{m.org_name || '-'}</td>
+										<td class="tal">{m.intended_use || '-'}</td>
 										<td class="tal">
 											{#if m.product_id}
 												<button
@@ -292,7 +291,6 @@ import { API_BASE } from '$lib/config';
 												-
 											{/if}
 										</td>
-										<td class="tal">{m.description || '-'}</td>
 
 										<td class="tar" onclick={(e) => e.stopPropagation()}>
 											<a href="/models/{m.id}/edit" class="button button_small" title="Edit">✎</a>

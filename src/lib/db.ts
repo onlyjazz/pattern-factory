@@ -100,6 +100,8 @@ export interface Model {
     keywords?: string | null;
     description?: string | null;
     product_id?: number | null;
+    intended_use?: string | null;
+    org_name?: string | null;
     created_at?: string;
     updated_at?: string;
 }
