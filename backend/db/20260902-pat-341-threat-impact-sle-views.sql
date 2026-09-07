@@ -117,6 +117,7 @@ threat_details AS (
         t.model_id,
         t.tag AS threat_tag,
         t.name AS threat_name,
+        t.damage_description,
 
         /*
          * Probability is retained for context and prioritization, but does not
@@ -195,6 +196,7 @@ threat_details AS (
         t.model_id,
         t.tag,
         t.name,
+        t.damage_description,
         t.probability,
         tm.current_residual_multiplier,
         tm.target_residual_multiplier
@@ -204,6 +206,7 @@ SELECT
     model_id,
     threat_tag,
     threat_name,
+    damage_description,
     threat_probability,
     affected_asset_count,
     gross_sle,
@@ -223,6 +226,25 @@ FROM threat_details;
  * values for all modeled scenarios and should be described as aggregate modeled
  * portfolio exposure.
  */
+/*
+ * Public view for bigpicture and risk dashboards
+ * Maps threat_impact SLE data to user-friendly column names
+ */
+DROP VIEW IF EXISTS "THRIM" CASCADE;
+CREATE OR REPLACE VIEW "THRIM" AS
+SELECT
+    threat_tag,
+    threat_name,
+    damage_description,
+    threat_probability,
+    affected_asset_count,
+    gross_sle,
+    current_sle,
+    target_sle,
+    target_mitigation_pct
+FROM threat.threat_impact
+WHERE threat_id IS NOT NULL;
+
 CREATE OR REPLACE VIEW threat.portfolio_exposure AS
 SELECT
     model_id,

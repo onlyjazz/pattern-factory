@@ -26,8 +26,8 @@ import { API_BASE } from '$lib/config';
     if (!container) return;
     
     const data = google.visualization.arrayToDataTable([
-      ['Threat', 'VaR Before Mitigation', 'VaR After Mitigation'],
-      ...chartThreats.map(t => [t.threat_tag, t.var_before_mitigation, t.var_after_mitigation])
+      ['Threat', 'Gross SLE', 'Target SLE'],
+      ...chartThreats.map(t => [t.threat_tag, t.gross_sle, t.target_sle])
     ]);
     
     const options = {
@@ -39,7 +39,7 @@ import { API_BASE } from '$lib/config';
         textStyle: { fontSize: 13, color: '#666' }
       },
       vAxis: {
-        title: 'Value (VaR)',
+        title: 'Single Loss Expectancy (SLE)',
         titleTextStyle: { color: '#333', fontSize: 13 },
         textStyle: { fontSize: 13, color: '#666' },
         format: '#,###'
@@ -57,7 +57,7 @@ import { API_BASE } from '$lib/config';
   
   onMount(async () => {
     try {
-      // First, try to fetch chart data from THRIM
+      // Fetch threat impact data from THRIM view which includes SLE values
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       
@@ -67,13 +67,15 @@ import { API_BASE } from '$lib/config';
       if (response.ok) {
         const allData = await response.json();
         
-        // Filter out rows with all null threat values, keep only rows with actual threat data
+        // Filter out rows with null gross_sle values, keep only rows with actual threat data
         const validThreats = allData.filter((t: any) => 
-          t.var_before_mitigation !== null && t.var_before_mitigation !== undefined
+          t.gross_sle !== null && t.gross_sle !== undefined
         );
         
-        // Get top 5 rows with valid data for chart
-        chartThreats = validThreats.slice(0, 5);
+        // Sort by gross_sle descending and get top 5 rows for chart
+        const sortedThreats = validThreats.sort((a: any, b: any) => (b.gross_sle || 0) - (a.gross_sle || 0));
+        chartThreats = sortedThreats.slice(0, 5);
+        allThreats = sortedThreats;
         
         // Only load Google Charts if we have valid threat data
         if (chartThreats.length > 0) {
@@ -96,13 +98,6 @@ import { API_BASE } from '$lib/config';
           }
         }
       }
-      
-      // Always fetch all threats to display in table below chart
-      const threatsResponse = await fetch(`${apiBase}/threats`);
-      if (threatsResponse.ok) {
-        const threatsData = await threatsResponse.json();
-        allThreats = threatsData || [];
-      }
     } catch (e) {
       // Treat aborts and errors gracefully
       if (e instanceof Error && e.name !== 'AbortError') {
@@ -117,7 +112,7 @@ import { API_BASE } from '$lib/config';
 <div id="application-content-area">
   <div class="page-title">
     <h1 class="heading heading_1">The Big Picture</h1>
-    <p class="subtitle">Top 5 Risk Threats - Value at Risk (VaR) before and after mitigation</p>
+    <p class="subtitle">Top 5 Risk Threats - Gross SLE vs Target SLE</p>
   </div>
 
   {#if loading}
@@ -130,28 +125,28 @@ import { API_BASE } from '$lib/config';
         <div id="curve_chart" class="google-chart"></div>
       </div>
       
-      <!-- Summary table for chart data -->
+    <!-- Summary table for chart data -->
       <div class="summary-section">
-        <h2 class="heading heading_2">Risk Summary (Top 5)</h2>
+        <h2 class="heading heading_2">Top 5 Risk Threats by Gross SLE</h2>
         <div class="summary-table">
           <table>
             <thead>
               <tr>
                 <th>Threat</th>
-                <th>VaR Before Mitigation</th>
-                <th>VaR After Mitigation</th>
-                <th>Mitigation Level</th>
-                <th>Residual Risk %</th>
+                <th>Gross SLE</th>
+                <th>Current SLE</th>
+                <th>Target SLE</th>
+                <th>Target Mitigation %</th>
               </tr>
             </thead>
             <tbody>
               {#each chartThreats as threat}
                 <tr>
                   <td class="threat-name">{threat.threat_tag}: {threat.threat_name}</td>
-                  <td class="number">{threat.var_before_mitigation.toLocaleString('en-US')}</td>
-                  <td class="number">{threat.var_after_mitigation.toLocaleString('en-US')}</td>
-                  <td class="center">{threat.mitigation_level}</td>
-                  <td class="center">{threat.residual_risk_pct.toFixed(1)}%</td>
+                  <td class="number">{threat.gross_sle.toLocaleString('en-US')}</td>
+                  <td class="number">{threat.current_sle.toLocaleString('en-US')}</td>
+                  <td class="number">{threat.target_sle.toLocaleString('en-US')}</td>
+                  <td class="center">{threat.target_mitigation_pct.toFixed(1)}%</td>
                 </tr>
               {/each}
             </tbody>
@@ -170,21 +165,21 @@ import { API_BASE } from '$lib/config';
               <tr>
                 <th>Tag</th>
                 <th>Name</th>
-                <th>Domain</th>
                 <th>Damage Description</th>
-                <th>Probability (%)</th>
-                <th>Created At</th>
+                <th>Gross SLE</th>
+                <th>Target SLE</th>
+                <th>Target Mitigation %</th>
               </tr>
             </thead>
             <tbody>
               {#each allThreats as threat}
                 <tr>
-                  <td class="threat-tag">{threat.tag || '-'}</td>
-                  <td class="threat-name">{threat.name}</td>
-                  <td class="threat-domain">{threat.domain || '-'}</td>
+                  <td class="threat-tag">{threat.threat_tag || '-'}</td>
+                  <td class="threat-name">{threat.threat_name}</td>
                   <td class="threat-description">{threat.damage_description || '-'}</td>
-                  <td class="center">{threat.probability || '-'}</td>
-                  <td class="date">{threat.created_at ? new Date(threat.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '-'}</td>
+                  <td class="number">{threat.gross_sle ? threat.gross_sle.toLocaleString('en-US') : '-'}</td>
+                  <td class="number">{threat.target_sle ? threat.target_sle.toLocaleString('en-US') : '-'}</td>
+                  <td class="center">{threat.target_mitigation_pct ? threat.target_mitigation_pct.toFixed(1) : '-'}%</td>
                 </tr>
               {/each}
             </tbody>
