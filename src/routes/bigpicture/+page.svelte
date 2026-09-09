@@ -208,9 +208,13 @@
               <td class="label">Product</td>
               <td class="value">{header.product}</td>
             </tr>
+            <tr>
+              <td class="label">Competitive Advantage</td>
+              <td class="value">{header.competitive_advantage || '-'}</td>
+            </tr>
           </tbody>
         </table>
-        {#if header.device_description || header.intended_use || header.competitive_advantage}
+        {#if header.device_description || header.intended_use}
           <table class="bigpicture-device-table">
             <tbody>
               {#if header.device_description}
@@ -223,12 +227,6 @@
                 <tr>
                   <td class="label">Intended Use</td>
                   <td class="value">{header.intended_use}</td>
-                </tr>
-              {/if}
-              {#if header.competitive_advantage}
-                <tr>
-                  <td class="label">Competitive Advantage</td>
-                  <td class="value">{header.competitive_advantage}</td>
                 </tr>
               {/if}
             </tbody>
