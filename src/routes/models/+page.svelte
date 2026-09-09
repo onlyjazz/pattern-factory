@@ -159,8 +159,8 @@ import { API_BASE } from '$lib/config';
 			if (!response.ok) throw new Error('Failed to activate model');
 			// Update mode store to reflect active model with name
 			modeStore.setActiveModel(modelId, modelName || null);
-			// Navigate to bigpicture page
-			await goto('/bigpicture');
+			// Navigate to model-risk page with model_id parameter
+			await goto(`/model-risk/${modelId}`);
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to activate model';
 		}

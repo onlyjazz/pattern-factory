@@ -1526,6 +1526,78 @@ async def delete_organization(org_id: int):
     return {"status": "ok", "deleted_id": org_id}
 
 # -------------------------------------------------------------------------
+# Enterprise Risk (Organization-level SLE aggregation)
+# -------------------------------------------------------------------------
+@app.get("/enterprise-risk/{org_id}", tags=["Organizations"])
+async def get_enterprise_risk(org_id: int, limit: int = Query(5000, description="Maximum number of rows to return")):
+    """Get organization-level SLE risk exposure across all models and products.
+    
+    Aggregates top 5 Single Loss Exposure (SLE) threats across all models and products
+    belonging to the specified organization. Unlike the model-specific /bigpicture endpoint,
+    this view provides enterprise-wide risk exposure.
+    
+    Args:
+        org_id (int): Organization ID
+        limit (int): Maximum number of rows to return (default: 5000)
+    
+    Returns:
+        dict: Organization metadata and risk data including:
+            - org_metadata: Organization details
+            - threats: All threats for the org (up to limit)
+    
+    Raises:
+        404: If organization not found
+    """
+    pool = get_pg_pool()
+    
+    # Verify org exists
+    async with pool.acquire() as conn:
+        org = await conn.fetchrow(
+            "SELECT id, name, size, tier, funding, estimated_annual_sales FROM public.orgs WHERE id = $1 AND deleted_at IS NULL",
+            org_id
+        )
+    
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    # Fetch enterprise risk data
+    async with pool.acquire() as conn:
+        threats = await conn.fetch(
+            """
+            SELECT
+                threat_id,
+                model_id,
+                model_name,
+                product_id,
+                product_name,
+                threat_tag,
+                threat_name,
+                damage_description,
+                threat_probability,
+                affected_asset_count,
+                gross_sle,
+                current_sle,
+                current_mitigation_pct,
+                current_residual_exposure_pct,
+                target_sle,
+                target_mitigation_pct,
+                target_residual_exposure_pct,
+                rank_in_org
+            FROM "ENTERPRISE_RISK_TOP_5_SLE"
+            WHERE org_id_link = $1
+            ORDER BY rank_in_org ASC
+            LIMIT $2
+            """,
+            org_id,
+            limit
+        )
+    
+    return {
+        "org_metadata": dict(org),
+        "threats": [dict(r) for r in threats]
+    }
+
+# -------------------------------------------------------------------------
 # Products CRUD (FDA-Cleared AI-Enabled Medical Devices)
 # -------------------------------------------------------------------------
 @app.get("/products", tags=["Products"])
