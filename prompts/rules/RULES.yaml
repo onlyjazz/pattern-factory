@@ -107,19 +107,6 @@ RULES:
     logic: |
      show name, stage, and the number of years from date_founded to date_funded for all orgs
 
-  - rule_code: WCRT
-    name: "Cards in Baseline"
-    description: "What threats are in the Baseline model"
-    logic: |
-      list threat name, threat probability in the 'Baseline' model
-
-  - rule_code: ALIST
-    name: "List assets"
-    description: " List of assets"
-    logic: |
-      list asset tag, asset name, asset yearly_value 
-      where model_id = (select model_id from active_models limit 1)
-
   - rule_code: CLIST
     name: "List countermeasures"
     description: " List of countermeasures"
@@ -130,20 +117,8 @@ RULES:
     name: "Residual Risk"
     description: "Threat Impact after applying countermeasures"
     logic: |
-     select threat_name, threat_probability, affected_asset_count, gross_sle, current_sle, 
-     target_mitigation_percent 
-
-  - rule_code: VULNEXPLOIT
-    name: "Exploitability"
-    description: "Show vulnerabilities ranked by exploitability"
-    logic: |
-      select * from threat.vulnerability_exploitability
-
-  - rule_code: THRCM
-    name: "Security countermeasures"
-    description: "Threats countermeasures"
-    logic: |
-      select * from threat.threat_countermeasures
+     select threat_name, damage_description, threat_probability, affected_asset_count, gross_sle, target_sle, 
+     target_mitigation_percent  
 
   - rule_code: THREAT-VULN
     name: "Threats and Vulnerabilities"
@@ -151,19 +126,18 @@ RULES:
     logic: |
         show threat tag threat name vulnerability name
         where model_id = (select model_id from active_models limit 1)
-      
-      
+            
   - rule_code: THREAT-CM
-    name: "Threats and Countermeasures"
+    name: "Risk mitigation"
     description: "Threats and their associated countermeasures"
     logic: |
-      show threat tag threat name, mitigation_level, countermeasure name, countermeasure yearly_cost 
-      where threat_id = countermeasure_threat_id
-      and model_id = (select model_id from active_models limit 1)
-      order by threat name, countermeasure name
+        show threat name, damage_description, countermeasure name, mitigation_level, countermeasure yearly_cost 
+        where threat_id = countermeasure_threat_id
+        and model_id = (select model_id from active_models limit 1)
+        order by threat name, countermeasure name
 
   - rule_code: ASSET-EXPLOITS
-    name: "Assets and Exploits"
+    name: "Exploits"
     description: "Assets threats to asset vulnerabilities exploited by threat countermeasures mitigating threat"
     logic: |
       show asset tag asset name, asset value, threat tag threat name threat damage to asset, vulnerability tag vulnerability name 
@@ -172,18 +146,10 @@ RULES:
       order by asset name, vulnerability name
 
   - rule_code: PRODUCTS
-    name: "AI-enabled medical devices by company"
+    name: "AI-enabled devices"
     description: "AI-enabled medical devices by company"
     logic: |
       SELECT p.id,p.device, p.company, o.size, p.submission_number, p.intended_use,  o.arm
       FROM public.products AS p
       JOIN public.orgs AS o ON p.org_id = o.id
       ORDER BY p.company, p.device;
-  
-  - rule_code: ALL-THREATS
-    name: "Threat list"
-    description: "Threat list"
-    logic: |
-      show tag, name, domain, probability, damage_description, created_at 
-      where  model_id = (select model_id from active_models limit 1)
-      order by threat name

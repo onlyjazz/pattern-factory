@@ -386,9 +386,11 @@ DATA:
           - disabled
         
         vulnerability_exploitability:
-          - asset_name
           - vulnerability_name
           - threat_name
-          - threat_probability
-          - pct_damage_to_asset
+          - cumulative_mitigation
+          - redundancy_factor
+          - residual_exploitability
           - exploitability
+          - qualitative_justification
+

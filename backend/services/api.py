@@ -1721,7 +1721,7 @@ async def get_views(
             SELECT id, name, table_name, mode, created_at, updated_at
             FROM public.views_registry
             WHERE mode = $1
-            ORDER BY created_at DESC
+            ORDER BY updated_at DESC
             LIMIT $2
             """,
             mode,
