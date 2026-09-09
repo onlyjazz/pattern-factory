@@ -1,12 +1,33 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-import { API_BASE } from '$lib/config';
+  import { API_BASE } from '$lib/config';
+  import type { Organization, Product } from '$lib/types/models';
+
+  interface ActiveModel {
+    model_id: number | null;
+  }
+
+  interface ModelDetail {
+    name: string;
+    product_id?: number;
+  }
+
+  interface BigPictureHeader {
+    product: string;
+    company: string;
+    sales?: number;
+    funding?: number;
+    valuation?: number;
+    device_description?: string;
+    intended_use?: string;
+    competitive_advantage?: string;
+  }
   
   let chartThreats: any[] = [];
   let allThreats: any[] = [];
+  let header: BigPictureHeader | null = null;
   let loading = true;
   let error = '';
-  let chartInitialized = false;
   const apiBase = API_BASE;
   
   function formatNumber(num: number): string {
@@ -17,6 +38,55 @@ import { API_BASE } from '$lib/config';
       return (num / 1000).toFixed(0) + 'K';
     }
     return num.toString();
+  }
+
+  function formatCurrency(value?: number): string {
+    if (value === undefined || value === null) return '-';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0
+    }).format(value);
+  }
+
+  async function loadHeader(): Promise<void> {
+    const activeResponse = await fetch(`${apiBase}/active-model`);
+    if (!activeResponse.ok) return;
+
+    const activeModel: ActiveModel = await activeResponse.json();
+    if (!activeModel.model_id) return;
+
+    const modelResponse = await fetch(`${apiBase}/models/${activeModel.model_id}`);
+    if (!modelResponse.ok) return;
+
+    const model: ModelDetail = await modelResponse.json();
+    let product: Product | null = null;
+    let organization: Organization | null = null;
+
+    if (model.product_id) {
+      const productResponse = await fetch(`${apiBase}/products/${model.product_id}`);
+      if (productResponse.ok) {
+        product = await productResponse.json();
+      }
+    }
+
+    if (product?.org_id) {
+      const organizationResponse = await fetch(`${apiBase}/orgs/${product.org_id}`);
+      if (organizationResponse.ok) {
+        organization = await organizationResponse.json();
+      }
+    }
+
+    header = {
+      product: product?.device || '-',
+      company: organization?.name || product?.company || '-',
+      sales: organization?.estimated_annual_sales,
+      funding: organization?.funding,
+      valuation: organization?.size,
+      device_description: product?.device_description,
+      intended_use: product?.intended_use,
+      competitive_advantage: product?.superiority
+    };
   }
   
   function drawChart() {
@@ -57,6 +127,7 @@ import { API_BASE } from '$lib/config';
   
   onMount(async () => {
     try {
+      await loadHeader();
       // Fetch threat impact data from THRIM view which includes SLE values
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -111,8 +182,60 @@ import { API_BASE } from '$lib/config';
 
 <div id="application-content-area">
   <div class="page-title">
-    <h1 class="heading heading_1">The Big Picture</h1>
-    <p class="subtitle">Top 5 Risk Threats - Gross SLE vs Target SLE</p>
+    <h1 class="heading heading_1">Model risk</h1>
+    <p class="subtitle">Top 5 Single Loss Events (SLE)</p>
+    {#if header}
+      <div class="bigpicture-header">
+        <table class="bigpicture-header-table">
+          <tbody>
+            <tr>
+              <td class="label">Company</td>
+              <td class="value">{header.company}</td>
+            </tr>
+            <tr>
+              <td class="label">Sales</td>
+              <td class="value">{formatCurrency(header.sales)}</td>
+            </tr>
+            <tr>
+              <td class="label">Funding</td>
+              <td class="value">{formatCurrency(header.funding)}</td>
+            </tr>
+            <tr>
+              <td class="label">Valuation</td>
+              <td class="value">{formatCurrency(header.valuation)}</td>
+            </tr>
+            <tr>
+              <td class="label">Product</td>
+              <td class="value">{header.product}</td>
+            </tr>
+          </tbody>
+        </table>
+        {#if header.device_description || header.intended_use || header.competitive_advantage}
+          <table class="bigpicture-device-table">
+            <tbody>
+              {#if header.device_description}
+                <tr>
+                  <td class="label">Device Description</td>
+                  <td class="value">{header.device_description}</td>
+                </tr>
+              {/if}
+              {#if header.intended_use}
+                <tr>
+                  <td class="label">Intended Use</td>
+                  <td class="value">{header.intended_use}</td>
+                </tr>
+              {/if}
+              {#if header.competitive_advantage}
+                <tr>
+                  <td class="label">Competitive Advantage</td>
+                  <td class="value">{header.competitive_advantage}</td>
+                </tr>
+              {/if}
+            </tbody>
+          </table>
+        {/if}
+      </div>
+    {/if}
   </div>
 
   {#if loading}
@@ -122,19 +245,18 @@ import { API_BASE } from '$lib/config';
   {:else}
     {#if chartThreats.length > 0}
       <div class="chart-container">
+        <h2 class="heading heading_2">Top 5 Single Loss Events (SLE)</h2>
         <div id="curve_chart" class="google-chart"></div>
       </div>
       
     <!-- Summary table for chart data -->
       <div class="summary-section">
-        <h2 class="heading heading_2">Top 5 Risk Threats by Gross SLE</h2>
         <div class="summary-table">
           <table>
             <thead>
               <tr>
                 <th>Threat</th>
                 <th>Gross SLE</th>
-                <th>Current SLE</th>
                 <th>Target SLE</th>
                 <th>Target Mitigation %</th>
               </tr>
@@ -144,7 +266,6 @@ import { API_BASE } from '$lib/config';
                 <tr>
                   <td class="threat-name">{threat.threat_tag}: {threat.threat_name}</td>
                   <td class="number">{threat.gross_sle.toLocaleString('en-US')}</td>
-                  <td class="number">{threat.current_sle.toLocaleString('en-US')}</td>
                   <td class="number">{threat.target_sle.toLocaleString('en-US')}</td>
                   <td class="center">{threat.target_mitigation_pct.toFixed(1)}%</td>
                 </tr>

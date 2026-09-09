@@ -1,3 +1,79 @@
+.bigpicture-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  margin: 1rem 0 0;
+}
+
+.bigpicture-header > div {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.bigpicture-header-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8em;
+  font-weight: 400;
+}
+
+.bigpicture-header-table td {
+  padding: 0.5rem;
+  border-bottom: 1px solid #eee;
+  vertical-align: top;
+}
+
+.bigpicture-header-table td.label {
+  color: #666;
+  font-weight: 600;
+  width: 15%;
+  min-width: 100px;
+}
+
+.bigpicture-header-table td.value {
+  color: #333;
+  line-height: 1.4;
+}
+
+.chart-container .heading_2 {
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.chart-container {
+  gap: 0 !important;
+}
+
+.google-chart {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.bigpicture-device-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  font-size: 0.8em;
+  font-weight: 400;
+}
+
+.bigpicture-device-table td {
+  padding: 0.5rem;
+  border-bottom: 1px solid #eee;
+  vertical-align: top;
+}
+
+.bigpicture-device-table td.label {
+  color: #666;
+  font-weight: 600;
+  width: 15%;
+  min-width: 150px;
+}
+
+.bigpicture-device-table td.value {
+  color: #333;
+  line-height: 1.4;
+}
 /**/
 /* plugins */
 /**/
