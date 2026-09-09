@@ -41,10 +41,10 @@ function doFilterAssets(items: Asset[], search: string): Asset[] {
 		const term = search.toLowerCase();
 		return items.filter(a => {
 			return (
-				(a.tag || '').toLowerCase().includes(term) ||
-				(a.name || '').toLowerCase().includes(term) ||
-				(a.description || '').toLowerCase().includes(term) ||
-				String(a.yearly_value || '').toLowerCase().includes(term) ||
+			(a.tag || '').toLowerCase().includes(term) ||
+			(a.name || '').toLowerCase().includes(term) ||
+			(a.description || '').toLowerCase().includes(term) ||
+			String(a.sle_value || '').toLowerCase().includes(term) ||
 				String(a.disabled).toLowerCase().includes(term)
 			);
 		});
@@ -58,8 +58,8 @@ function doFilterAssets(items: Asset[], search: string): Asset[] {
 			
 			let comparison: number;
 			
-			// Numeric sorting for tag (A1, A2, A10) and yearly_value
-			if (sortField === 'tag' || sortField === 'yearly_value') {
+			// Numeric sorting for tag (A1, A2, A10) and sle_value
+			if (sortField === 'tag' || sortField === 'sle_value') {
 				// Extract numbers for tag (e.g., 'A1' -> 1)
 				const aNum = sortField === 'tag' ? 
 					parseInt(String(aVal).replace(/\D/g, '')) || 0 :
@@ -161,8 +161,8 @@ $: {
 							<th class="tal sortable" class:sorted-asc={sortField === 'description' && sortDirection === 'asc'} class:sorted-desc={sortField === 'description' && sortDirection === 'desc'} onclick={() => toggleSort('description')}>
 								Description
 							</th>
-							<th class="tal sortable" class:sorted-asc={sortField === 'yearly_value' && sortDirection === 'asc'} class:sorted-desc={sortField === 'yearly_value' && sortDirection === 'desc'} onclick={() => toggleSort('yearly_value')}>
-								Yearly Value
+							<th class="tal sortable" class:sorted-asc={sortField === 'sle_value' && sortDirection === 'asc'} class:sorted-desc={sortField === 'sle_value' && sortDirection === 'desc'} onclick={() => toggleSort('sle_value')}>
+								SLE Value
 							</th>
 							<th class="tal sortable" class:sorted-asc={sortField === 'disabled' && sortDirection === 'asc'} class:sorted-desc={sortField === 'disabled' && sortDirection === 'desc'} onclick={() => toggleSort('disabled')}>
 								Disabled
@@ -177,7 +177,7 @@ $: {
 								<td class="tal">{a.tag || '-'}</td>
 								<td class="tal">{a.name}</td>
 								<td class="tal">{a.description}</td>
-									<td class="tal">{(a.yearly_value || 0).toLocaleString()}</td>
+									<td class="tal">{(a.sle_value || 0).toLocaleString()}</td>
 								<td class="tal">{a.disabled ? 'Yes' : 'No'}</td>
 
 								<td class="tar">

@@ -335,3 +335,4 @@ Edit Page (`[id]/edit/+page.svelte`):
 - Entity names are displayed with `heading heading_3` class
 - Detail sections use `detail-field` with label/p pair
 - Always test with `npm run check` after changes
+- SLE is Single Loss Expectancy
