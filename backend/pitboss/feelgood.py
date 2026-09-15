@@ -152,15 +152,14 @@ async def agent_validate_product_id(message_body: Dict[str, Any]) -> Tuple[str, 
         return ("no", 0.10, reason)
 
 
-# System prompt for Exa Answer API: request clean flowing prose so stored
-# superiority claims read well in a single-line DB column. Exa sometimes
-# returns bulleted lists or multi-line text without this guidance.
-_EXA_ANSWER_SYSTEM_PROMPT = (
-    "You are a medical-device competitive-intelligence analyst. "
-    "Answer with a concise paragraph (2-4 sentences) of flowing prose that "
-    "explains how the device is better than or differentiates from other solutions. "
-    "Do not use bullet points, numbered lists, line breaks, or square-bracket "
-    "citation markers. Write a single coherent paragraph."
+# System prompt for superiority extraction: focus on commercial advantage
+_SUPERIORITY_EXTRACTION_SYSTEM_PROMPT = (
+    "You are advising the CEO of the company. They already know their product. "
+    "Identify the SINGLE most important competitive superiority. "
+    "Do not describe the product, list features, explain technology, or use marketing language. "
+    "Select the one advantage most likely to matter commercially, clinically, or operationally. "
+    "Prefer a specific measurable outcome when credible evidence supports it. "
+    "Write exactly one sentence, no more than 35 words."
 )
 
 
@@ -255,64 +254,33 @@ async def agent_search_for_superiority(message_body: Dict[str, Any]) -> Tuple[st
             return ("no", 0.50, reason)
         
         try:
-            # Use Exa's Answer API: search + synthesis in one call. Returns a
-            # citation-backed superiority narrative directly (model="exa"),
-            # replacing the highlights-search + LLM-extraction two-step.
+            # Use Exa's Answer API to find superior features and advantages
+            # Then use LLM to extract a crisp, CEO-focused one-sentence claim (≤35 words)
             exa = Exa(api_key=exa_api_key)
-            answer_response = exa.answer(
-                query,
-                model="exa",
-                system_prompt=_EXA_ANSWER_SYSTEM_PROMPT,
-            )
+            answer_response = exa.answer(query, model="exa")
 
             superiority_answer = ""
             if answer_response and hasattr(answer_response, "answer"):
                 superiority_answer = (answer_response.answer or "").strip()
-
-            # Normalize to clean single-paragraph prose (strip citation markers,
-            # bullet markers, and newlines that Exa sometimes returns)
-            if superiority_answer:
-                superiority_answer = _clean_superiority_text(superiority_answer)
 
             if not superiority_answer or len(superiority_answer) < 20:
                 reason = f"Exa Answer API returned no substantial answer for: {query}"
                 logger.warning(f"  Decision: no (confidence: 0.60) - {reason}")
                 return ("no", 0.60, reason)
 
-            # Capture citations for traceability
-            citations = []
-            if hasattr(answer_response, "citations") and answer_response.citations:
-                citations = [
-                    {
-                        "url": getattr(c, "url", ""),
-                        "title": getattr(c, "title", ""),
-                    }
-                    for c in answer_response.citations[:5]
-                ]
-
-            logger.info(f"  Answer ({len(superiority_answer)} chars): {superiority_answer[:120]}...")
-            if citations:
-                logger.info(f"  Citations: {len(citations)} (e.g. {citations[0].get('url')})")
-
-            # The Answer API returns the superiority narrative directly, so we
-            # store it as the final claim and skip model.extractSuperiorityClaim.
+            # Store Exa's answer for LLM extraction
             message_body["search_query"] = query
             message_body["search_results"] = [{
                 "url": "exa-answer",
                 "title": "Exa Answer API",
                 "snippet": superiority_answer,
-                "highlights": [],
             }]
-            message_body["superiority_claim"] = superiority_answer
-            message_body["extraction_source"] = "exa_answer_api"
-            message_body["extraction_confidence"] = 0.90
-
-            reason = (
-                f"Exa Answer API returned superiority claim "
-                f"({len(superiority_answer)} chars, {len(citations)} citations)"
-            )
-            logger.info(f"  Decision: yes (confidence: 0.90) - {reason}")
-            return ("yes", 0.90, reason)
+            message_body["exa_answer"] = superiority_answer
+            
+            # Now route to LLM extraction which will refine into CEO-focused claim
+            reason = f"Exa found competitive advantage info ({len(superiority_answer)} chars)"
+            logger.info(f"  Decision: yes (confidence: 0.88) - {reason}")
+            return ("yes", 0.88, reason)
 
         except Exception as e:
             reason = f"Exa Answer API call failed: {str(e)}"
@@ -333,19 +301,19 @@ async def agent_extract_superiority_claim(message_body: Dict[str, Any]) -> Tuple
     """
     model.extractSuperiorityClaim (FEELGOOD flow)
     
-    RESPONSIBILITY: Use LLM to extract competitive advantage claims from search results.
-    Analyzes top 3 search results and produces structured superiority narrative.
+    RESPONSIBILITY: Extract a crisp CEO-focused superiority claim from Exa results.
+    Produces a single sentence (max 35 words) identifying one key commercial advantage.
     
     Returns: (decision: yes|no, confidence: 0.0-1.0, reason: str)
     """
-    logger.info("🤖 [model.extractSuperiorityClaim] Extracting superiority claims from search results...")
+    logger.info("🤖 [model.extractSuperiorityClaim] Extracting CEO-focused superiority claim...")
     
     try:
         product = message_body.get("product")
-        search_results = message_body.get("search_results", [])
+        exa_answer = message_body.get("exa_answer", "")
         
-        if not search_results:
-            reason = "No search results available for analysis"
+        if not exa_answer:
+            reason = "No Exa answer available for extraction"
             logger.warning(f"  Decision: no (confidence: 0.80) - {reason}")
             return ("no", 0.80, reason)
         
@@ -357,27 +325,24 @@ async def agent_extract_superiority_claim(message_body: Dict[str, Any]) -> Tuple
         # Prepare context for LLM
         company = product.get("company", "")
         device = product.get("device", "")
-        indicated_use = product.get("indicated_use", "")
+        intended_use = product.get("intended_use", "")
+        competitors_str = product.get("competitors", "")  # Comma-separated list from DB
         
-        # Build search results text for LLM
-        search_text = "\n\n".join([
-            f"Result {i+1}: {r['title']}\nURL: {r['url']}\nSnippet: {r['snippet']}"
-            for i, r in enumerate(search_results)
-        ])
-        
-        # Construct prompt for LLM
-        prompt = f"""Analyze the following search results about how the '{device}' from '{company}' 
-is superior to competing solutions. Extract a concise summary (2-3 sentences) of the key 
-competitive advantages. Focus on technical superiority, clinical benefits, or market differentiation.
+        # Construct prompt for LLM - CEO-focused and concise
+        prompt = f"""You are advising the CEO. Given this product and its top competitors, identify the single most important competitive superiority.
 
 Product: {device}
 Company: {company}
-Indicated Use: {indicated_use}
+Intended Use: {intended_use}
+Top Competitors: {competitors_str if competitors_str else "(Not yet specified)"}
 
-Search Results:
-{search_text}
+Competitive Intelligence:
+{exa_answer}
 
-Provide a concise superiority claim (2-3 sentences) that highlights how this product differentiates from competitors."""
+Write exactly one sentence (no more than 35 words) identifying the SINGLE most important competitive superiority. 
+Do not describe the product, list features, explain technology, or use marketing language. 
+Select the one advantage most likely to matter commercially, clinically, or operationally. 
+Prefer a specific measurable outcome when credible evidence supports it."""
         
         try:
             api_key = os.getenv("OPENAI_API_KEY")
@@ -392,6 +357,10 @@ Provide a concise superiority claim (2-3 sentences) that highlights how this pro
                 temperature=0.0,
                 messages=[
                     {
+                        "role": "system",
+                        "content": _SUPERIORITY_EXTRACTION_SYSTEM_PROMPT
+                    },
+                    {
                         "role": "user",
                         "content": prompt
                     }
@@ -400,17 +369,27 @@ Provide a concise superiority claim (2-3 sentences) that highlights how this pro
             
             superiority_claim = response.choices[0].message.content.strip()
             
-            if not superiority_claim or len(superiority_claim) < 20:
-                reason = "LLM extraction produced insufficient text"
+            if not superiority_claim:
+                reason = "LLM extraction produced no text"
                 logger.warning(f"  Decision: no (confidence: 0.70) - {reason}")
                 return ("no", 0.70, reason)
             
-            message_body["superiority_claim"] = superiority_claim
-            message_body["extraction_confidence"] = 0.85
+            # Enforce 35-word limit
+            word_count = len(superiority_claim.split())
+            if word_count > 35:
+                logger.warning(f"  Superiority claim exceeded 35 words ({word_count}), truncating...")
+                words = superiority_claim.split()
+                superiority_claim = " ".join(words[:35])
+                # Ensure it ends with a period if not already
+                if not superiority_claim.endswith("."):
+                    superiority_claim += "."
             
-            reason = f"Extracted superiority claim ({len(superiority_claim)} chars)"
-            logger.info(f"  Decision: yes (confidence: 0.85) - {reason}")
-            return ("yes", 0.85, reason)
+            message_body["superiority_claim"] = superiority_claim
+            message_body["extraction_confidence"] = 0.88
+            
+            reason = f"Extracted CEO-focused claim ({word_count} words): {superiority_claim[:60]}..."
+            logger.info(f"  Decision: yes (confidence: 0.88) - {reason}")
+            return ("yes", 0.88, reason)
             
         except Exception as e:
             reason = f"LLM extraction failed: {str(e)}"
