@@ -234,7 +234,7 @@ def _format_exa_agent_output(
             competitors_ranked.append({
                 "company": comp_company,
                 "device": comp_product,
-                "description": f"Competitor: {comp_product}",
+                "description": comp_product,
                 "rank": len(competitors_ranked) + 1
             })
             
@@ -389,18 +389,26 @@ async def agent_upsert_competitors(message_body: Dict[str, Any]) -> Tuple[str, f
                         competitor_product_id = competitor_product["id"]
                     else:
                         # Create new product record for competitor device
+                        # Use 'UNK-{uuid}' for submission_number (unique placeholder)
+                        # PROFILE agent can find real submission numbers later
+                        import uuid
+                        placeholder_submission = f"UNK-{uuid.uuid4().hex[:8].upper()}"
                         try:
-                            logger.info(f"  Creating new product for competitor: {competitor_device}")
+                            logger.info(f"  Creating new competitor product: {competitor_device}")
                             competitor_product_id = await db.fetchval(
-                                """INSERT INTO public.products (device, company, org_id, status_id) 
-                                   VALUES ($1, $2, $3, 1) 
+                                """INSERT INTO public.products (device, company, org_id, submission_number, process_flag) 
+                                   VALUES ($1, $2, $3, $4, false) 
                                    RETURNING id""",
                                 competitor_device,
                                 competitor_company,
-                                competitor_org_id
+                                competitor_org_id,
+                                placeholder_submission
                             )
+                            logger.info(f"  ✓ Created competitor product {competitor_product_id}: {competitor_device} (submission: {placeholder_submission})")
                         except Exception as e:
-                            logger.warning(f"  Could not create competitor product: {e}")
+                            logger.error(f"  ERROR creating competitor product '{competitor_device}' for org {competitor_org_id}: {str(e)}", exc_info=True)
+                            # Continue anyway - we'll insert with competitor_product_id=NULL
+                            competitor_product_id = None
                 
                 # Upsert competitor relationship
                 await db.execute(
