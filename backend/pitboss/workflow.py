@@ -254,7 +254,37 @@ class WorkflowEngine:
         }
         self.workflows["PROFILE"] = profile_workflow
         
-        logger.info(f"✅ Loaded {len(self.workflows)} workflows (RULE, CONTENT, GENERATE, ENRICH, FEELGOOD, PROFILE)")
+        # COMPETITORS Flow (Product competition intelligence)
+        # Note: Uses shared model.validateProductId agent with FEELGOOD/PROFILE
+        competitors_workflow = {
+            "model.Capo": WorkflowNode(
+                agent_name="model.Capo",
+                branch_yes="model.validateProductId",
+                branch_no="sendMessageToChat",
+                description="Initial validation of competitors request"
+            ),
+            "model.validateProductId": WorkflowNode(
+                agent_name="model.validateProductId",
+                branch_yes="model.searchForCompetitors",
+                branch_no="sendMessageToChat",
+                description="Validate product exists in database (shared with FEELGOOD/PROFILE)"
+            ),
+            "model.searchForCompetitors": WorkflowNode(
+                agent_name="model.searchForCompetitors",
+                branch_yes="tool.upsertCompetitors",
+                branch_no="sendMessageToChat",
+                description="Search Exa for top 3 competing products"
+            ),
+            "tool.upsertCompetitors": WorkflowNode(
+                agent_name="tool.upsertCompetitors",
+                branch_yes="sendMessageToChat",
+                branch_no="sendMessageToChat",
+                description="Upsert competitor relationships and missing org/product records"
+            ),
+        }
+        self.workflows["COMPETITORS"] = competitors_workflow
+        
+        logger.info(f"✅ Loaded {len(self.workflows)} workflows (RULE, CONTENT, GENERATE, ENRICH, FEELGOOD, PROFILE, COMPETITORS)")
     
     def get_workflow(self, verb: str) -> Dict[str, WorkflowNode]:
         """Get workflow by verb (RULE or CONTENT)."""

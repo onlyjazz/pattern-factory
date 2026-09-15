@@ -135,6 +135,19 @@ async def agent_language_capo(message_body: Dict[str, Any]) -> Tuple[str, float,
         reason = f"User wants to extract competitive advantage for product: '{product_ref}'"
         logger.info(f"  Detected 'FEELGOOD' syntax → routing to FEELGOOD workflow")
         return ("yes", 0.95, reason, "FEELGOOD")
+    
+    # Fast-path: recognize explicit "competitor(s) <ID>" syntax → route to COMPETITORS
+    if text_upper.startswith("COMPETITOR "):
+        product_ref = text[11:].strip()
+        reason = f"User wants to find competitors for product: '{product_ref}'"
+        logger.info(f"  Detected 'COMPETITOR' syntax → routing to COMPETITORS workflow")
+        return ("yes", 0.95, reason, "COMPETITORS")
+    
+    if text_upper.startswith("COMPETITORS "):
+        product_ref = text[12:].strip()
+        reason = f"User wants to find competitors for product: '{product_ref}'"
+        logger.info(f"  Detected 'COMPETITORS' syntax → routing to COMPETITORS workflow")
+        return ("yes", 0.95, reason, "COMPETITORS")
 
     # Try LLM-based classification first
     api_key = os.getenv("OPENAI_API_KEY")
@@ -156,7 +169,7 @@ async def agent_language_capo(message_body: Dict[str, Any]) -> Tuple[str, float,
             decision = data.get("decision", "no")
             verb = (data.get("verb", "") or "").strip().upper()
             # Default to RULE if empty or invalid
-            if verb not in ("RULE", "CONTENT", "GENERATE", "ENRICH"):
+            if verb not in ("RULE", "CONTENT", "GENERATE", "ENRICH", "FEELGOOD", "PROFILE", "COMPETITORS"):
                 verb = "RULE"
             confidence = float(data.get("confidence", 0.55))
             reason = data.get("reason", "")
@@ -1838,6 +1851,12 @@ from .profile import (
     tool_update_product_profile,
 )
 
+# Import competitors agents
+from .competitors import (
+    agent_search_for_competitors,
+    agent_upsert_competitors,
+)
+
 AGENT_REGISTRY = {
     # Pre-workflow language capo
     "model.LanguageCapo": agent_language_capo,
@@ -1877,6 +1896,11 @@ AGENT_REGISTRY = {
     "model.searchFDADatabase": agent_search_fda_database,
     "model.extractDeviceProfile": agent_extract_device_profile,
     "tool.updateProductProfile": tool_update_product_profile,
+    
+    # COMPETITORS flow (product competition intelligence)
+    # Uses shared agent_validate_product_id above
+    "model.searchForCompetitors": agent_search_for_competitors,
+    "tool.upsertCompetitors": agent_upsert_competitors,
 }
 
 
@@ -1938,6 +1962,13 @@ def _get_agent_for_verb(agent_name: str, verb: str):
                     return AGENT_REGISTRY.get(agent_name)
         
         case "PROFILE":
+            match agent_name:
+                case "model.Capo":
+                    return agent_capo_rule
+                case _:
+                    return AGENT_REGISTRY.get(agent_name)
+        
+        case "COMPETITORS":
             match agent_name:
                 case "model.Capo":
                     return agent_capo_rule

@@ -40,6 +40,7 @@ class Verb(str, Enum):
     ENRICH = "ENRICH"  # Enrich organization data (funding, revenue)
     FEELGOOD = "FEELGOOD"  # Extract product superiority claims from web search
     PROFILE = "PROFILE"  # Extract FDA device profile (device_description, intended_use, indications_for_use)
+    COMPETITORS = "COMPETITORS"  # Discover top 3 competing products for a device
     GENERIC = "GENERIC"  # Placeholder: LanguageCapo will determine actual verb
 
 

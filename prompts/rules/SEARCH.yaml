@@ -129,3 +129,20 @@ SEARCH:
       highlights: true
       text:
         max_characters: 8000
+
+  # Prompt for COMPETITORS workflow extraction of top 3 competing products from search results
+  competitors_extraction_prompt: |
+    You are a competitive intelligence analyst. Your task is simple: find the top 3 competing medical devices that serve the same intended use as the source product.
+    
+    INSTRUCTIONS:
+    1. Look at the search results below
+    2. Identify up to 3 products from DIFFERENT COMPANIES that have the SAME INTENDED USE as the source
+    3. Exclude products from the same company as the source product
+    4. Return ONLY a JSON array with up to 3 objects
+    5. Each object must have exactly these keys: company, device, description, rank
+    6. Description should briefly state what the device does and that it competes with the source product
+    7. If you find fewer than 3 competitors, return only what you found
+    8. Return ONLY valid JSON, no markdown, no explanation
+    
+    JSON Format:
+    [{"company": "Company Name", "device": "Device Name", "description": "Brief description of what this device does and how it competes with the source product.", "rank": 1}]

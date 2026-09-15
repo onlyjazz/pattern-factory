@@ -55,11 +55,12 @@ async def agent_validate_product_id(message_body: Dict[str, Any]) -> Tuple[str, 
     try:
         raw_text = message_body.get("raw_text", "").strip()
         product_id = message_body.get("product_id")
+        product_device = message_body.get("product_device")  # Device name for lookup
         
-        # Extract product ID from raw_text if not already set
-        # Formats: "feelgood 42", "products 1-50", etc
-        if not product_id and raw_text:
-            # Try to extract number from text
+        # Extract product ID or device name from raw_text if not already set
+        # Formats: "feelgood 42", "competitors HeartLogic", etc
+        if not product_id and not product_device and raw_text:
+            # Try to extract number from text (product ID)
             import re
             matches = re.findall(r"\d+", raw_text)
             if matches:
@@ -68,9 +69,16 @@ async def agent_validate_product_id(message_body: Dict[str, Any]) -> Tuple[str, 
                     message_body["product_id"] = product_id
                 except (ValueError, IndexError):
                     pass
+            else:
+                # No number found; treat as device name
+                # Extract everything after the workflow verb
+                parts = raw_text.split(None, 1)
+                if len(parts) > 1:
+                    product_device = parts[1].strip()
+                    message_body["product_device"] = product_device
         
-        if not product_id:
-            reason = "No product ID found in message"
+        if not product_id and not product_device:
+            reason = "No product ID or device name found in message"
             logger.warning(f"  Decision: no (confidence: 0.90) - {reason}")
             return ("no", 0.90, reason)
         
@@ -82,20 +90,36 @@ async def agent_validate_product_id(message_body: Dict[str, Any]) -> Tuple[str, 
             return ("no", 0.10, reason)
         
         try:
-            # Query: find product by ID with required fields
-            result = await db.fetchrow(
-                """
-                SELECT id, submission_number, device, company, intended_use, indications_for_use, device_description
-                FROM public.products
-                WHERE id = $1 AND deleted_at IS NULL
-                """,
-                product_id
-            )
-            
-            if not result:
-                reason = f"Product ID {product_id} not found in database"
-                logger.warning(f"  Decision: no (confidence: 0.85) - {reason}")
-                return ("no", 0.85, reason)
+            # Query: find product by ID or device name with required fields
+            result = None
+            if product_id:
+                result = await db.fetchrow(
+                    """
+                    SELECT id, submission_number, device, company, intended_use, indications_for_use, device_description
+                    FROM public.products
+                    WHERE id = $1 AND deleted_at IS NULL
+                    """,
+                    product_id
+                )
+                if not result:
+                    reason = f"Product ID {product_id} not found in database"
+                    logger.warning(f"  Decision: no (confidence: 0.85) - {reason}")
+                    return ("no", 0.85, reason)
+            elif product_device:
+                result = await db.fetchrow(
+                    """
+                    SELECT id, submission_number, device, company, intended_use, indications_for_use, device_description
+                    FROM public.products
+                    WHERE device = $1 AND deleted_at IS NULL
+                    """,
+                    product_device
+                )
+                if not result:
+                    reason = f"Product '{product_device}' not found in database"
+                    logger.warning(f"  Decision: no (confidence: 0.85) - {reason}")
+                    return ("no", 0.85, reason)
+                product_id = result['id']  # Store ID for future use
+                message_body["product_id"] = product_id
             
             # Validate required fields for superiority search
             missing_fields = []

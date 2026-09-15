@@ -416,3 +416,36 @@ class PersonUpdate(BaseModel):
     content_url: str | None = None
     email: str | None = None
     company_url: str | None = None
+
+
+# -------------------------------------------------------------------------
+# Competitors (Product Competition Intelligence)
+# -------------------------------------------------------------------------
+class CompetitorCreate(BaseModel):
+    """Create a new competitor relationship between organizations."""
+    company_id: int  # Product owner (org_id)
+    competitor_id: int  # Competing organization (org_id)
+    product_id: int | None = None  # Optional: specific product being compared
+    rank: int | None = None  # 1-3 for top 3 competitors
+    rationale: str | None = None  # Why this is a competitor
+
+
+class CompetitorUpdate(BaseModel):
+    """Update a competitor relationship."""
+    company_id: int | None = None
+    competitor_id: int | None = None
+    product_id: int | None = None
+    rank: int | None = None
+    rationale: str | None = None
+
+
+class CompetitorRead(BaseModel):
+    """Read response for a competitor relationship."""
+    id: int
+    company_id: int
+    competitor_id: int
+    product_id: int | None
+    rank: int | None
+    rationale: str | None
+    created_at: str
+    updated_at: str

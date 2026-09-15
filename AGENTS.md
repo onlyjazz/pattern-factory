@@ -1179,6 +1179,109 @@ reason = "Invalid data"
 
 ---
 
+## COMPETITORS Workflow (Product Competition Intelligence)
+
+Discovers and stores the top 3 competing products for a given FDA-cleared device.
+
+### Agent: `model.validateProductId` (shared with FEELGOOD/PROFILE)
+
+**Responsibility**: Verify product exists in database with required fields.
+
+**Input**:
+- `message_body["raw_text"]` — User request (e.g., "competitors 42")
+- `message_body["product_id"]` — Product ID (extracted from raw_text)
+
+**Checks**:
+1. Product ID is valid and exists in `public.products`
+2. Product has required fields: company, device, device_description, intended_use
+
+**Output**: `(decision, confidence, reason)`
+
+**Routing**:
+- YES → `model.searchForCompetitors`
+- NO → Return error (product not found, missing fields)
+
+**Database**: SELECT only (read-only)
+
+---
+
+### Agent: `model.searchForCompetitors`
+
+**Responsibility**: Search Exa for top 3 competing products using device description and intended use.
+
+**Input**:
+- `message_body["product"]` — Product data from validateProductId
+- Product fields: device, company, device_description, intended_use
+
+**Process**:
+1. Build Exa search query from intended_use + device_description
+2. Call `exa.search()` with type="auto", num_results=10
+3. Extract top 10 results with highlights
+4. Use GPT-4o-mini to identify top 3 competing products from results
+5. Extract company name, device name, and brief description for each
+
+**Output**:
+- Stores `message_body["competitors_found"]` with list of up to 3 competitors
+- Each competitor: {company, device, description, rank}
+- Returns `(decision="yes", confidence=0.88, reason="Found N potential competitor products")`
+
+**Routing**:
+- YES → `tool.upsertCompetitors`
+- NO → Return error (Exa search failed, LLM extraction failed)
+
+**Database Impact**: None yet.
+
+---
+
+### Agent: `tool.upsertCompetitors` (Terminal Agent)
+
+**Responsibility**: Upsert competitor relationships and missing org/product records.
+
+**Input**:
+- `message_body["product_id"]` — ID of product being analyzed
+- `message_body["product"]` — Product data (company, device, etc.)
+- `message_body["competitors_found"]` — List of up to 3 competing products
+
+**Process**:
+1. Get or create org for product's company (company_org_id)
+2. For each competitor (top 3 only):
+   a. Look up competitor org by company name
+   b. If not found: create new org record
+   c. Upsert into `public.competitors` table:
+      - company_id → org.id of product's company
+      - competitor_id → org.id of competitor's company
+      - product_id → products.id
+      - rank → 1, 2, or 3
+      - rationale → brief description
+3. Log completion via `log_event()` with summary
+
+**Output**: `(decision="yes", confidence=0.92, reason="Upserted N competitor relationships")`
+
+**Database Changes**:
+- ✅ INSERT/UPDATE `public.competitors` (upsert by unique key)
+- ✅ INSERT `public.orgs` if competitor org missing
+- ✅ INSERT `public.system_log` (completion event)
+
+---
+
+## CLI Usage (COMPETITORS)
+
+```bash
+# Single product
+./bin/product-competitors 42
+
+# Range of products
+./bin/product-competitors --products 1-50
+
+# Specific product IDs
+./bin/product-competitors --products 1,5,10,42
+
+# Dry run (validate without executing)
+./bin/product-competitors --products 1-50 --dry-run
+```
+
+---
+
 ## Future Enhancements
 
 1. **Agent Caching**: Cache LLM responses for identical rule logic

@@ -134,6 +134,18 @@ DATA:
           - created_at
           - updated_at
 
+        competitors:
+          - id
+          - company_id
+          - competitor_id
+          - product_id
+          - competitor_product_id
+          - rank
+          - rationale
+          - created_at
+          - updated_at
+          - deleted_at
+
     threat:
       tables:
 

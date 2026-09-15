@@ -1,0 +1,227 @@
+#!/usr/bin/env python3
+"""
+Batch execution script for the COMPETITORS agent flow.
+
+Discovers top 3 competing products for FDA-approved medical devices.
+
+Usage:
+    ./product-competitors 42                 # Run for product ID 42
+    ./product-competitors --products 1-50    # Run for products 1 through 50
+    ./product-competitors --products 1,5,10  # Run for specific product IDs
+    ./product-competitors --products 1-50 --dry-run    # Validate without executing
+
+Environment:
+    DATABASE_URL: PostgreSQL connection string
+    EXA_API_KEY: Exa search API key
+    OPENAI_API_KEY: OpenAI GPT-4o API key
+"""
+
+import asyncio
+import asyncpg
+import json
+import logging
+import os
+import sys
+import uuid
+from datetime import datetime
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Add backend to path for imports
+sys_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if sys_path not in sys.path:
+    sys.path.insert(0, sys_path)
+
+from backend.pitboss.supervisor import PitbossSupervisor
+from backend.pitboss.envelope import MessageEnvelope, MessageType, Verb
+
+
+async def run_competitors_for_products(product_ids: list, dry_run=False):
+    """
+    Run COMPETITORS flow for specified products.
+    
+    Args:
+        product_ids: List of product IDs to process
+        dry_run: If True, validate without executing
+    """
+    # Validate environment
+    db_url = os.getenv("DATABASE_URL")
+    if not db_url:
+        logger.error("❌ DATABASE_URL environment variable not set")
+        return
+    
+    exa_key = os.getenv("EXA_API_KEY")
+    if not exa_key:
+        logger.warning("⚠️  EXA_API_KEY environment variable not set (required for web search)")
+    
+    openai_key = os.getenv("OPENAI_API_KEY")
+    if not openai_key:
+        logger.error("❌ OPENAI_API_KEY environment variable not set")
+        return
+    
+    if dry_run:
+        logger.info(f"🔍 [DRY RUN] Would process {len(product_ids)} products")
+        return
+    
+    # Connect to database
+    logger.info(f"📦 Connecting to database...")
+    try:
+        pool = await asyncpg.create_pool(db_url, min_size=1, max_size=5, command_timeout=300)
+    except Exception as e:
+        logger.error(f"❌ Database connection failed: {e}")
+        return
+    
+    # Initialize supervisor
+    logger.info(f"🧠 Initializing Pitboss Supervisor...")
+    db = pool
+    supervisor = PitbossSupervisor(db, websocket=None)
+    
+    # Process each product
+    results = {
+        "success": 0,
+        "failed": 0,
+        "skipped": 0,
+        "details": []
+    }
+    
+    for i, product_id in enumerate(product_ids, 1):
+        logger.info(f"\n[{i}/{len(product_ids)}] Processing product ID: {product_id}")
+        
+        try:
+            # Create COMPETITORS request
+            session_id = f"competitors-{datetime.utcnow().isoformat()}"
+            request_id = f"req-{uuid.uuid4().hex[:8]}"
+            
+            message_body = {
+                "product_id": product_id,
+                "raw_text": f"competitors {product_id}",
+            }
+            
+            envelope_dict = {
+                "type": "request",
+                "version": "1.1",
+                "session_id": session_id,
+                "request_id": request_id,
+                "verb": "COMPETITORS",
+                "nextAgent": None,
+                "messageBody": message_body
+            }
+            
+            # Process through supervisor
+            await supervisor.process_envelope(envelope_dict)
+            
+            # Log result
+            results["success"] += 1
+            results["details"].append({
+                "product_id": product_id,
+                "status": "success",
+                "timestamp": datetime.utcnow().isoformat()
+            })
+            
+            logger.info(f"✅ Product {product_id} processed successfully")
+            
+        except Exception as e:
+            logger.error(f"❌ Product {product_id} failed: {e}", exc_info=False)
+            results["failed"] += 1
+            results["details"].append({
+                "product_id": product_id,
+                "status": "failed",
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat()
+            })
+        
+        # Brief pause between requests
+        if i < len(product_ids):
+            await asyncio.sleep(2)
+    
+    # Final summary
+    logger.info(f"\n\n🎯 COMPETITORS Batch Complete")
+    logger.info(f"  ✅ Success: {results['success']}")
+    logger.info(f"  ❌ Failed:  {results['failed']}")
+    logger.info(f"  ⏭️  Skipped: {results['skipped']}")
+    logger.info(f"  📊 Total:   {len(product_ids)}")
+    
+    # Log to system_log table
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute(
+                """
+                INSERT INTO public.system_log (event, context)
+                VALUES ($1, $2)
+                """,
+                "COMPETITORS_BATCH",
+                json.dumps(results)
+            )
+    except Exception as e:
+        logger.warning(f"Failed to log batch results: {e}")
+    
+    # Cleanup
+    await pool.close()
+
+
+def parse_product_ids(args):
+    """
+    Parse product IDs from command line arguments.
+    Supports:
+      product 42          (positional single)
+      --products 1-50     (range)
+      --products 1,5,10   (list)
+      --product 42        (named single)
+    """
+    product_ids = []
+    
+    # Check for positional argument first (single product ID)
+    for arg in args:
+        if arg not in ["--products", "--product", "--dry-run"] and arg[0] != "-":
+            try:
+                product_ids.append(int(arg))
+            except ValueError:
+                pass
+    
+    # Check for named arguments
+    for i, arg in enumerate(args):
+        if arg == "--products" and i + 1 < len(args):
+            spec = args[i + 1]
+            if "-" in spec:
+                start, end = map(int, spec.split("-"))
+                product_ids.extend(range(start, end + 1))
+            elif "," in spec:
+                product_ids.extend([int(x.strip()) for x in spec.split(",")])
+            else:
+                product_ids.append(int(spec))
+        elif arg == "--product" and i + 1 < len(args):
+            product_ids.append(int(args[i + 1]))
+    
+    return sorted(list(set(product_ids)))  # Dedupe and sort
+
+
+if __name__ == "__main__":
+    # Parse arguments
+    args = sys.argv[1:]
+    
+    if not args or "--help" in args or "-h" in args:
+        print(__doc__)
+        sys.exit(0)
+    
+    dry_run = "--dry-run" in args
+    product_ids = parse_product_ids(args)
+    
+    if not product_ids:
+        print("❌ No product IDs specified")
+        print(__doc__)
+        sys.exit(1)
+    
+    logger.info(f"🚀 Starting COMPETITORS batch processing")
+    logger.info(f"   Products: {product_ids}")
+    logger.info(f"   Dry run:  {dry_run}")
+    
+    # Run async function
+    asyncio.run(run_competitors_for_products(product_ids, dry_run=dry_run))
