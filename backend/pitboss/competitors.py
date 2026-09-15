@@ -66,13 +66,13 @@ async def agent_search_for_competitors(message_body: Dict[str, Any]) -> Tuple[st
     """
     model.searchForCompetitors (COMPETITORS flow)
     
-    RESPONSIBILITY: Search Exa for top 3 competing products based on the
-    product's device_description and intended_use. Extract competitor
-    product names and company information from results.
+    RESPONSIBILITY: Use Exa agent API to find top 3 competing products based on
+    the product's name. The Exa agent handles
+    search, analysis, and structured JSON extraction in one step.
     
     Returns: (decision: yes|no, confidence: 0.0-1.0, reason: str)
     """
-    logger.info("🤖 [model.searchForCompetitors] Searching for competing products...")
+    logger.info("🤖 [model.searchForCompetitors] Searching for competing products via Exa agent...")
     
     try:
         product = message_body.get("product")
@@ -85,31 +85,13 @@ async def agent_search_for_competitors(message_body: Dict[str, Any]) -> Tuple[st
         device = (product.get("device") or "").strip()
         company = (product.get("company") or "").strip()
         intended_use = (product.get("intended_use") or "").strip()
-        device_description = (product.get("device_description") or "").strip()
-        panel = (product.get("panel") or "").strip()
         
         if not device:
             reason = f"Product missing device name"
             logger.warning(f"  Decision: no (confidence: 0.85) - {reason}")
             return ("no", 0.85, reason)
         
-        # Build simple search query focused on intended use
-        # Search for competing devices with the same clinical purpose
-        # Exclude the source company to avoid getting the source product itself in results
-        if intended_use:
-            search_query = f"competing medical devices {intended_use}"
-        elif device:
-            search_query = f"competing medical devices {device}"
-        else:
-            search_query = "competing medical devices"
-        
-        # Add company exclusion to filter out source company from Exa results
-        if company:
-            search_query += f" -{company}"
-        
-        logger.info(f"  Search query: {search_query}")
-        
-        # Use Exa to find competitors
+        # Check Exa availability
         if not EXA_AVAILABLE:
             reason = "Exa Python SDK not available"
             logger.error(f"  Decision: no (confidence: 0.10) - {reason}")
@@ -124,47 +106,72 @@ async def agent_search_for_competitors(message_body: Dict[str, Any]) -> Tuple[st
         try:
             exa = Exa(api_key=exa_api_key)
             
-            # Search using Exa Answer API for narrative extraction
-            # Use type="auto" with num_results to get top results
+            # Build agent query to find competitors
+            # Prompt: find the top 3 competitors to {products.device} device from {orgs.name}. return a json object with up to 3 strings (names of companies/products)
+            query = f"find the top 3 competitors to {device} device from {company}. return a json object with up to 3 strings (names of companies/products)"
+            
+            logger.info(f"  Exa agent query: {query}")
+            
+            # Call Exa agent API with structured output schema
             import asyncio
             
-            def _search_exa():
-                results = exa.search(
-                    query=search_query,
-                    num_results=10,
-                    type="auto",
-                    contents={"highlights": True}
+            def _call_exa_agent():
+                run = exa.agent.runs.create(
+                    query=query,
+                    output_schema={
+                        "items": {
+                            "additionalProperties": False,
+                            "properties": {
+                                "company": {"type": "string"},
+                                "product": {"type": "string"},
+                            },
+                            "required": ["company", "product"],
+                            "type": "object",
+                        },
+                        "type": "object",
+                    },
                 )
-                return results
+                # Poll until finished (timeout_ms is in milliseconds; 120000 ms = 120 seconds)
+                completed_run = exa.agent.runs.poll_until_finished(run.id, timeout_ms=120000)
+                return completed_run
             
-            results = await asyncio.to_thread(_search_exa)
+            completed_run = await asyncio.to_thread(_call_exa_agent)
             
-            if not results or not results.results:
-                reason = "No competitor products found in Exa results"
+            # Extract structured output
+            if not completed_run or not completed_run.output:
+                reason = "Exa agent returned no output"
                 logger.warning(f"  Decision: no (confidence: 0.70) - {reason}")
                 return ("no", 0.70, reason)
             
-            # Extract competitor information from Exa results
-            competitors_found = await _extract_competitor_products(
-                results=results,
-                product=product,
-                message_body=message_body
+            structured_output = completed_run.output.structured
+            if not structured_output:
+                reason = "Exa agent returned no structured data"
+                logger.warning(f"  Decision: no (confidence: 0.70) - {reason}")
+                return ("no", 0.70, reason)
+            
+            logger.info(f"  Raw structured output: {structured_output}")
+            logger.info(f"  Output type: {type(structured_output)}")
+            
+            # Format output into competitor list
+            competitors_found = _format_exa_agent_output(
+                structured_output=structured_output,
+                source_company=company
             )
             
             if not competitors_found:
-                reason = "Could not extract competitor product details from Exa results"
-                logger.warning(f"  Decision: no (confidence: 0.65) - {reason}")
-                return ("no", 0.65, reason)
+                reason = "No valid competitors extracted from Exa agent output"
+                logger.warning(f"  Decision: no (confidence: 0.70) - {reason}")
+                return ("no", 0.70, reason)
             
             # Store results for next agent
             message_body["competitors_found"] = competitors_found
             
-            reason = f"Found {len(competitors_found)} potential competitor products"
-            logger.info(f"  Decision: yes (confidence: 0.88) - {reason}")
-            return ("yes", 0.88, reason)
+            reason = f"Found {len(competitors_found)} competitor(s) via Exa agent"
+            logger.info(f"  Decision: yes (confidence: 0.92) - {reason}")
+            return ("yes", 0.92, reason)
             
         except Exception as e:
-            reason = f"Exa search failed: {str(e)}"
+            reason = f"Exa agent call failed: {str(e)}"
             logger.error(f"  Decision: no (confidence: 0.10) - {reason}", exc_info=True)
             return ("no", 0.10, reason)
         
@@ -174,134 +181,73 @@ async def agent_search_for_competitors(message_body: Dict[str, Any]) -> Tuple[st
         return ("no", 0.10, reason)
 
 
-async def _extract_competitor_products(
-    results: Any,
-    product: Dict[str, Any],
-    message_body: Dict[str, Any]
+def _format_exa_agent_output(
+    structured_output: Dict[str, Any],
+    source_company: str
 ) -> List[Dict[str, Any]]:
     """
-    Extract competitor product names and companies from Exa search results.
-    Uses LLM to identify product/company pairs from search results.
+    Format Exa agent structured output into competitor list.
+    Exa agent returns a JSON object with company and product strings.
     
     Returns: List of {company: str, device: str, description: str, rank: int}
     """
-    logger.info("  Extracting competitor products from Exa results...")
+    logger.info("  Processing Exa agent output...")
     
     try:
-        # Format Exa results for LLM extraction
-        result_texts = []
-        for i, result in enumerate(results.results[:10]):  # Top 10
-            title = getattr(result, 'title', '')
-            text = getattr(result, 'text', '')
-            highlight = getattr(result, 'highlight', '')
-            
-            result_text = f"Result {i+1}: {title}\n"
-            if highlight:
-                result_text += f"Highlight: {highlight}\n"
-            if text:
-                result_text += f"Content: {text[:500]}\n"
-            result_texts.append(result_text)
+        if not structured_output:
+            logger.warning("  No structured output from Exa agent")
+            return []
         
-        combined_results = "\n---\n".join(result_texts)
+        logger.info(f"  Raw output: {structured_output}")
         
-        # Use LLM to extract competitor products
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            logger.warning("  OPENAI_API_KEY not set, falling back to heuristic extraction")
-            return _extract_competitors_heuristic(combined_results)
+        # Exa may return competitors as an array in a 'competitors' key
+        competitor_list = []
+        if "competitors" in structured_output and isinstance(structured_output["competitors"], list):
+            competitor_list = structured_output["competitors"]
+        elif "company" in structured_output and "product" in structured_output:
+            # Single object: {"company": "...", "product": "..."}
+            competitor_list = [structured_output]
         
-        client = OpenAI(api_key=api_key)
-        source_company = (product.get("company") or "").strip()
-        source_device = (product.get("device") or "").strip()
+        if not competitor_list:
+            logger.warning(f"  No competitors in Exa output: {structured_output}")
+            return []
         
-        # Load system prompt from SEARCH.yaml
-        system_prompt = (
-            "You are a medical device competitive intelligence analyst. "
-            "Extract the top 3 competing product companies and device names from the provided search results. "
-            "IMPORTANT: Exclude any products from the same company as the source product. "
-            "Return ONLY a JSON array with up to 3 objects from DIFFERENT companies: "
-            '[{"company": "Company Name", "device": "Device Name", "description": "Brief description", "rank": 1}, ...]. '
-            "If fewer than 3 competitors from different companies found, return only what you found. "
-            "Ensure company names and device names are realistic FDA-cleared medical device names. "
-            "Return ONLY valid JSON, no markdown, no extra text."
-        )
-        
-        try:
-            search_config = _load_search_config()
-            system_prompt = (search_config.get("competitors_extraction_prompt") or system_prompt).strip()
-            logger.info(f"  ✓ Loaded COMPETITORS extraction prompt from SEARCH.yaml")
-        except Exception as e:
-            logger.warning(f"  Could not load SEARCH.yaml prompt, using fallback: {e}")
-        
-        user_message = f"Search results:\n\n{combined_results}\n\nOriginal product: {product.get('device')} by {product.get('company')}"
-        
-        response = await _call_openai_async(
-            client=client,
-            system_prompt=system_prompt,
-            user_message=user_message,
-            model="gpt-4o-mini",
-            temperature=0.1,
-            timeout=30.0
-        )
-        
-        competitors = json.loads(response)
-        if not isinstance(competitors, list):
-            competitors = [competitors]
-        
-        # Filter out source product and add rank to remaining
         competitors_ranked = []
         source_company_lower = source_company.lower()
         
-        for comp in competitors:
-            comp_company = (comp.get("company") or "").strip()
-            
-            # Skip if it's the same company as source
-            if comp_company.lower() == source_company_lower:
-                logger.info(f"  Skipping competitor from same company: {comp_company}")
+        for comp_data in competitor_list:
+            if not isinstance(comp_data, dict):
                 continue
             
-            # Add rank and keep
-            comp["rank"] = len(competitors_ranked) + 1
-            competitors_ranked.append(comp)
+            comp_company = (comp_data.get("company") or "").strip()
+            comp_product = (comp_data.get("product") or "").strip()
+            
+            if not comp_company or not comp_product:
+                logger.warning(f"  Skipping incomplete entry: {comp_data}")
+                continue
+            
+            # Skip if same company as source
+            if comp_company.lower() == source_company_lower:
+                logger.info(f"  Skipping same company: {comp_company}")
+                continue
+            
+            competitors_ranked.append({
+                "company": comp_company,
+                "device": comp_product,
+                "description": f"Competitor: {comp_product}",
+                "rank": len(competitors_ranked) + 1
+            })
             
             # Only keep top 3
             if len(competitors_ranked) >= 3:
                 break
         
-        logger.info(f"  Extracted {len(competitors_ranked)} competitors via LLM (filtered)")
+        logger.info(f"  Extracted {len(competitors_ranked)} competitors from Exa output")
         return competitors_ranked
         
-    except json.JSONDecodeError as e:
-        logger.warning(f"  LLM extraction failed: {e}, falling back to heuristic")
-        return _extract_competitors_heuristic(combined_results)
     except Exception as e:
-        logger.error(f"  Extraction failed: {e}", exc_info=True)
+        logger.error(f"  Failed to process Exa output: {e}", exc_info=True)
         return []
-
-
-def _extract_competitors_heuristic(text: str) -> List[Dict[str, Any]]:
-    """
-    Fallback heuristic extraction of competitor products from text.
-    Looks for company names and device names in search results.
-    """
-    # Simple heuristic: look for capitalized phrases that might be company/device names
-    # This is a simplified approach; the LLM method is preferred
-    logger.info("  Using heuristic competitor extraction (LLM unavailable)")
-    
-    # Extract potential company names (all caps or Title Case)
-    company_pattern = r"([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:Inc|LLC|Corp|Ltd|Corporation|Company)"
-    companies = re.findall(company_pattern, text)
-    
-    competitors = []
-    for i, company in enumerate(companies[:3], 1):
-        competitors.append({
-            "company": company,
-            "device": f"Medical Device {i}",  # Placeholder
-            "description": "Competitor medical device (heuristic extraction)",
-            "rank": i
-        })
-    
-    return competitors
 
 
 async def _call_openai_async(
