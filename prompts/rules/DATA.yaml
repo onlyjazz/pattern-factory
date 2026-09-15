@@ -26,7 +26,16 @@ DATA:
           - org_id
           - superiority
           - process_flag
+          - competitors
 
+        competitors:
+          - id
+          - company_id
+          - competitor_id
+          - product_id
+          - competitor_product_id
+          - rank
+          - rationale
 
         active_models:
           - user_id
