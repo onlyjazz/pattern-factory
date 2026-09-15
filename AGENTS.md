@@ -15,6 +15,10 @@ Schemas: `public` (patterns, products, orgs, posts, people, categories, etc.), `
 
 ## Agent Continuity Rule (CRITICAL)
 
+Do not cd while you're working since it breaks the reference to AGENTS.md in the working directory.
+
+Specifically if you run psql or git commands do not cd to the project root.
+
 **When you return from the terminal or paste test output, treat it as a continuation of active work, not a new interaction.** If context is unclear from the message alone, immediately call `search_conversation_history` to recover prior task context instead of asking the user to repeat themselves. This prevents losing mid-task progress when developers escape to run tests, check logs, or verify output. Treat pasted query results, error messages, and command output as signals that the user is mid-stream, working on the branch specified in their git HEAD.
 
 ---
