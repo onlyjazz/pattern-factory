@@ -125,42 +125,26 @@ CONTENT:
       }
 
       PATTERNS:
-        Extract DESIGN PATTERNS and ANTI-PATTERNS described by the author.
-
-        CRITICAL: When you see text that contains:
-        - "Design pattern:" followed by a principle or practice
-        - "Anti-pattern:" followed by a principle or practice
-        - "Anti-design pattern:" followed by a principle or practice
-        - "Pattern:" followed by a principle or practice
-
-        EXTRACT the entire statement that follows these keywords.
-        Example: "Design pattern: Ask what risks really count for your business?"
-        Extract name: "Ask what risks really count for your business?"
-        Extract kind: "pattern"
+        Extract DESIGN PATTERNS and ANTI-PATTERNS described by the author in this article.
         
-        Example: "Anti-Design pattern: Security by obscurity"
-        Extract name: "Security by obscurity"
-        Extract kind: "anti-pattern"
-
-        What IS a pattern:
-        - A reusable PRINCIPLE, METHOD, or APPROACH that someone could apply elsewhere
-        - A reusable ANTI-PRACTICE or BAD ASSUMPTION the author warns against
-
-        What is NOT a pattern:
-        - Organization names (OpenCRO, Target, etc.)
-        - Product/technology names (firewalls, ransomware, etc.)
-        - Specific incidents or attacks ("WannaCry", "HVAC breach")
-        - Examples or stories used to illustrate a pattern
-
-        EXTRACTION RULE:
-        1. FIRST: Search for explicit keywords like "Design pattern:", "Anti-pattern:", "Pattern:", "Anti-design pattern:"
-        2. When found, extract the complete statement/text that follows
-        3. Set kind="pattern" or kind="anti-pattern" based on the keyword used
-        4. ONLY then consider unnamed concepts if the author clearly generalizes a principle
-
-        DO NOT confuse companies, products, or incidents with patterns.
-        DO NOT skip explicitly labeled patterns.
-        DO extract exactly what the author writes after the pattern label.
+        A pattern is a reusable principle, method, or approach.
+        An anti-pattern is an approach or practice that is ineffective, dangerous, or produces bad results.
+        
+        Look for:
+        - Principles and practices the author recommends or warns against
+        - Methods that could be applied or avoided in different contexts
+        - Best practices, common mistakes, recurring themes
+        - Anything the author frames as "the right way" or "the wrong way"
+        
+        Do NOT extract:
+        - Company names (OpenCRO, Target, etc.)
+        - Product or technology names (firewalls, ransomware, etc.)
+        - Specific incidents or attacks (WannaCry, HVAC breach, etc.)
+        - Examples (extract the underlying lesson, not the example)
+        
+        KIND classification:
+        - kind: "pattern" for recommendations, best practices, effective approaches
+        - kind: "anti-pattern" for warnings, mistakes, ineffective or harmful approaches
 
 
       CRITICAL: POST FALLBACK RULE
