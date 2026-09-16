@@ -1049,7 +1049,11 @@ async def agent_request_to_extract_entities(message_body: Dict[str, Any]) -> Tup
             match = re.search(r'/cards/([a-f0-9\-]+)(?:/story)?', url)
             if match:
                 uuid = match.group(1)
-                normalized_url = f"/cards/view/story/{uuid}"
+                # Extract base URL (scheme + netloc)
+                from urllib.parse import urlparse
+                parsed = urlparse(url)
+                base_url = f"{parsed.scheme}://{parsed.netloc}"
+                normalized_url = f"{base_url}/cards/view/story/{uuid}"
                 logger.info(f"  [Content Detection] Detected Stories source, normalized URL: {normalized_url}")
         
         client = OpenAI(api_key=api_key)
