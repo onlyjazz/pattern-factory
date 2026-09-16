@@ -6,7 +6,7 @@ LANGUAGE plpgsql
 AS $$
 DECLARE
     v_org_count     INTEGER := 0;
-    v_guest_count   INTEGER := 0;
+    v_people_count  INTEGER := 0;
     v_post_count    INTEGER := 0;
     v_pattern_count INTEGER := 0;
     v_link_count    INTEGER := 0;
@@ -82,10 +82,10 @@ BEGIN
 
 
     ---------------------------------------------------------------------
-    -- 3. BULK UPSERT GUESTS
+    -- 3. BULK UPSERT PEOPLE (was GUESTS)
     ---------------------------------------------------------------------
-    WITH upserted_guests AS (
-        INSERT INTO guests (
+    WITH upserted_people AS (
+        INSERT INTO people (
             name,
             description,
             job_description,
@@ -117,7 +117,7 @@ BEGIN
             updated_at      = NOW()
         RETURNING id
     )
-    SELECT COUNT(*) INTO v_guest_count FROM upserted_guests;
+    SELECT COUNT(*) INTO v_people_count FROM upserted_people;
 
 
     ---------------------------------------------------------------------
@@ -187,16 +187,16 @@ BEGIN
 
 
     ---------------------------------------------------------------------
-    -- 7. BULK INSERT PATTERN → GUEST LINKS
+    -- 7. BULK INSERT PATTERN → PEOPLE LINKS (was GUEST LINKS)
     ---------------------------------------------------------------------
     WITH inserted_links AS (
-        INSERT INTO pattern_guest_link(pattern_id, guest_id)
+        INSERT INTO pattern_people_link(pattern_id, people_id)
         SELECT DISTINCT
             pat.id,
-            guest.id
+            person.id
         FROM jsonb_array_elements(COALESCE(v_payload->'pattern_guest_link', '[]'::jsonb))
         INNER JOIN patterns pat ON pat.name = value->>'pattern_name'
-        INNER JOIN guests guest ON guest.name = value->>'guest_name'
+        INNER JOIN people person ON person.name = value->>'guest_name'
         WHERE value->>'pattern_name' IS NOT NULL 
           AND value->>'guest_name' IS NOT NULL
         ON CONFLICT DO NOTHING
@@ -213,7 +213,7 @@ BEGIN
         'summary', jsonb_build_object(
             'orgs_upserted', v_org_count,
             'posts_upserted', v_post_count,
-            'guests_upserted', v_guest_count,
+            'people_upserted', v_people_count,
             'patterns_upserted', v_pattern_count,
             'links_created', v_link_count
         )
