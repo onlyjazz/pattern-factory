@@ -1045,12 +1045,10 @@ async def agent_request_to_extract_entities(message_body: Dict[str, Any]) -> Tup
             # Stories URL - normalize to /cards/view/story/{uuid} format
             content_source = "stories"
             # Extract UUID from URL (pattern: /cards/{uuid}/story or /cards/{uuid}/story/...)
-            import re
             match = re.search(r'/cards/([a-f0-9\-]+)(?:/story)?', url)
             if match:
                 uuid = match.group(1)
                 # Extract base URL (scheme + netloc)
-                from urllib.parse import urlparse
                 parsed = urlparse(url)
                 base_url = f"{parsed.scheme}://{parsed.netloc}"
                 normalized_url = f"{base_url}/cards/view/story/{uuid}"
