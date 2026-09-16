@@ -125,26 +125,36 @@ CONTENT:
       }
 
       PATTERNS:
-        Extract DESIGN PATTERNS and ANTI-PATTERNS described by the author in this article.
+        Extract only explicit DESIGN PATTERNS and ANTI-PATTERNS that the author clearly identifies.
         
-        A pattern is a reusable principle, method, or approach.
-        An anti-pattern is an approach or practice that is ineffective, dangerous, or produces bad results.
+        PRIORITY 1 - EXPLICIT PATTERNS (ALWAYS EXTRACT IF PRESENT):
+        Look for text that contains:
+        - "Design pattern" or "Design pattern:"
+        - "Anti-pattern" or "Anti-pattern:"
+        - "Anti-design pattern" or "Anti-design pattern:"
+        Extract the exact text/phrase that follows these labels as the pattern name.
         
-        Look for:
-        - Principles and practices the author recommends or warns against
-        - Methods that could be applied or avoided in different contexts
-        - Best practices, common mistakes, recurring themes
-        - Anything the author frames as "the right way" or "the wrong way"
-        
-        Do NOT extract:
-        - Company names (OpenCRO, Target, etc.)
-        - Product or technology names (firewalls, ransomware, etc.)
-        - Specific incidents or attacks (WannaCry, HVAC breach, etc.)
-        - Examples (extract the underlying lesson, not the example)
+        PRIORITY 2 - ONLY if no explicit patterns found:
+        Look for general principles the author discusses as broadly applicable lessons.
+        NOT individual projects, tools, products, or company initiatives.
+        NOT specific incidents, attacks, or examples.
         
         KIND classification:
-        - kind: "pattern" for recommendations, best practices, effective approaches
-        - kind: "anti-pattern" for warnings, mistakes, ineffective or harmful approaches
+        - "pattern": recommended approach, best practice, effective method
+        - "anti-pattern": warned against approach, harmful practice, ineffective method
+        
+        EXAMPLES OF WHAT IS NOT A PATTERN:
+        - "Developing OpenCRO" (this is a specific product/project)
+        - "System of agents" when describing a specific implementation
+        - Any project name, company name, or product name
+        - Any specific incident or attack example
+        
+        EXAMPLES OF WHAT IS A PATTERN:
+        - "Ask what risks really count for your business" (general principle)
+        - "Security by obscurity" (general anti-pattern)
+        - "Business Threat Modeling" (named methodology the author recommends)
+        
+        Return empty patterns array ONLY if the article contains no explicit patterns and no general reusable principles.
 
 
       CRITICAL: POST FALLBACK RULE
