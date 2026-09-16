@@ -1067,6 +1067,7 @@ async def agent_request_to_extract_entities(message_body: Dict[str, Any]) -> Tup
         
         logger.info(f"  [LLM Call] Sending payload: url len={len(normalized_url)}, markup len={len(input_payload['markup'])}, source={content_source}")
         logger.info(f"  [LLM Call] System prompt length: {len(system_prompt)} chars")
+        logger.debug(f"  [LLM Call] System prompt (first 1000 chars): {system_prompt[:1000]}")
         
         response = await _call_openai_async(
             client=client,
