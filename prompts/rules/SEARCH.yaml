@@ -146,3 +146,41 @@ SEARCH:
     
     JSON Format:
     [{"company": "Company Name", "device": "Device Name", "description": "Brief description of what this device does and how it competes with the source product.", "rank": 1}]
+
+  # Prompt for FEELGOOD workflow extraction of CEO-focused competitive superiority (CEO-facing distinction, not benefit)
+  superiority_extraction_system_prompt: |
+    You are advising the CEO of the company. They already know their product. Identify the SINGLE most important competitive superiority—the reason this product is DIFFERENT FROM or BETTER THAN the named competitors.
+    
+    CRITICAL DISTINCTION: A superiority is NOT a product benefit. Your sentence should only make sense BECAUSE you compared this product with these competitors.
+    
+    WHAT TO AVOID:
+    - Do not write benefit language: avoid "enhancing," "allowing," "improving," "streamlining," "significantly," or similar verb modifiers.
+    - Do not describe the product, list features, or explain technology.
+    - Do not use marketing language.
+    
+    WHAT TO PREFER:
+    - Prefer the underlying competitive distinction (what we do differently) over its marketing benefit (what the customer gains).
+    - Prefer a specific measurable distinction when credible evidence supports it.
+    - Select the one advantage most likely to matter commercially, clinically, or operationally.
+    
+    INTERNAL REASONING (not output):
+    Before writing your sentence, identify: "PRODUCT does X whereas COMPETITORS do Y."
+    Then turn that comparison into the final statement.
+    
+    OUTPUT FORMAT:
+    Write exactly one sentence, no more than 35 words.
+
+  superiority_extraction_user_prompt: |
+    Given this product and its top 3 competitors, identify the single most important competitive superiority.
+    
+    Product: {device}
+    Company: {company}
+    Intended Use: {intended_use}
+    Top Competitors: {competitors}
+    
+    Competitive Intelligence:
+    {exa_answer}
+    
+    Before writing, identify: What does {company}'s {device} do that these competitors do NOT do (or do differently)? What is the core distinction?
+    
+    Write exactly one sentence (no more than 35 words) stating this distinction. Focus on why this matters to the CEO, not how it benefits customers.

@@ -152,15 +152,45 @@ async def agent_validate_product_id(message_body: Dict[str, Any]) -> Tuple[str, 
         return ("no", 0.10, reason)
 
 
-# System prompt for superiority extraction: focus on commercial advantage
-_SUPERIORITY_EXTRACTION_SYSTEM_PROMPT = (
-    "You are advising the CEO of the company. They already know their product. "
-    "Identify the SINGLE most important competitive superiority. "
-    "Do not describe the product, list features, explain technology, or use marketing language. "
-    "Select the one advantage most likely to matter commercially, clinically, or operationally. "
-    "Prefer a specific measurable outcome when credible evidence supports it. "
-    "Write exactly one sentence, no more than 35 words."
-)
+# Cache for SEARCH.yaml config
+_SEARCH_CONFIG_CACHE_FG: Optional[Dict[str, Any]] = None
+
+def _load_search_config_feelgood() -> Dict[str, Any]:
+    """Load and cache the SEARCH section from prompts/rules/SEARCH.yaml."""
+    global _SEARCH_CONFIG_CACHE_FG
+    if _SEARCH_CONFIG_CACHE_FG is not None:
+        return _SEARCH_CONFIG_CACHE_FG
+    try:
+        import yaml
+        yaml_path = os.path.join(
+            os.path.dirname(__file__), "..", "..", "prompts", "rules", "SEARCH.yaml",
+        )
+        with open(yaml_path, "r", encoding="utf-8") as f:
+            yaml_data = yaml.safe_load(f)
+        _SEARCH_CONFIG_CACHE_FG = (yaml_data.get("SEARCH") or {}) if isinstance(yaml_data, dict) else {}
+        logger.info("  ✓ Loaded SEARCH.yaml superiority extraction config")
+    except Exception as e:
+        logger.warning(f"  Could not load SEARCH.yaml, using defaults: {e}")
+        _SEARCH_CONFIG_CACHE_FG = {}
+    return _SEARCH_CONFIG_CACHE_FG
+
+# Load prompts once at module load time
+def _load_superiority_prompts():
+    """Load system and user prompts for superiority extraction from SEARCH.yaml."""
+    search_config = _load_search_config_feelgood()
+    
+    system_prompt = search_config.get(
+        "superiority_extraction_system_prompt",
+        "You are advising the CEO. Identify the single most important competitive superiority."
+    )
+    user_prompt_template = search_config.get(
+        "superiority_extraction_user_prompt",
+        "Given this product and its competitors, identify the key distinction.\n{exa_answer}"
+    )
+    
+    return system_prompt, user_prompt_template
+
+_SUPERIORITY_EXTRACTION_SYSTEM_PROMPT, _SUPERIORITY_EXTRACTION_USER_TEMPLATE = _load_superiority_prompts()
 
 
 def _clean_superiority_text(text: str) -> str:
@@ -328,21 +358,14 @@ async def agent_extract_superiority_claim(message_body: Dict[str, Any]) -> Tuple
         intended_use = product.get("intended_use", "")
         competitors_str = product.get("competitors", "")  # Comma-separated list from DB
         
-        # Construct prompt for LLM - CEO-focused and concise
-        prompt = f"""You are advising the CEO. Given this product and its top competitors, identify the single most important competitive superiority.
-
-Product: {device}
-Company: {company}
-Intended Use: {intended_use}
-Top Competitors: {competitors_str if competitors_str else "(Not yet specified)"}
-
-Competitive Intelligence:
-{exa_answer}
-
-Write exactly one sentence (no more than 35 words) identifying the SINGLE most important competitive superiority. 
-Do not describe the product, list features, explain technology, or use marketing language. 
-Select the one advantage most likely to matter commercially, clinically, or operationally. 
-Prefer a specific measurable outcome when credible evidence supports it."""
+        # Build user prompt from template
+        user_prompt = _SUPERIORITY_EXTRACTION_USER_TEMPLATE.format(
+            device=device,
+            company=company,
+            intended_use=intended_use,
+            competitors=competitors_str if competitors_str else "(Not yet specified)",
+            exa_answer=exa_answer
+        )
         
         try:
             api_key = os.getenv("OPENAI_API_KEY")
@@ -362,7 +385,7 @@ Prefer a specific measurable outcome when credible evidence supports it."""
                     },
                     {
                         "role": "user",
-                        "content": prompt
+                        "content": user_prompt
                     }
                 ]
             )
