@@ -125,36 +125,35 @@ CONTENT:
       }
 
       PATTERNS:
-        Extract only explicit DESIGN PATTERNS and ANTI-PATTERNS that the author clearly identifies.
+        Extract DESIGN PATTERNS and ANTI-PATTERNS the author discusses as reusable lessons.
         
-        PRIORITY 1 - EXPLICIT PATTERNS (ALWAYS EXTRACT IF PRESENT):
-        Look for text that contains:
-        - "Design pattern" or "Design pattern:"
-        - "Anti-pattern" or "Anti-pattern:"
-        - "Anti-design pattern" or "Anti-design pattern:"
-        Extract the exact text/phrase that follows these labels as the pattern name.
+        A pattern is a reusable principle, practice, or methodology.
+        An anti-pattern is a practice or approach that is ineffective or harmful.
         
-        PRIORITY 2 - ONLY if no explicit patterns found:
-        Look for general principles the author discusses as broadly applicable lessons.
-        NOT individual projects, tools, products, or company initiatives.
-        NOT specific incidents, attacks, or examples.
+        Look for:
+        1. Sections labeled "Design pattern", "Anti-pattern", "Pattern", etc. Extract what the author states.
+        2. General principles, methodologies, or practices the author discusses as broadly applicable
+        3. Things that could be applied or avoided in different contexts
+        
+        DO NOT extract:
+        - Specific project names (e.g., "Developing OpenCRO")
+        - Product or company names
+        - Specific incidents or attacks
+        - Examples (extract the underlying principle, not the example)
         
         KIND classification:
-        - "pattern": recommended approach, best practice, effective method
-        - "anti-pattern": warned against approach, harmful practice, ineffective method
+        - "pattern": recommended, effective, best practice
+        - "anti-pattern": warned against, harmful, ineffective
         
-        EXAMPLES OF WHAT IS NOT A PATTERN:
-        - "Developing OpenCRO" (this is a specific product/project)
-        - "System of agents" when describing a specific implementation
-        - Any project name, company name, or product name
-        - Any specific incident or attack example
+        For each pattern extracted, provide:
+        - name: The pattern or principle name
+        - description: A brief explanation
+        - kind: "pattern" or "anti-pattern"
+        - content_source: "substack"
         
-        EXAMPLES OF WHAT IS A PATTERN:
-        - "Ask what risks really count for your business" (general principle)
-        - "Security by obscurity" (general anti-pattern)
-        - "Business Threat Modeling" (named methodology the author recommends)
-        
-        Return empty patterns array ONLY if the article contains no explicit patterns and no general reusable principles.
+        If the article explicitly discusses patterns (like "Design pattern: X"), EXTRACT THEM.
+        If the article contains reusable principles, EXTRACT THEM.
+        Only return empty array if article truly has no patterns or principles.
 
 
       CRITICAL: POST FALLBACK RULE
