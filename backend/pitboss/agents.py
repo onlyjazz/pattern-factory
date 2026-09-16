@@ -1092,6 +1092,10 @@ async def agent_request_to_extract_entities(message_body: Dict[str, Any]) -> Tup
         logger.info(f"  [Extraction] Parsed JSON successfully")
         if isinstance(llm_obj, dict):
             logger.info(f"  [Extraction] Top-level keys: {list(llm_obj.keys())}")
+            if isinstance(llm_obj.get("messageBody"), dict):
+                patterns = llm_obj["messageBody"].get("patterns", [])
+                if patterns:
+                    logger.info(f"  [DEBUG] Raw patterns from LLM: {json.dumps(patterns, indent=2)[:1000]}")
         
         # Accept both envelope-style and bare-payload outputs
         extracted_data = None
