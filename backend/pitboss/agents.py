@@ -1037,18 +1037,33 @@ async def agent_request_to_extract_entities(message_body: Dict[str, Any]) -> Tup
         return ("no", 0.70, reason)
 
     try:
+        # Detect content source (Stories or Substack)
+        content_source = "substack"
+        normalized_url = url
+        
+        if "/cards/" in url:
+            # Stories URL - normalize to /cards/view/story/{uuid} format
+            content_source = "stories"
+            # Extract UUID from URL (pattern: /cards/{uuid}/story or /cards/{uuid}/story/...)
+            import re
+            match = re.search(r'/cards/([a-f0-9\-]+)(?:/story)?', url)
+            if match:
+                uuid = match.group(1)
+                normalized_url = f"/cards/view/story/{uuid}"
+                logger.info(f"  [Content Detection] Detected Stories source, normalized URL: {normalized_url}")
+        
         client = OpenAI(api_key=api_key)
         
         # Provide input in the exact structure the prompt expects
         max_chars = 60000
         input_payload = {
-            "url": url,
+            "url": normalized_url,
             "markup": (text or "")[:max_chars],
-            "content_source": "substack",
+            "content_source": content_source,
         }
         user_message = json.dumps(input_payload, ensure_ascii=False)
         
-        logger.info(f"  [LLM Call] Sending payload: url len={len(url)}, markup len={len(input_payload['markup'])}, source=substack")
+        logger.info(f"  [LLM Call] Sending payload: url len={len(normalized_url)}, markup len={len(input_payload['markup'])}, source={content_source}")
         logger.info(f"  [LLM Call] System prompt length: {len(system_prompt)} chars")
         
         response = await _call_openai_async(
@@ -1111,8 +1126,8 @@ async def agent_request_to_extract_entities(message_body: Dict[str, Any]) -> Tup
                 extracted_data["posts"].append({
                     "name": title,
                     "description": subtitle,
-                    "content_url": url,
-                    "content_source": "substack",
+                    "content_url": normalized_url,
+                    "content_source": content_source,
                     "published_at": published,
                 })
         
