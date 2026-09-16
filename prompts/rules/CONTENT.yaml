@@ -125,35 +125,67 @@ CONTENT:
       }
 
       PATTERNS:
-        Extract DESIGN PATTERNS and ANTI-PATTERNS the author discusses as reusable lessons.
-        
-        A pattern is a reusable principle, practice, or methodology.
-        An anti-pattern is a practice or approach that is ineffective or harmful.
-        
-        Look for:
-        1. Sections labeled "Design pattern", "Anti-pattern", "Pattern", etc. Extract what the author states.
-        2. General principles, methodologies, or practices the author discusses as broadly applicable
-        3. Things that could be applied or avoided in different contexts
-        
-        DO NOT extract:
-        - Specific project names (e.g., "Developing OpenCRO")
-        - Product or company names
-        - Specific incidents or attacks
-        - Examples (extract the underlying principle, not the example)
-        
+
         KIND classification:
         - "pattern": recommended, effective, best practice
         - "anti-pattern": warned against, harmful, ineffective
         
-        For each pattern extracted, provide:
-        - name: The pattern or principle name
-        - description: A brief explanation
-        - kind: "pattern" or "anti-pattern"
-        - content_source: "substack"
-        
-        If the article explicitly discusses patterns (like "Design pattern: X"), EXTRACT THEM.
-        If the article contains reusable principles, EXTRACT THEM.
-        Only return empty array if article truly has no patterns or principles.
+        Extract DESIGN PATTERNS and ANTI-PATTERNS described by the author in this article.
+
+        A pattern is NOT:
+        - a story
+        - an example
+        - an incident
+        - a product
+        - a technology
+        - a company
+        - something the author built
+        - a threat or attack technique
+
+        Examples such as Target, WannaCry, HVAC access, ransomware,
+        firewalls, OpenCRO, or AI agents may be EVIDENCE for a pattern,
+        but must not themselves be extracted as patterns.
+
+        DESIGN PATTERN
+
+        A reusable principle, method, or approach recommended by the author
+        for solving a recurring problem.
+
+        ANTI-PATTERN
+
+        A reusable approach, assumption, or practice that the author argues
+        is ineffective, dangerous, or produces undesirable results.
+
+        EXTRACTION PRIORITY
+
+        1. First look for patterns or anti-patterns explicitly named by the author,
+          including headings containing phrases such as:
+          "Design pattern"
+          "Pattern"
+          "Anti-pattern"
+          "Anti-design pattern"
+
+        2. Then consider unnamed concepts only when the author clearly generalizes
+          them into a reusable principle or method.
+
+        3. Do NOT turn supporting examples into patterns.
+
+        For each candidate ask:
+
+        "Could someone apply or avoid this principle in a different system,
+        company, or situation?"
+
+        If NO, it is not a pattern.
+
+        "Is this merely an example demonstrating a broader principle?"
+
+        If YES, do not extract it. Extract the broader principle instead.
+
+        Be conservative.
+        It is better to miss a weak pattern than invent one.
+
+        Return only patterns strongly supported by the article.
+        Do not use external knowledge.
 
 
       CRITICAL: POST FALLBACK RULE
