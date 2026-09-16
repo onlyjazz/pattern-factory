@@ -125,39 +125,44 @@ CONTENT:
       }
 
       PATTERNS:
-      Extract conceptual patterns and anti-patterns from the content.
-      A pattern is a recurring practice, approach, or lesson that appears in the text.
-      
-      WHAT TO EXTRACT:
-      - Anything explicitly labeled: "Pattern:", "Design pattern:", "Anti-pattern:", "Anti-Design pattern:"
-      - Recurring themes or lessons about what works or doesn't work
-      - Best practices, common mistakes, false assumptions, ineffective approaches
-      - Anything that could be described as "the right way" or "the wrong way" to do something
-      - Security practices, development practices, organizational practices, etc.
-      
-      HOW TO CLASSIFY:
-      - kind: "anti-pattern" if the text describes something that is WRONG, BROKEN, HARMFUL, or INEFFECTIVE
-      - kind: "pattern" if the text describes something that is RIGHT, EFFECTIVE, BENEFICIAL, or WORKS WELL
-      - When in doubt, use your judgment based on the context and tone
-      
-      DO NOT be overly restrictive. If the content discusses a practice, approach, problem, or solution, extract it as a pattern.
-      DO NOT skip patterns because the text doesn't use exact keywords like "Pattern:" or "Anti-pattern:".
-      The LLM should intelligently identify patterns even if they're not explicitly labeled.
-      
-      A pattern has 4 required fields:
-      {
-            "name": "...",
-            "description": "...",
-            "kind": "pattern | anti-pattern",
-            "content_source": "substack"
-      }
-      
-      EXAMPLES:
-      - Name: "Assuming non-networked devices are inherently secure", kind: "anti-pattern"
-      - Name: "Security review early in development", kind: "pattern"
-      - Name: "Treating infrastructure as cattle, not pets", kind: "pattern"
-      - Name: "Siloed security teams", kind: "anti-pattern"
-      
+        Extract DESIGN PATTERNS and ANTI-PATTERNS described by the author.
+
+        CRITICAL: When you see text that contains:
+        - "Design pattern:" followed by a principle or practice
+        - "Anti-pattern:" followed by a principle or practice
+        - "Anti-design pattern:" followed by a principle or practice
+        - "Pattern:" followed by a principle or practice
+
+        EXTRACT the entire statement that follows these keywords.
+        Example: "Design pattern: Ask what risks really count for your business?"
+        Extract name: "Ask what risks really count for your business?"
+        Extract kind: "pattern"
+        
+        Example: "Anti-Design pattern: Security by obscurity"
+        Extract name: "Security by obscurity"
+        Extract kind: "anti-pattern"
+
+        What IS a pattern:
+        - A reusable PRINCIPLE, METHOD, or APPROACH that someone could apply elsewhere
+        - A reusable ANTI-PRACTICE or BAD ASSUMPTION the author warns against
+
+        What is NOT a pattern:
+        - Organization names (OpenCRO, Target, etc.)
+        - Product/technology names (firewalls, ransomware, etc.)
+        - Specific incidents or attacks ("WannaCry", "HVAC breach")
+        - Examples or stories used to illustrate a pattern
+
+        EXTRACTION RULE:
+        1. FIRST: Search for explicit keywords like "Design pattern:", "Anti-pattern:", "Pattern:", "Anti-design pattern:"
+        2. When found, extract the complete statement/text that follows
+        3. Set kind="pattern" or kind="anti-pattern" based on the keyword used
+        4. ONLY then consider unnamed concepts if the author clearly generalizes a principle
+
+        DO NOT confuse companies, products, or incidents with patterns.
+        DO NOT skip explicitly labeled patterns.
+        DO extract exactly what the author writes after the pattern label.
+
+
       CRITICAL: POST FALLBACK RULE
       If you extract ANY patterns, orgs, or guests from the URL but NO post is found:
       - You MUST create at least one post entry using the page/site name or title tag
