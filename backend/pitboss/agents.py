@@ -944,6 +944,49 @@ def _extract_published_date(html: str) -> Optional[str]:
             return (m.group(2) if m.lastindex and m.lastindex >= 2 else m.group(1)).strip()
     return None
 
+def _preprocess_html_for_extraction(html: str) -> str:
+    """
+    Preprocess HTML to clean text for LLM extraction.
+    Removes scripts, styles, and HTML tags while preserving readability.
+    
+    This makes pattern headings and article content much more visible to the LLM
+    by removing CSS classes, nested divs, spans, and other HTML noise.
+    """
+    if not html:
+        return ""
+    
+    # Remove script and style tags and their content
+    text = re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r'<style[^>]*>.*?</style>', '', text, flags=re.IGNORECASE | re.DOTALL)
+    
+    # Replace common block elements with newlines for readability
+    text = re.sub(r'</(?:div|p|section|article|header|footer|main)[^>]*>', '\n', text, flags=re.IGNORECASE)
+    text = re.sub(r'</(?:h[1-6])[^>]*>', '\n', text, flags=re.IGNORECASE)
+    text = re.sub(r'</li[^>]*>', '\n', text, flags=re.IGNORECASE)
+    text = re.sub(r'</blockquote[^>]*>', '\n', text, flags=re.IGNORECASE)
+    
+    # Remove all HTML tags (including attributes)
+    text = re.sub(r'<[^>]+>', '', text)
+    
+    # Decode common HTML entities
+    text = text.replace('&nbsp;', ' ')
+    text = text.replace('&lt;', '<')
+    text = text.replace('&gt;', '>')
+    text = text.replace('&amp;', '&')
+    text = text.replace('&quot;', '"')
+    text = text.replace('&apos;', "'")
+    
+    # Clean up excessive whitespace
+    lines = [line.strip() for line in text.split('\n') if line.strip()]
+    text = '\n'.join(lines)
+    
+    # Remove excessive blank lines (more than 2 in a row)
+    while '\n\n\n' in text:
+        text = text.replace('\n\n\n', '\n\n')
+    
+    return text
+
+
 def _get_extract_content_system_prompt(context_builder) -> Optional[str]:
     """
     Load the EXTRACT_CONTENT system prompt from pattern-factory.yaml CONTENT section.
@@ -1056,16 +1099,20 @@ async def agent_request_to_extract_entities(message_body: Dict[str, Any]) -> Tup
         
         client = OpenAI(api_key=api_key)
         
+        # Preprocess HTML to clean text: remove scripts, styles, and tags
+        # This makes pattern headings and article content much more visible to the LLM
+        clean_text = _preprocess_html_for_extraction(text or "")
+        
         # Provide input in the exact structure the prompt expects
-        max_chars = 60000
+        max_chars = 200000
         input_payload = {
             "url": normalized_url,
-            "markup": (text or "")[:max_chars],
+            "markup": clean_text[:max_chars],
             "content_source": content_source,
         }
         user_message = json.dumps(input_payload, ensure_ascii=False)
         
-        logger.info(f"  [LLM Call] Sending payload: url len={len(normalized_url)}, markup len={len(input_payload['markup'])}, source={content_source}")
+        logger.info(f"  [LLM Call] Sending payload: url len={len(normalized_url)}, cleaned markup len={len(input_payload['markup'])}, source={content_source}")
         logger.info(f"  [LLM Call] System prompt length: {len(system_prompt)} chars")
         logger.debug(f"  [LLM Call] System prompt (first 1000 chars): {system_prompt[:1000]}")
         
