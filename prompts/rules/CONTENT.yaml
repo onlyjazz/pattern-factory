@@ -126,32 +126,23 @@ CONTENT:
 
       PATTERNS:
       Extract conceptual patterns and anti-patterns from the content.
-      A pattern is a recurring problem, solution, practice, or mistake that appears in business, technology, or healthcare.
+      A pattern is a recurring practice, approach, or lesson that appears in the text.
       
       WHAT TO EXTRACT:
-      - Explicit patterns: "Pattern: X", "Design pattern: X", "Anti-pattern: X", "Anti-Design pattern: X", "Common mistake: X"
-      - Implicit patterns: Best practices, common pitfalls, recurring challenges, design approaches
-      - Domain patterns: Security patterns, development patterns, organizational patterns, process patterns
-      - Business patterns: Business models, business strategies, business practices, revenue, paying customers, cash flows
-      - Team patterns: Team structures, team roles, team practices, team challenges - for example Dissent in your team is an act of faith.
-      - Problem patterns: Things teams do wrong, false assumptions, common errors
-      - Solution patterns: Things teams do right, best practices, effective strategies
-      - Anti-patterns: Things teams do wrong, false assumptions, common errors, not this, this statements - for example 
-        Customers don't want to hear your vision. They want to understand your logic.
-
-      EXTRACTION RULES:
-      1. Look for problem statements ("Teams often...", "A common mistake...", "Many organizations...")
-      2. Look for solution statements ("Best practice...", "Successful teams...", "The right way...")
-      3. Look for contrasts/contradictions ("Instead of X, do Y", "X is wrong because...")
-      4. Extract domain-specific practices (security, development, management, etc.)
-      5. Be generous - if it's a recurring theme or lesson, extract it as a pattern
+      - Anything explicitly labeled: "Pattern:", "Design pattern:", "Anti-pattern:", "Anti-Design pattern:"
+      - Recurring themes or lessons about what works or doesn't work
+      - Best practices, common mistakes, false assumptions, ineffective approaches
+      - Anything that could be described as "the right way" or "the wrong way" to do something
+      - Security practices, development practices, organizational practices, etc.
       
-      KIND DETECTION:
-      - If text starts with "Anti-pattern:", "Anti-Design pattern:", "Common mistake:", "Problem:", or "This is wrong..." → kind: "anti-pattern"
-      - If text starts with "Pattern:", "Design pattern:", "Best practice:", "Solution:", or "This is right..." → kind: "pattern"
-      - When in doubt, classify as "pattern" unless the text explicitly describes a mistake, pitfall, or wrong approach
+      HOW TO CLASSIFY:
+      - kind: "anti-pattern" if the text describes something that is WRONG, BROKEN, HARMFUL, or INEFFECTIVE
+      - kind: "pattern" if the text describes something that is RIGHT, EFFECTIVE, BENEFICIAL, or WORKS WELL
+      - When in doubt, use your judgment based on the context and tone
       
-      DO NOT skip patterns because you're uncertain. If the content discusses a practice, approach, or mistake, extract it.
+      DO NOT be overly restrictive. If the content discusses a practice, approach, problem, or solution, extract it as a pattern.
+      DO NOT skip patterns because the text doesn't use exact keywords like "Pattern:" or "Anti-pattern:".
+      The LLM should intelligently identify patterns even if they're not explicitly labeled.
       
       A pattern has 4 required fields:
       {
