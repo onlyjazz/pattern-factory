@@ -129,11 +129,11 @@ CONTENT:
       A pattern is a recurring problem, solution, practice, or mistake that appears in business, technology, or healthcare.
       
       WHAT TO EXTRACT:
-      - Explicit patterns: "Pattern: X", "Anti-pattern: X", "Common mistake: X"
+      - Explicit patterns: "Pattern: X", "Design pattern: X", "Anti-pattern: X", "Anti-Design pattern: X", "Common mistake: X"
       - Implicit patterns: Best practices, common pitfalls, recurring challenges, design approaches
       - Domain patterns: Security patterns, development patterns, organizational patterns, process patterns
       - Business patterns: Business models, business strategies, business practices, revenue, paying customers, cash flows
-      - Team patterns: Team structures, team roles, team practices, team challenges - for  example Dissent in your team is an act of faith.
+      - Team patterns: Team structures, team roles, team practices, team challenges - for example Dissent in your team is an act of faith.
       - Problem patterns: Things teams do wrong, false assumptions, common errors
       - Solution patterns: Things teams do right, best practices, effective strategies
       - Anti-patterns: Things teams do wrong, false assumptions, common errors, not this, this statements - for example 
@@ -145,6 +145,11 @@ CONTENT:
       3. Look for contrasts/contradictions ("Instead of X, do Y", "X is wrong because...")
       4. Extract domain-specific practices (security, development, management, etc.)
       5. Be generous - if it's a recurring theme or lesson, extract it as a pattern
+      
+      KIND DETECTION:
+      - If text starts with "Anti-pattern:", "Anti-Design pattern:", "Common mistake:", "Problem:", or "This is wrong..." → kind: "anti-pattern"
+      - If text starts with "Pattern:", "Design pattern:", "Best practice:", "Solution:", or "This is right..." → kind: "pattern"
+      - When in doubt, classify as "pattern" unless the text explicitly describes a mistake, pitfall, or wrong approach
       
       DO NOT skip patterns because you're uncertain. If the content discusses a practice, approach, or mistake, extract it.
       
