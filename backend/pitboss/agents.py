@@ -280,44 +280,66 @@ async def agent_verify_request_generate(message_body: Dict[str, Any]) -> Tuple[s
 async def agent_verify_request(message_body: Dict[str, Any]) -> Tuple[str, float, str]:
     """
     model.verifyRequest (RULE flow)
-    Validate basic structure of the rule request.
+    Validate rule request and extract rule logic from YAML.
     
     Checks:
-    - Rule code exists in YAML (if provided)
+    - Rule code is provided (from raw_text)
+    - Rule code exists in YAML
     - Rule has logic
-    - Message envelope is valid
+    - Extracts logic and stores in message_body["rule_logic"]
     
     NOTE: We do NOT validate rule logic or table references here.
     The LLM (model.ruleToSQL) will handle semantic validation when generating SQL.
-    This keeps the system simple and avoids brittleness from string matching.
     """
     logger.info("🤖 [model.verifyRequest] Validating rule structure...")
     
+    # Extract rule code from raw_text (format: "rule PIP")
+    raw_text = message_body.get("raw_text", "").strip()
     rule_code = message_body.get("rule_code", "").strip()
-    rule_logic = message_body.get("rule_logic", "").strip()
     
-    # Validate rule logic is present
-    if not rule_logic:
-        reason = "Rule has no logic defined"
+    # If rule_code not in message body, extract from raw_text
+    if not rule_code and raw_text.upper().startswith("RULE "):
+        rule_code = raw_text[5:].strip().upper()
+        message_body["rule_code"] = rule_code
+    
+    if not rule_code:
+        reason = "No rule code provided. Usage: RULE <rulecode>"
         logger.info(f"  Decision: no (confidence: 0.95) - {reason}")
         return ("no", 0.95, reason)
     
-    # Validate rule code if provided
-    if rule_code:
-        context_builder = message_body.get("_ctx")
-        if context_builder and hasattr(context_builder, 'yaml_data'):
-            rules = context_builder.yaml_data.get("RULES", [])
-            rule_codes = [r.get("rule_code") for r in rules]
-            
-            if rule_code not in rule_codes:
-                reason = f"Rule '{rule_code}' not found in YAML. Available rules: {', '.join(rule_codes[:5])}"
-                logger.info(f"  Decision: no (confidence: 0.98) - {reason}")
-                return ("no", 0.98, reason)
+    # Look up rule in YAML
+    context_builder = message_body.get("_ctx")
+    if not context_builder or not hasattr(context_builder, 'yaml_data'):
+        reason = "Cannot access rule definitions (missing ContextBuilder)"
+        logger.info(f"  Decision: no (confidence: 0.95) - {reason}")
+        return ("no", 0.95, reason)
     
-    # Basic validation passed - let LLM handle semantic validation
+    rules = context_builder.yaml_data.get("RULES", [])
+    rule_entry = None
+    for r in rules:
+        if r.get("rule_code", "").upper() == rule_code.upper():
+            rule_entry = r
+            break
+    
+    if not rule_entry:
+        available = [r.get("rule_code") for r in rules]
+        reason = f"Rule '{rule_code}' not found. Available: {', '.join(available[:5])}"
+        logger.info(f"  Decision: no (confidence: 0.98) - {reason}")
+        return ("no", 0.98, reason)
+    
+    # Extract logic from rule definition
+    rule_logic = rule_entry.get("logic", "").strip()
+    if not rule_logic:
+        reason = f"Rule '{rule_code}' has no logic defined"
+        logger.info(f"  Decision: no (confidence: 0.95) - {reason}")
+        return ("no", 0.95, reason)
+    
+    # Store logic in message body for next agent
+    message_body["rule_logic"] = rule_logic
+    
     decision = "yes"
-    confidence = 0.95
-    reason = f"Rule structure valid. LLM will generate SQL."
+    confidence = 0.99
+    reason = f"Rule '{rule_code}' found with valid logic"
     
     logger.info(f"  Decision: {decision} (confidence: {confidence:.2f})")
     return (decision, confidence, reason)
