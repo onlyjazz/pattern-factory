@@ -121,7 +121,7 @@ async def agent_language_capo(message_body: Dict[str, Any]) -> Tuple[str, float,
         decision = data.get("decision", "no")
         verb = (data.get("verb", "") or "").strip().upper()
         # Validate verb exists in LLM response
-        if verb not in ("RUN", "CONTENT", "CARD", "GENERATE", "ENRICH", "FEELGOOD", "PROFILE", "COMPETITORS", "PORTFOLIO", "GENERIC"):
+        if verb not in ("RULE", "CONTENT", "CARD", "GENERATE", "ENRICH", "FEELGOOD", "PROFILE", "COMPETITORS", "PORTFOLIO", "GENERIC"):
             verb = "GENERIC"
             decision = "no"
         confidence = float(data.get("confidence", 0.55))
