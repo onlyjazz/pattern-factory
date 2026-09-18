@@ -1,0 +1,47 @@
+#!/bin/bash
+# =============================================================================
+# org-portfolio - Discover FDA-cleared device portfolios for organizations
+#
+# Wraps backend/scripts/batch_org_portfolio.py, which runs the PORTFOLIO agent
+# flow to discover all FDA-cleared devices for an organization using Exa's
+# agent API and stores the portfolio as JSON in orgs.portfolio.
+#
+# Usage:
+#   ./bin/org-portfolio --org-ids <ID1,ID2,...> [options]
+#   ./bin/org-portfolio --org-ids <MIN>-<MAX> [options]
+#
+# Runtime parameters (selection — exactly one required):
+#   --org-ids ID1,ID2,...    Comma-separated org IDs or range (e.g., 1,5,10 or 1-50)
+#   --org-names NAME1,NAME2  Comma-separated organization names
+#
+# Optional:
+#   --dry-run                Log what would happen but don't update database
+#   -h, --help               Show this help.
+#
+# Examples:
+#   ./bin/org-portfolio --org-ids 1-50                 # Discover portfolios for orgs 1-50
+#   ./bin/org-portfolio --org-ids 1,5,10               # Specific orgs
+#   ./bin/org-portfolio --org-names "Medtronic,Siemens"
+#   ./bin/org-portfolio --org-ids 1-10 --dry-run       # Dry run
+#
+# Required environment (loaded from .env in the project root):
+#   EXA_API_KEY     Exa API key for agent.runs.create() calls
+#   DATABASE_URL    PostgreSQL connection string (optional)
+#
+# Logs are written to stdout.
+# =============================================================================
+
+# Show help if requested (before delegating so this wrapper documents itself)
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    # Print the header comment block (skip the shebang), stripping the leading "# "
+    awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "$0"
+    exit 0
+fi
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Run from the project root so .env and sys.path resolution match
+cd "$PROJECT_ROOT" || exit 1
+exec python "$PROJECT_ROOT/backend/scripts/batch_org_portfolio.py" "$@"

@@ -148,6 +148,13 @@ async def agent_language_capo(message_body: Dict[str, Any]) -> Tuple[str, float,
         reason = f"User wants to find competitors for product: '{product_ref}'"
         logger.info(f"  Detected 'COMPETITORS' syntax → routing to COMPETITORS workflow")
         return ("yes", 0.95, reason, "COMPETITORS")
+    
+    # Fast-path: recognize explicit "portfolio <ORG>" syntax → route to PORTFOLIO
+    if text_upper.startswith("PORTFOLIO "):
+        org_name = text[10:].strip()
+        reason = f"User wants to discover portfolio for organization: '{org_name}'"
+        logger.info(f"  Detected 'PORTFOLIO' syntax → routing to PORTFOLIO workflow")
+        return ("yes", 0.95, reason, "PORTFOLIO")
 
     # Try LLM-based classification first
     api_key = os.getenv("OPENAI_API_KEY")
@@ -169,7 +176,7 @@ async def agent_language_capo(message_body: Dict[str, Any]) -> Tuple[str, float,
             decision = data.get("decision", "no")
             verb = (data.get("verb", "") or "").strip().upper()
             # Default to RULE if empty or invalid
-            if verb not in ("RULE", "CONTENT", "GENERATE", "ENRICH", "FEELGOOD", "PROFILE", "COMPETITORS"):
+            if verb not in ("RULE", "CONTENT", "GENERATE", "ENRICH", "FEELGOOD", "PROFILE", "COMPETITORS", "PORTFOLIO"):
                 verb = "RULE"
             confidence = float(data.get("confidence", 0.55))
             reason = data.get("reason", "")
@@ -1926,6 +1933,13 @@ from .competitors import (
     agent_upsert_competitors,
 )
 
+# Import portfolio agents
+from .portfolio import (
+    agent_search_portfolio,
+    agent_verify_portfolio_payload,
+    tool_upsert_portfolio,
+)
+
 AGENT_REGISTRY = {
     # Pre-workflow language capo
     "model.LanguageCapo": agent_language_capo,
@@ -1970,6 +1984,12 @@ AGENT_REGISTRY = {
     # Uses shared agent_validate_product_id above
     "model.searchForCompetitors": agent_search_for_competitors,
     "tool.upsertCompetitors": agent_upsert_competitors,
+    
+    # PORTFOLIO flow (FDA-cleared device discovery)
+    # Uses shared agent_validate_org_name from ENRICH
+    "model.searchPortfolio": agent_search_portfolio,
+    "model.verifyPortfolioPayload": agent_verify_portfolio_payload,
+    "tool.upsertPortfolio": tool_upsert_portfolio,
 }
 
 
@@ -2038,6 +2058,13 @@ def _get_agent_for_verb(agent_name: str, verb: str):
                     return AGENT_REGISTRY.get(agent_name)
         
         case "COMPETITORS":
+            match agent_name:
+                case "model.Capo":
+                    return agent_capo_rule
+                case _:
+                    return AGENT_REGISTRY.get(agent_name)
+        
+        case "PORTFOLIO":
             match agent_name:
                 case "model.Capo":
                     return agent_capo_rule
