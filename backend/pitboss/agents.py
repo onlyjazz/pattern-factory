@@ -1843,7 +1843,7 @@ def _get_agent_for_verb(agent_name: str, verb: str):
     Route to correct agent based on verb.
     
     Verbs:
-    - RULE: rule extraction flow
+    - RUN: query/view building flow
     - CONTENT: content extraction from URLs flow  
     - CARD: risk model generation from card flow
     - GENERATE: alias for CARD
@@ -1853,7 +1853,7 @@ def _get_agent_for_verb(agent_name: str, verb: str):
         verb = "CARD"
     
     match verb:
-        case "RULE":
+        case "RUN":
             match agent_name:
                 case "model.Capo":
                     return agent_capo_rule
@@ -1942,7 +1942,7 @@ async def call_agent(agent_name: str, verb: str, message_body: Dict[str, Any]):
             return await agent_language_capo(message_body)
         except Exception as e:
             logger.error(f"❌ Agent {agent_name} crashed: {e}", exc_info=True)
-            return ("no", 0.0, f"Agent error: {str(e)}", "RULE")
+            return ("no", 0.0, f"Agent error: {str(e)}", "RUN")
 
     # Route to correct agent based on verb
     agent_fn = _get_agent_for_verb(agent_name, verb)
