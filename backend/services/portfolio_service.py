@@ -10,18 +10,23 @@ import asyncio
 import json
 import logging
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Callable
 
 logger = logging.getLogger(__name__)
 
 
-async def search_portfolio_via_exa(company: str, timeout: int = 540) -> Dict[str, Any]:
+async def search_portfolio_via_exa(
+    company: str,
+    timeout: int = 540,
+    on_progress: Optional[Callable[[str], None]] = None,
+) -> Dict[str, Any]:
     """
     Search for all FDA-cleared devices for a company using Exa agent API.
 
     Args:
         company: Company name (e.g., "Medtronic", "Siemens Healthineers")
         timeout: Maximum seconds to wait for Exa run completion (default 540s = 9min)
+        on_progress: Optional callback function to receive progress updates (status, elapsed)
 
     Returns:
         Dictionary with structure:
@@ -90,20 +95,35 @@ async def search_portfolio_via_exa(company: str, timeout: int = 540) -> Dict[str
         )
         
         logger.info(f"  [Portfolio] Exa run created: {run.id}")
+        if on_progress:
+            on_progress(f"Started Exa search for {company} (run ID: {run.id})")
 
-        # Wait for run to complete with timeout
+        # Poll for run completion with progress updates
         start_time = asyncio.get_event_loop().time()
+        last_status = None
+        poll_count = 0
+        
         while True:
             run = exa.agent.runs.retrieve(run.id)
+            elapsed = asyncio.get_event_loop().time() - start_time
+            poll_count += 1
+            
+            # Log status changes
+            if run.status != last_status:
+                logger.info(f"  [Portfolio] Status: {run.status} (elapsed: {elapsed:.1f}s)")
+                if on_progress:
+                    on_progress(f"Status: {run.status} (elapsed: {int(elapsed)}s)")
+                last_status = run.status
             
             if run.status == "completed":
-                logger.info(f"  [Portfolio] Exa run completed successfully")
+                logger.info(f"  [Portfolio] Exa run completed successfully after {elapsed:.1f}s ({poll_count} polls)")
+                if on_progress:
+                    on_progress(f"✓ Exa search completed in {int(elapsed)}s")
                 break
             elif run.status == "failed":
                 error_msg = getattr(run, "error", "Unknown error")
                 raise ValueError(f"Exa run failed: {error_msg}")
             elif run.status in ("pending", "running"):
-                elapsed = asyncio.get_event_loop().time() - start_time
                 if elapsed > timeout:
                     raise TimeoutError(
                         f"Exa run did not complete within {timeout}s. "
@@ -171,38 +191,57 @@ async def search_portfolio_via_exa(company: str, timeout: int = 540) -> Dict[str
 
     except Exception as e:
         logger.error(f"  ❌ [Portfolio] Exa search failed: {str(e)}", exc_info=True)
+        if on_progress:
+            on_progress(f"✗ Error: {str(e)}")
         raise
 
 
 async def batch_search_portfolios(
     org_names: list[str],
     dry_run: bool = False,
+    on_progress: Optional[Callable[[str], None]] = None,
 ) -> Dict[str, Any]:
     """
-    Batch search portfolios for multiple organizations.
+    Batch search portfolios for multiple organizations with progress tracking.
 
     Args:
         org_names: List of organization names
         dry_run: If True, log what would happen but don't update database
+        on_progress: Optional callback function to receive progress updates
 
     Returns:
         Summary dict: {total, success, failed, errors: {org_name: error_msg, ...}}
     """
     summary = {"total": len(org_names), "success": 0, "failed": 0, "errors": {}}
 
-    for org_name in org_names:
+    for idx, org_name in enumerate(org_names, 1):
         try:
-            logger.info(f"🔍 [Batch Portfolio] Processing: {org_name}")
-            portfolio = await search_portfolio_via_exa(org_name)
+            logger.info(f"🔍 [Batch Portfolio] Processing {idx}/{len(org_names)}: {org_name}")
+            if on_progress:
+                on_progress(f"[{idx}/{len(org_names)}] Starting search for {org_name}")
+            
+            # Create per-org progress callback that includes org name
+            def org_progress(msg: str, name: str = org_name, num: int = idx) -> None:
+                full_msg = f"[{num}/{len(org_names)}] {name}: {msg}"
+                if on_progress:
+                    on_progress(full_msg)
+            
+            portfolio = await search_portfolio_via_exa(org_name, on_progress=org_progress)
             
             if dry_run:
                 logger.info(f"  [DRY-RUN] Would update {org_name} with {len(portfolio['items'])} devices")
+                if on_progress:
+                    on_progress(f"[{idx}/{len(org_names)}] {org_name}: [DRY-RUN] {len(portfolio['items'])} devices found")
             else:
                 logger.info(f"  [Portfolio] Found {len(portfolio['items'])} devices for {org_name}")
+                if on_progress:
+                    on_progress(f"[{idx}/{len(org_names)}] {org_name}: ✓ {len(portfolio['items'])} devices stored")
             
             summary["success"] += 1
         except Exception as e:
             logger.error(f"  ❌ [Batch Portfolio] Failed for {org_name}: {str(e)}")
+            if on_progress:
+                on_progress(f"[{idx}/{len(org_names)}] {org_name}: ✗ {str(e)}")
             summary["failed"] += 1
             summary["errors"][org_name] = str(e)
 
@@ -210,4 +249,6 @@ async def batch_search_portfolios(
         f"✅ [Batch Portfolio] Complete: {summary['success']} success, "
         f"{summary['failed']} failed out of {summary['total']}"
     )
+    if on_progress:
+        on_progress(f"✅ Batch complete: {summary['success']} success, {summary['failed']} failed")
     return summary

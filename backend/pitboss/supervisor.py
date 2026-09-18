@@ -154,25 +154,6 @@ class PitbossSupervisor:
                 verb_str = verb_determined
             else:
                 verb_str = env.verb.value if isinstance(env.verb, Verb) else str(env.verb)
-
-            # If user asked to run a rule code, populate message_body with rule metadata
-            if verb_str == "RULE":
-                rule_code = self._extract_rule_code_from_message(env.messageBody)
-                if rule_code:
-                    logger.info(f"📋 Detected explicit rule code: {rule_code}")
-                    rule_entry = self._get_rule_from_yaml(rule_code)
-                    if rule_entry:
-                        logger.info(f"📋 Looked up rule from YAML: {rule_code}")
-                        rule_name = rule_entry.get("name") or rule_code
-                        rule_logic = rule_entry.get("logic") or ""
-                        logger.info(f"   Rule entry keys: {list(rule_entry.keys())}")
-                        logger.info(f"   Rule name: {rule_name}")
-                        logger.info(f"   Rule logic ({len(rule_logic)} chars): {rule_logic[:100]}..." if rule_logic else f"   Rule logic: [EMPTY]")
-                        env.messageBody["rule_code"] = rule_code
-                        env.messageBody["rule_name"] = rule_name
-                        env.messageBody["rule_logic"] = rule_logic
-                        env.messageBody["_tools"] = self.tool_registry
-                        env.messageBody["_ctx"] = self.context_builder
             
             # Start workflow with Capo
             current_agent = "model.Capo"
@@ -246,40 +227,6 @@ class PitbossSupervisor:
             # Continue to next agent
             current_agent = next_agent
 
-    # Shared helper to look up rule in YAML
-    def _extract_rule_code_from_message(self, message_body: dict) -> Optional[str]:
-        """
-        Extract rule code from message using agents' inline extraction logic.
-        """
-        from .agents import _extract_rule_code_inline
-        raw_text = message_body.get("raw_text") or ""
-        return _extract_rule_code_inline(raw_text)
-    
-    def _get_rule_from_yaml(self, rule_code: str):
-        """
-        Return the entire RULE entry dict for a given rule_code, or None.
-        """
-        if not rule_code:
-            return None
-        
-        # Hot-reload: Check if YAML file has been modified
-        if self.context_builder.reload_if_changed():
-            logger.warning("📋 [Supervisor] YAML hot-reload complete - new rules available")
-        
-        rules = self.context_builder.yaml_data.get("RULES", [])
-        logger.info(f"📋 [DEBUG] Searching for rule_code='{rule_code}' in {len(rules)} rules")
-        for i, rule in enumerate(rules):
-            rule_code_in_yaml = rule.get("rule_code")
-            logger.info(f"   Rule {i}: code='{rule_code_in_yaml}' (match: {rule_code_in_yaml == rule_code})")
-            if rule_code_in_yaml == rule_code:
-                logger.info(f"   ✓ Found match!")
-                return rule
-        logger.info(f"   ✗ No match found for '{rule_code}'")
-        return None
-
-    def _list_rule_codes(self):
-        rules = self.context_builder.yaml_data.get("RULES", [])
-        return [r.get("rule_code") for r in rules if r.get("rule_code")]
 
     async def _send_to_frontend(self, message: str):
         if self.websocket:

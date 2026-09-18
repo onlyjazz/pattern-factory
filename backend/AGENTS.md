@@ -1,5 +1,73 @@
 # Backend API, Pydantic Models & System Logging
 
+## Adding a New Verb (Clean Architecture Pattern)
+
+The system follows a clean, generic `VERB OBJECT` pattern:
+```
+User: "VERB OBJECT"  (e.g., "portfolio Medtronic", "enrich Acme Corp", "feelgood 42")
+  ↓
+LanguageCapo: Validates verb exists, returns (decision, confidence, reason, verb)
+  ↓
+Supervisor: Routes to workflow (no special cases, pure routing)
+  ↓
+Agent Flow: Extracts object using _extract_verb_object(raw_text), processes, returns result
+  ↓
+Terminal/HITL: Returns to chat or awaits user approval
+```
+
+### To Add a New Verb (5 Steps)
+
+1. **Add to Verb enum** (`backend/pitboss/envelope.py`, lines 34-45):
+   ```python
+   class Verb(str, Enum):
+       # ... existing verbs ...
+       MYVERB = "MYVERB"  # Description of what MYVERB does
+   ```
+
+2. **Add workflow to WorkflowEngine** (`backend/pitboss/workflow.py`):
+   ```python
+   myverb_workflow = {
+       "model.Capo": WorkflowNode(...),
+       # ... other nodes in your agent flow ...
+   }
+   self.workflows["MYVERB"] = myverb_workflow
+   ```
+
+3. **Create agent files** (`backend/pitboss/myverb.py`):
+   - Agents extract object using: `from .agents import _extract_verb_object`
+   - Object extraction: `obj = _extract_verb_object(raw_text)`
+   - Each agent returns: `(decision, confidence, reason)`
+
+4. **Register agents** in `backend/pitboss/agents.py`:
+   ```python
+   # Import
+   from .myverb import agent_name1, agent_name2
+   
+   # Register in AGENT_REGISTRY
+   AGENT_REGISTRY = {
+       # ...
+       "agent.name1": agent_name1,
+       "agent.name2": agent_name2,
+   }
+   
+   # Add routing in _get_agent_for_verb()
+   case "MYVERB":
+       match agent_name:
+           case "model.Capo":
+               return agent_capo_rule
+           case _:
+               return AGENT_REGISTRY.get(agent_name)
+   ```
+
+5. **Done** — No supervisor changes needed. The generic flow handles all verbs.
+
+### Key Rules
+
+- **NEVER extract object in supervisor** — Leave raw_text untouched
+- **ALWAYS use `_extract_verb_object(raw_text)`** in agents — Splits on first space, returns everything after
+- **NEVER add special cases to supervisor** — It only routes, agents own business logic
+- **Each agent returns `(decision, confidence, reason)`** — Supervisor handles yes/no/HITL
+
 ## Agent Continuity Rule (CRITICAL)
 
 Do not cd to the root directory of the project while you're working since it breaks the reference to AGENTS.md in the working directory.

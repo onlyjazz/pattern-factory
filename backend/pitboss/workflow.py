@@ -290,7 +290,42 @@ class WorkflowEngine:
         }
         self.workflows["COMPETITORS"] = competitors_workflow
         
-        logger.info(f"✅ Loaded {len(self.workflows)} workflows (RULE, CONTENT, GENERATE, ENRICH, FEELGOOD, PROFILE, COMPETITORS)")
+        # PORTFOLIO Flow (FDA device portfolio discovery for organization)
+        portfolio_workflow = {
+            "model.Capo": WorkflowNode(
+                agent_name="model.Capo",
+                branch_yes="model.validateOrgName",
+                branch_no="sendMessageToChat",
+                description="Initial validation of portfolio request"
+            ),
+            "model.validateOrgName": WorkflowNode(
+                agent_name="model.validateOrgName",
+                branch_yes="agent_search_portfolio",
+                branch_no="sendMessageToChat",
+                description="Validate organization exists in database"
+            ),
+            "agent_search_portfolio": WorkflowNode(
+                agent_name="agent_search_portfolio",
+                branch_yes="agent_verify_portfolio_payload",
+                branch_no="sendMessageToChat",
+                description="Search Exa for FDA-cleared device portfolio"
+            ),
+            "agent_verify_portfolio_payload": WorkflowNode(
+                agent_name="agent_verify_portfolio_payload",
+                branch_yes="tool_upsert_portfolio",
+                branch_no="sendMessageToChat",
+                description="Verify portfolio payload structure and safety"
+            ),
+            "tool_upsert_portfolio": WorkflowNode(
+                agent_name="tool_upsert_portfolio",
+                branch_yes="sendMessageToChat",
+                branch_no="sendMessageToChat",
+                description="Upsert portfolio JSON to org record"
+            ),
+        }
+        self.workflows["PORTFOLIO"] = portfolio_workflow
+        
+        logger.info(f"✅ Loaded {len(self.workflows)} workflows (RULE, CONTENT, GENERATE, ENRICH, FEELGOOD, PROFILE, COMPETITORS, PORTFOLIO)")
     
     def get_workflow(self, verb: str) -> Dict[str, WorkflowNode]:
         """Get workflow by verb (RULE or CONTENT)."""

@@ -83,28 +83,29 @@ _SEARCH_PROMPTS = load_search_prompts()
 
 async def agent_validate_org_name(message_body: Dict[str, Any]) -> Tuple[str, float, str]:
     """
-    model.validateOrgName (ENRICH flow)
+    model.validateOrgName (ENRICH and PORTFOLIO flows)
     
-    RESPONSIBILITY: Find organization in database by fuzzy matching against raw_text.
-    Extract org name from message like "enrich 3D Systems Inc" and look it up.
+    RESPONSIBILITY: Find organization in database by fuzzy matching.
+    Extract org name from "VERB <ORG_NAME>" format and look it up.
     
     Returns: (decision: yes|no, confidence: 0.0-1.0, reason: str)
     """
     logger.info("🤖 [model.validateOrgName] Validating org name in database...")
     
     try:
+        from .agents import _extract_verb_object
+        
         raw_text = message_body.get("raw_text", "").strip()
         
-        # Extract org name from "enrich <ORG_NAME>" or similar patterns
         if not raw_text:
             reason = "Empty message - cannot extract org name"
             logger.warning(f"  Decision: no (confidence: 0.95) - {reason}")
             return ("no", 0.95, reason)
         
-        # Strip "enrich " prefix if present
-        org_name = raw_text
-        if org_name.lower().startswith("enrich "):
-            org_name = org_name[7:].strip()
+        # Extract org name from "VERB <ORG_NAME>" (works for enrich, portfolio, etc.)
+        org_name = _extract_verb_object(raw_text)
+        if not org_name:
+            org_name = raw_text  # Fallback: use entire text
         
         # Remove trailing "with funding" or "with revenue" etc
         for suffix in [" with funding", " with revenue", " with sales"]:

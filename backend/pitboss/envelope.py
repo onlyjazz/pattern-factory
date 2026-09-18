@@ -41,6 +41,7 @@ class Verb(str, Enum):
     FEELGOOD = "FEELGOOD"  # Extract product superiority claims from web search
     PROFILE = "PROFILE"  # Extract FDA device profile (device_description, intended_use, indications_for_use)
     COMPETITORS = "COMPETITORS"  # Discover top 3 competing products for a device
+    PORTFOLIO = "PORTFOLIO"  # Discover FDA-cleared device portfolio for an organization
     GENERIC = "GENERIC"  # Placeholder: LanguageCapo will determine actual verb
 
 

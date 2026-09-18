@@ -69,96 +69,32 @@ def get_capo_system_prompt() -> str:
 async def agent_language_capo(message_body: Dict[str, Any]) -> Tuple[str, float, str, str]:
     """
     model.LanguageCapo
-    Pre-workflow agent that determines if user is asking for RULE or CONTENT.
+    Pre-workflow agent that validates the verb and routes to correct workflow.
     
-    RESPONSIBILITY: Route the message to the correct workflow (RULE or CONTENT).
-    Does NOT validate anything - that's the job of downstream agents.
+    RESPONSIBILITY: 
+    1. Validate verb is one of: RULE, CONTENT, CARD, GENERATE, ENRICH, FEELGOOD, PROFILE, COMPETITORS, PORTFOLIO
+    2. Extract verb from message (first word, case-insensitive)
+    3. Return (decision, confidence, reason, verb)
+    
+    CRITICAL: Do NOT extract the object (everything after first space).
+    Leave raw_text untouched so agents can extract it generically.
     
     Uses LLM if OPENAI_API_KEY is set, otherwise falls back to heuristics.
-    Always returns decision="yes" with a RULE or CONTENT verb.
     
     Returns: (decision: yes|no, confidence: 0.0-1.0, reason: str, verb: str)
     """
-    logger.info("🤖 [model.LanguageCapo] Routing message to RULE or CONTENT workflow...")
+    logger.info("🤖 [model.LanguageCapo] Validating verb and routing...")
 
     text = (message_body.get("raw_text") or "").strip()
-
-    # Fast-path: recognize explicit "run <SOMETHING>" syntax → route to RULE
-    # (Do NOT validate if rule exists - downstream agent verifyRequest will do that)
-    if text.upper().startswith("RUN "):
-        code = text[4:].strip()
-        reason = f"User wants to run rule: '{code}'"
-        logger.info(f"  Detected 'RUN' syntax → routing to RULE workflow")
-        return ("yes", 0.95, reason, "RULE")
     
-    # Fast-path: recognize explicit "generate <URL>" or "card <URL>" syntax → route to GENERATE (risk model from card)
-    if text.upper().startswith("GENERATE "):
-        url = text[9:].strip()
-        reason = f"User wants to generate risk model from: '{url}'"
-        logger.info(f"  Detected 'GENERATE' syntax → routing to GENERATE workflow")
-        return ("yes", 0.98, reason, "GENERATE")
-    
-    if text.upper().startswith("CARD "):
-        url = text[5:].strip()
-        reason = f"User wants to generate risk model from card: '{url}'"
-        logger.info(f"  Detected 'CARD' syntax → routing to GENERATE workflow")
-        return ("yes", 0.98, reason, "GENERATE")
-    
-    # Fast-path: recognize explicit "extract <URL>" syntax → route to CONTENT
-    if text.upper().startswith("EXTRACT "):
-        url = text[8:].strip()
-        reason = f"User wants to extract from URL: '{url}'"
-        logger.info(f"  Detected 'EXTRACT' syntax → routing to CONTENT workflow")
-        return ("yes", 0.95, reason, "CONTENT")
-    
-    # Fast-path: recognize explicit "enrich <ORG>" syntax → route to ENRICH
-    # Match 'enrich ' or 'enrich:' or 'enrich, ' variations
-    text_upper = text.upper()
-    if text_upper.startswith("ENRICH ") or text_upper.startswith("ENRICH:") or text_upper.startswith("ENRICH,"):
-        # Extract org name after 'enrich'
-        prefix_len = 7 if text_upper.startswith("ENRICH ") else 7  # All are 7 chars or less
-        org_name = text[prefix_len:].strip()
-        reason = f"User wants to enrich organization: '{org_name}'"
-        logger.info(f"  Detected 'ENRICH' syntax → routing to ENRICH workflow")
-        return ("yes", 0.95, reason, "ENRICH")
-    
-    # Fast-path: recognize explicit "profile <ID>" or "profile submission_number" syntax → route to PROFILE
-    if text_upper.startswith("PROFILE "):
-        product_ref = text[8:].strip()
-        reason = f"User wants to profile FDA device: '{product_ref}'"
-        logger.info(f"  Detected 'PROFILE' syntax → routing to PROFILE workflow")
-        return ("yes", 0.95, reason, "PROFILE")
-    
-    # Fast-path: recognize explicit "feelgood <ID>" or "feelgood submission_number" syntax → route to FEELGOOD
-    if text_upper.startswith("FEELGOOD "):
-        product_ref = text[9:].strip()
-        reason = f"User wants to extract competitive advantage for product: '{product_ref}'"
-        logger.info(f"  Detected 'FEELGOOD' syntax → routing to FEELGOOD workflow")
-        return ("yes", 0.95, reason, "FEELGOOD")
-    
-    # Fast-path: recognize explicit "competitor(s) <ID>" syntax → route to COMPETITORS
-    if text_upper.startswith("COMPETITOR "):
-        product_ref = text[11:].strip()
-        reason = f"User wants to find competitors for product: '{product_ref}'"
-        logger.info(f"  Detected 'COMPETITOR' syntax → routing to COMPETITORS workflow")
-        return ("yes", 0.95, reason, "COMPETITORS")
-    
-    if text_upper.startswith("COMPETITORS "):
-        product_ref = text[12:].strip()
-        reason = f"User wants to find competitors for product: '{product_ref}'"
-        logger.info(f"  Detected 'COMPETITORS' syntax → routing to COMPETITORS workflow")
-        return ("yes", 0.95, reason, "COMPETITORS")
-    
-    # Fast-path: recognize explicit "portfolio <ORG>" syntax → route to PORTFOLIO
-    if text_upper.startswith("PORTFOLIO "):
-        org_name = text[10:].strip()
-        reason = f"User wants to discover portfolio for organization: '{org_name}'"
-        logger.info(f"  Detected 'PORTFOLIO' syntax → routing to PORTFOLIO workflow")
-        return ("yes", 0.95, reason, "PORTFOLIO")
+    if not text:
+        reason = "Empty message"
+        logger.warning(f"  Decision: no (confidence: 1.0) - {reason}")
+        return ("no", 1.0, reason, "GENERIC")
 
     # Try LLM-based classification first
     api_key = os.getenv("OPENAI_API_KEY")
-    if api_key and text:
+    if api_key:
         try:
             client = OpenAI(api_key=api_key)
             system_prompt = get_capo_system_prompt()
@@ -175,9 +111,10 @@ async def agent_language_capo(message_body: Dict[str, Any]) -> Tuple[str, float,
             data = json.loads(response)
             decision = data.get("decision", "no")
             verb = (data.get("verb", "") or "").strip().upper()
-            # Default to RULE if empty or invalid
-            if verb not in ("RULE", "CONTENT", "GENERATE", "ENRICH", "FEELGOOD", "PROFILE", "COMPETITORS", "PORTFOLIO"):
-                verb = "RULE"
+            # Validate verb exists
+            if verb not in ("RULE", "CONTENT", "CARD", "GENERATE", "ENRICH", "FEELGOOD", "PROFILE", "COMPETITORS", "PORTFOLIO"):
+                verb = "GENERIC"
+                decision = "no"
             confidence = float(data.get("confidence", 0.55))
             reason = data.get("reason", "")
 
@@ -186,7 +123,7 @@ async def agent_language_capo(message_body: Dict[str, Any]) -> Tuple[str, float,
         except Exception as e:
             logger.warning(f"[LanguageCapo] LLM classification failed, falling back to heuristics: {e}")
 
-    # Fallback: heuristic classification
+    # Fallback: heuristic classification (extract first word as verb)
     logger.info("  Using heuristic classification")
     return _heuristic_language_capo(text)
 
@@ -278,24 +215,39 @@ def _heuristic_language_capo(text: str) -> Tuple[str, float, str, str]:
         "intended use",
         "indications for use",
     ]
+    
+    portfolio_keywords = [
+        "portfolio",
+        "fda-cleared devices",
+        "device portfolio",
+        "cleared devices",
+    ]
 
     rule_score = sum(1 for kw in rule_keywords if kw in text_lower)
     content_score = sum(1 for kw in content_keywords if kw in text_lower)
     enrich_score = sum(1 for kw in enrich_keywords if kw in text_lower)
     feelgood_score = sum(1 for kw in feelgood_keywords if kw in text_lower)
     profile_score = sum(1 for kw in profile_keywords if kw in text_lower)
+    portfolio_score = sum(1 for kw in portfolio_keywords if kw in text_lower)
 
     # Determine highest score
     scores = {
         "ENRICH": enrich_score,
         "FEELGOOD": feelgood_score,
         "PROFILE": profile_score,
+        "PORTFOLIO": portfolio_score,
         "RULE": rule_score,
         "CONTENT": content_score,
     }
     max_score = max(scores.values())
     
-    # If FEELGOOD or PROFILE wins, return that
+    # If PORTFOLIO, FEELGOOD, or PROFILE wins, return that
+    if portfolio_score == max_score and portfolio_score > 0:
+        verb = "PORTFOLIO"
+        confidence = min(0.95, 0.5 + (portfolio_score * 0.1))
+        reason = f"User is asking for portfolio discovery (detected {portfolio_score} PORTFOLIO keywords)"
+        return ("yes", confidence, reason, verb)
+    
     if feelgood_score == max_score and feelgood_score > 0:
         verb = "FEELGOOD"
         confidence = min(0.95, 0.5 + (feelgood_score * 0.1))
@@ -327,6 +279,24 @@ def _heuristic_language_capo(text: str) -> Tuple[str, float, str, str]:
         reason = "Ambiguous intent, defaulting to RULE workflow"
 
     return ("yes", confidence, reason, verb)
+
+
+def _extract_verb_object(raw_text: str) -> Optional[str]:
+    """Extract the object/argument of a verb from raw_text.
+    Format: VERB <OBJECT>
+    Example: "portfolio Carlsmed, Inc." → "Carlsmed, Inc."
+    
+    Returns the text after the first space, or None if no space found.
+    Generic for all verb types: portfolio, enrich, feelgood, etc.
+    """
+    if not raw_text:
+        return None
+    
+    text = raw_text.strip()
+    parts = text.split(None, 1)  # Split on first whitespace
+    if len(parts) == 2:
+        return parts[1].strip()
+    return None
 
 
 def _extract_rule_code_inline(raw_text: str) -> Optional[str]:
@@ -1987,9 +1957,9 @@ AGENT_REGISTRY = {
     
     # PORTFOLIO flow (FDA-cleared device discovery)
     # Uses shared agent_validate_org_name from ENRICH
-    "model.searchPortfolio": agent_search_portfolio,
-    "model.verifyPortfolioPayload": agent_verify_portfolio_payload,
-    "tool.upsertPortfolio": tool_upsert_portfolio,
+    "agent_search_portfolio": agent_search_portfolio,
+    "agent_verify_portfolio_payload": agent_verify_portfolio_payload,
+    "tool_upsert_portfolio": tool_upsert_portfolio,
 }
 
 
@@ -2068,6 +2038,8 @@ def _get_agent_for_verb(agent_name: str, verb: str):
             match agent_name:
                 case "model.Capo":
                     return agent_capo_rule
+                case "model.validateOrgName":
+                    return agent_validate_org_name  # Shared with ENRICH
                 case _:
                     return AGENT_REGISTRY.get(agent_name)
         

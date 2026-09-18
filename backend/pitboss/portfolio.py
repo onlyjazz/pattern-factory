@@ -10,7 +10,14 @@ Workflow: PORTFOLIO
 
 import json
 import logging
+import sys
+from pathlib import Path
 from typing import Tuple, Dict, Any
+
+# Add backend to path for imports
+BACKEND_PATH = Path(__file__).parent.parent
+if str(BACKEND_PATH) not in sys.path:
+    sys.path.insert(0, str(BACKEND_PATH))
 
 from services.portfolio_service import search_portfolio_via_exa
 from pitboss.logging_util import log_event
@@ -22,6 +29,7 @@ async def agent_search_portfolio(message_body: Dict[str, Any]) -> Tuple[str, flo
     """
     model.searchPortfolio (PORTFOLIO flow)
     Call Exa agent API to discover FDA-cleared devices for the organization.
+    Tracks polling progress and stores status updates in message_body.
     
     Input:
     - message_body["org_id"]: Organization ID (from validateOrgName)
@@ -29,6 +37,7 @@ async def agent_search_portfolio(message_body: Dict[str, Any]) -> Tuple[str, flo
     
     Output:
     - Stores message_body["portfolio"]: {items: [{company, device, ...}, ...]}
+    - Stores message_body["portfolio_poll_log"]: List of polling status updates
     """
     logger.info("🤖 [model.searchPortfolio] Searching for organization portfolio...")
     
@@ -38,16 +47,26 @@ async def agent_search_portfolio(message_body: Dict[str, Any]) -> Tuple[str, flo
         logger.warning(f"  Decision: no (confidence: 0.95) - {reason}")
         return ("no", 0.95, reason)
     
+    # Track polling progress in message_body for potential HITL or logging
+    poll_log = []
+    
+    def track_progress(status_msg: str) -> None:
+        """Callback to track Exa polling progress."""
+        poll_log.append(status_msg)
+        logger.debug(f"    [Exa Polling] {status_msg}")
+    
     try:
-        portfolio = await search_portfolio_via_exa(org_name)
+        portfolio = await search_portfolio_via_exa(org_name, on_progress=track_progress)
         message_body["portfolio"] = portfolio
+        message_body["portfolio_poll_log"] = poll_log
         
         device_count = len(portfolio.get("items", []))
-        reason = f"Found {device_count} FDA-cleared devices for {org_name}"
+        reason = f"Found {device_count} FDA-cleared devices for {org_name} ({len(poll_log)} polling updates)"
         logger.info(f"  Decision: yes (confidence: 0.96) - {reason}")
         return ("yes", 0.96, reason)
     
     except Exception as e:
+        message_body["portfolio_poll_log"] = poll_log
         reason = f"Failed to search portfolio: {str(e)}"
         logger.error(f"  Decision: no (confidence: 0.85) - {reason}", exc_info=True)
         return ("no", 0.85, reason)
