@@ -23,48 +23,7 @@ from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
-# Load system prompt for LanguageCapo from YAML
-
-def get_capo_system_prompt() -> str:
-    """Load LanguageCapo system prompt from CAPO.yaml."""
-    try:
-        import yaml
-        yaml_path = os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "..",
-            "prompts",
-            "rules",
-            "CAPO.yaml",
-        )
-        with open(yaml_path, "r", encoding="utf-8") as f:
-            yaml_data = yaml.safe_load(f)
-        capo_section = yaml_data.get("CAPO", [])
-        if capo_section and isinstance(capo_section, list):
-            prompt = (capo_section[0] or {}).get("prompt", "").strip()
-            # Remove surrounding quotes if present
-            if prompt.startswith('"') and prompt.endswith('"'):
-                prompt = prompt[1:-1]
-            return prompt
-    except Exception as e:
-        logger.warning(f"[LanguageCapo] Failed to load CAPO prompt from YAML: {e}")
-
-    # Fallback prompt
-    return (
-        "You are LanguageCapo, the router that classifies user messages for the Pattern Factory.\n"
-        "All user messages follow: VERB OBJECT (e.g., 'RULE MyRule', 'CONTENT https://...', 'ENRICH Acme Corp')\n\n"
-        "Valid verbs:\n"
-        "- RULE: query/view building (RULE rulecode)\n"
-        "- CONTENT: extract entities from URLs (CONTENT url)\n"
-        "- GENERATE/CARD: risk model generation (GENERATE cardurl)\n"
-        "- ENRICH: organization enrichment (ENRICH orgname)\n"
-        "- FEELGOOD: product superiority extraction (FEELGOOD productid)\n"
-        "- PROFILE: FDA device profiling (PROFILE productid)\n"
-        "- COMPETITORS: competing products discovery (COMPETITORS productid)\n"
-        "- PORTFOLIO: FDA device portfolio discovery (PORTFOLIO orgname)\n\n"
-        "Return strict JSON: { \"decision\": \"yes\"|\"no\", \"verb\": \"RULE\"|\"CONTENT\"|\"GENERATE\"|\"ENRICH\"|\"FEELGOOD\"|\"PROFILE\"|\"COMPETITORS\"|\"PORTFOLIO\"|\"GENERIC\", \"confidence\": 0.0–1.0, \"reason\": \"...\" }. "
-        "If intent is unclear (<0.6 confidence), set decision to \"no\" and verb to \"GENERIC\"."
-    )
+# LanguageCapo uses deterministic pattern matching (no LLM needed)
 
 
 # ============================================================================
@@ -77,14 +36,14 @@ async def agent_language_capo(message_body: Dict[str, Any]) -> Tuple[str, float,
     Pre-workflow agent that validates the verb and routes to correct workflow.
     
     RESPONSIBILITY: 
-    1. Validate verb is one of: RULE, CONTENT, CARD, GENERATE, ENRICH, FEELGOOD, PROFILE, COMPETITORS, PORTFOLIO
-    2. Extract verb from message (first word, case-insensitive)
+    1. Extract first word from message as verb
+    2. Validate verb is one of: RULE, CONTENT, CARD, GENERATE, ENRICH, FEELGOOD, PROFILE, COMPETITORS, PORTFOLIO
     3. Return (decision, confidence, reason, verb)
     
     CRITICAL: Do NOT extract the object (everything after first space).
     Leave raw_text untouched so agents can extract it generically.
     
-    Uses LLM if OPENAI_API_KEY is set, otherwise falls back to heuristics.
+    Uses deterministic pattern matching (no LLM).
     
     Returns: (decision: yes|no, confidence: 0.0-1.0, reason: str, verb: str)
     """
@@ -97,42 +56,29 @@ async def agent_language_capo(message_body: Dict[str, Any]) -> Tuple[str, float,
         logger.warning(f"  Decision: no (confidence: 1.0) - {reason}")
         return ("no", 1.0, reason, "GENERIC")
 
-    # Use LLM for classification
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        reason = "OPENAI_API_KEY not set. Cannot classify intent."
-        logger.error(f"[LanguageCapo] {reason}")
-        return ("no", 0.0, reason, "GENERIC")
-
-    try:
-        client = OpenAI(api_key=api_key)
-        system_prompt = get_capo_system_prompt()
-
-        response = await _call_openai_async(
-            client=client,
-            system_prompt=system_prompt,
-            user_message=f"Message: {text}",
-            model="gpt-4o-mini",
-            temperature=0.0,
-            timeout=5.0,
-        )
-
-        data = json.loads(response)
-        decision = data.get("decision", "no")
-        verb = (data.get("verb", "") or "").strip().upper()
-        # Validate verb exists in LLM response
-        if verb not in ("RULE", "CONTENT", "CARD", "GENERATE", "ENRICH", "FEELGOOD", "PROFILE", "COMPETITORS", "PORTFOLIO", "GENERIC"):
-            verb = "GENERIC"
-            decision = "no"
-        confidence = float(data.get("confidence", 0.55))
-        reason = data.get("reason", "")
-
-        logger.info(f"  LLM: Verb={verb}, decision={decision}, confidence={confidence:.2f}")
-        return (decision, confidence, reason, verb)
-    except Exception as e:
-        reason = f"LLM classification failed: {e}"
-        logger.error(f"[LanguageCapo] {reason}")
-        return ("no", 0.0, reason, "GENERIC")
+    # Extract first word as verb
+    parts = text.split(None, 1)  # Split on first whitespace
+    if not parts:
+        reason = "Could not extract verb from message"
+        logger.warning(f"  Decision: no (confidence: 1.0) - {reason}")
+        return ("no", 1.0, reason, "GENERIC")
+    
+    verb = parts[0].strip().upper()
+    
+    # Valid verbs
+    valid_verbs = {"RULE", "CONTENT", "CARD", "GENERATE", "ENRICH", "FEELGOOD", "PROFILE", "COMPETITORS", "PORTFOLIO"}
+    
+    if verb not in valid_verbs:
+        reason = f"The verb '{verb}' is not recognized. Valid verbs: {', '.join(sorted(valid_verbs))}"
+        logger.warning(f"  Decision: no (confidence: 1.0) - {reason}")
+        return ("no", 1.0, reason, "GENERIC")
+    
+    # Valid verb found
+    decision = "yes"
+    confidence = 1.0
+    reason = f"Recognized verb: {verb}"
+    logger.info(f"  Decision: {decision} (confidence: {confidence:.2f}) - {reason}")
+    return (decision, confidence, reason, verb)
 
 
 async def _call_openai_async(*, client: OpenAI, system_prompt: str, user_message: str, model: str, temperature: float, timeout: float) -> str:
