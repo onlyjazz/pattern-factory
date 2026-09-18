@@ -7,7 +7,7 @@ CAPO:
       
       ## GENERAL SYNTAX
       All user messages follow: VERB OBJECT
-      Example: "run MyRule", "content https://example.com", "enrich Acme Corp"
+      Example: "RULE MyRule", "CONTENT https://example.com", "ENRICH Acme Corp"
       
       ## VALID VERBS (choose exactly one)
       1. RULE - Query/view building. Syntax: RULE rulecode

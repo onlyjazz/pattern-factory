@@ -676,18 +676,18 @@ async def agent_capo_content(message_body: Dict[str, Any]) -> Tuple[str, float, 
     """
     model.Capo (CONTENT flow)
     Initial validation of extraction request.
-    Deterministically pass when the user typed 'extract <url>'.
+    Deterministically pass when the user typed 'CONTENT <url>'.
     """
     logger.info("🤖 [model.Capo] Validating extraction request...")
 
-    text = (message_body.get("raw_text") or "").strip().lower()
-    if text.startswith("extract "):
-        return ("yes", 0.99, "Recognized 'extract <url>' command")
+    text = (message_body.get("raw_text") or "").strip().upper()
+    if text.startswith("CONTENT "):
+        return ("yes", 0.99, "Recognized 'CONTENT <url>' command")
 
     # Fallback: could not recognize extraction format
     decision = "no"
     confidence = 0.92
-    reason = "Could not recognize extraction format. Usage: extract <url>"
+    reason = "Could not recognize extraction format. Usage: CONTENT <url>"
     logger.info(f"  Decision: {decision} (confidence: {confidence:.2f}) - {reason}")
     return (decision, confidence, reason)
 
@@ -706,17 +706,17 @@ async def agent_verify_request_content(message_body: Dict[str, Any]) -> Tuple[st
         return ("yes", 0.96, "URL detected for extraction")
 
     # If no URL yet, ask for one via HITL
-    reason = "Please provide a URL. Usage: extract <url>"
+    reason = "Please provide a URL. Usage: CONTENT <url>"
     logger.info(f"  Decision: no (confidence: 0.98) - {reason}")
     return ("no", 0.98, reason)
 
 
 def _parse_url_from_text(text: str) -> Optional[str]:
-    """Extract URL from text matching 'extract <url>' pattern; returns URL or None."""
+    """Extract URL from text matching 'CONTENT <url>' pattern; returns URL or None."""
     if not text:
         return None
     parts = text.strip().split()
-    if len(parts) >= 2 and parts[0].lower() == "extract":
+    if len(parts) >= 2 and parts[0].upper() == "CONTENT":
         return parts[1]
     return None
 
