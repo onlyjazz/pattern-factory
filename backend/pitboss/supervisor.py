@@ -63,50 +63,25 @@ class PitbossSupervisor:
         # Check for YAML hot-reload before processing any request
         self.context_builder.reload_if_changed()
         
-        # Step 0: Validate envelope has required fields and valid verb
+        # Step 0: Parse envelope
         session_id = envelope_dict.get("session_id", "")
         request_id = envelope_dict.get("request_id", "")
-        verb_str = (envelope_dict.get("verb") or "").strip().upper()
         
-        # Check for invalid verb
-        if not verb_str:
-            error_msg = "Missing or empty 'verb' field. Must be: RULE, CONTENT, CARD, GENERATE, ENRICH, FEELGOOD, PROFILE, or COMPETITORS"
-            logger.error(f"Invalid envelope: {error_msg}")
-            if self.websocket:
-                await self.websocket.send_json(make_error(
-                    session_id=session_id,
-                    request_id=request_id,
-                    verb=Verb.GENERIC,
-                    error_message=error_msg
-                ).to_dict())
-            return
-        
-        if verb_str not in [v.value for v in Verb]:
-            error_msg = f"Invalid verb '{verb_str}'. Must be: RULE, CONTENT, CARD, GENERATE, ENRICH, FEELGOOD, PROFILE, or COMPETITORS"
-            logger.error(f"Invalid envelope: {error_msg}")
-            if self.websocket:
-                await self.websocket.send_json(make_error(
-                    session_id=session_id,
-                    request_id=request_id,
-                    verb=Verb.GENERIC,
-                    error_message=error_msg
-                ).to_dict())
-            return
-        
-        # Envelope is valid - proceed
         try:
             env = MessageEnvelope.from_dict(envelope_dict)
         except Exception as e:
-            error_msg = f"Invalid envelope: {e}"
+            error_msg = f"Invalid envelope structure: {e}"
             logger.error(f"Envelope parsing failed: {error_msg}")
             if self.websocket:
                 await self.websocket.send_json(make_error(
                     session_id=session_id,
                     request_id=request_id,
-                    verb=Verb(verb_str),
+                    verb=Verb.GENERIC,
                     error_message=error_msg
                 ).to_dict())
             return
+        
+        verb_str = (env.verb.value if isinstance(env.verb, Verb) else str(env.verb)).strip().upper()
 
         # Check if this is a HITL return from human
         is_hitl_return = env.nextAgent and env.nextAgent not in ("model.LanguageCapo", "sendMessageToChat", None)
@@ -126,49 +101,41 @@ class PitbossSupervisor:
                 if "rule_text" in message_body_for_capo and "raw_text" not in message_body_for_capo:
                     message_body_for_capo["raw_text"] = message_body_for_capo["rule_text"]
                 
-                # Call language capo (returns 4-tuple with verb)
+                # Call language capo (returns 4-tuple: decision, confidence, reason, verb)
                 result = await call_agent("model.LanguageCapo", "GENERIC", message_body_for_capo)
                 
                 if len(result) == 4:
                     decision, confidence, reason, verb_determined = result
                 else:
                     decision, confidence, reason = result
-                    verb_determined = "RULE"
+                    verb_determined = "RUN"
                 
-                logger.info(f"  Classification: {verb_determined} (confidence: {confidence:.2f})")
+                logger.info(f"  Classification: {verb_determined} (decision: {decision}, confidence: {confidence:.2f})")
                 
-                # Validate verb from LanguageCapo
+                # If LanguageCapo couldn't classify (decision=no), send HITL response and return
+                if decision == "no":
+                    logger.info(f"  LanguageCapo could not classify: {reason}")
+                    step_resp = make_response(
+                        session_id=env.session_id,
+                        request_id=env.request_id,
+                        verb=Verb.GENERIC,
+                        next_agent=None,
+                        decision=Decision.NO,
+                        confidence=float(confidence),
+                        reason=str(reason),
+                        message_body=env.messageBody.copy(),
+                        return_code=-1,
+                    )
+                    await self._send_envelope(step_resp)
+                    return
+                
+                # Verb is determined - use it
                 verb_determined = (verb_determined or "").strip().upper()
-                if verb_determined not in [v.value for v in Verb]:
-                    error_msg = f"LanguageCapo returned invalid verb: {verb_determined}"
-                    logger.error(error_msg)
-                    if self.websocket:
-                        await self.websocket.send_json(make_error(
-                            session_id=env.session_id,
-                            request_id=env.request_id,
-                            verb=Verb.GENERIC,
-                            error_message=error_msg
-                        ).to_dict())
-                    return
-                
-                # If verb is GENERIC, it means LanguageCapo couldn't classify - return error
-                if verb_determined == "GENERIC":
-                    error_msg = "Could not classify intent. Please be more specific. Use format: VERB OBJECT (e.g., 'portfolio Medtronic', 'enrich Acme Corp')"
-                    logger.warning(f"Cannot route GENERIC verb: {error_msg}")
-                    if self.websocket:
-                        await self.websocket.send_json(make_error(
-                            session_id=env.session_id,
-                            request_id=env.request_id,
-                            verb=Verb.GENERIC,
-                            error_message=error_msg
-                        ).to_dict())
-                    return
-                
                 verb_str = verb_determined
             else:
                 verb_str = env.verb.value if isinstance(env.verb, Verb) else str(env.verb)
             
-            # Start workflow with Capo
+            # Start workflow with model.Capo
             current_agent = "model.Capo"
         
         # Update env verb for consistency
