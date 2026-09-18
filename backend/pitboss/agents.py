@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 # Load system prompt for LanguageCapo from YAML
 
 def get_capo_system_prompt() -> str:
-    """Load Capo system prompt from pattern-factory.yaml."""
+    """Load LanguageCapo system prompt from CAPO.yaml."""
     try:
         import yaml
         yaml_path = os.path.join(
@@ -35,7 +35,7 @@ def get_capo_system_prompt() -> str:
             "..",
             "prompts",
             "rules",
-            "pattern-factory.yaml",
+            "CAPO.yaml",
         )
         with open(yaml_path, "r", encoding="utf-8") as f:
             yaml_data = yaml.safe_load(f)
@@ -52,9 +52,9 @@ def get_capo_system_prompt() -> str:
     # Fallback prompt
     return (
         "You are LanguageCapo, the router that classifies user messages for the Pattern Factory.\n"
-        "All user messages follow: VERB OBJECT (e.g., 'run MyRule', 'content https://...', 'enrich Acme Corp')\n\n"
+        "All user messages follow: VERB OBJECT (e.g., 'RULE MyRule', 'CONTENT https://...', 'ENRICH Acme Corp')\n\n"
         "Valid verbs:\n"
-        "- RUN: query/view building (RUN rulecode)\n"
+        "- RULE: query/view building (RULE rulecode)\n"
         "- CONTENT: extract entities from URLs (CONTENT url)\n"
         "- GENERATE/CARD: risk model generation (GENERATE cardurl)\n"
         "- ENRICH: organization enrichment (ENRICH orgname)\n"
@@ -62,7 +62,7 @@ def get_capo_system_prompt() -> str:
         "- PROFILE: FDA device profiling (PROFILE productid)\n"
         "- COMPETITORS: competing products discovery (COMPETITORS productid)\n"
         "- PORTFOLIO: FDA device portfolio discovery (PORTFOLIO orgname)\n\n"
-        "Return strict JSON: { \"decision\": \"yes\"|\"no\", \"verb\": \"RUN\"|\"CONTENT\"|\"GENERATE\"|\"ENRICH\"|\"FEELGOOD\"|\"PROFILE\"|\"COMPETITORS\"|\"PORTFOLIO\"|\"GENERIC\", \"confidence\": 0.0–1.0, \"reason\": \"...\" }. "
+        "Return strict JSON: { \"decision\": \"yes\"|\"no\", \"verb\": \"RULE\"|\"CONTENT\"|\"GENERATE\"|\"ENRICH\"|\"FEELGOOD\"|\"PROFILE\"|\"COMPETITORS\"|\"PORTFOLIO\"|\"GENERIC\", \"confidence\": 0.0–1.0, \"reason\": \"...\" }. "
         "If intent is unclear (<0.6 confidence), set decision to \"no\" and verb to \"GENERIC\"."
     )
 
