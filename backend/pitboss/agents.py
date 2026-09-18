@@ -51,14 +51,19 @@ def get_capo_system_prompt() -> str:
 
     # Fallback prompt
     return (
-        "You are a router that classifies a user's message for the Pattern Factory. "
-        "Choose exactly one verb: RULE, CONTENT, GENERATE, or ENRICH.\n"
-        "- RULE: user wants to query/build logical views (rules → SQL → execute)\n"
-        "- CONTENT: user wants to extract entities (orgs, guests, patterns, posts) from a URL or text\n"
-        "- GENERATE: user wants to generate risk models from card URLs\n"
-        "- ENRICH: user wants to enrich organization data (funding, revenue, sales)\n"
-        "Return strict JSON only: { \"decision\": \"yes\"|\"no\", \"verb\": \"RULE\"|\"CONTENT\"|\"GENERATE\"|\"ENRICH\", \"confidence\": 0.0–1.0, \"reason\": \"...\" }. "
-        "If intent is unclear (<0.6 confidence), set decision to \"no\" and explain what's ambiguous in reason."
+        "You are LanguageCapo, the router that classifies user messages for the Pattern Factory.\n"
+        "All user messages follow: VERB OBJECT (e.g., 'run MyRule', 'content https://...', 'enrich Acme Corp')\n\n"
+        "Valid verbs:\n"
+        "- RUN: query/view building (RUN rulecode)\n"
+        "- CONTENT: extract entities from URLs (CONTENT url)\n"
+        "- GENERATE/CARD: risk model generation (GENERATE cardurl)\n"
+        "- ENRICH: organization enrichment (ENRICH orgname)\n"
+        "- FEELGOOD: product superiority extraction (FEELGOOD productid)\n"
+        "- PROFILE: FDA device profiling (PROFILE productid)\n"
+        "- COMPETITORS: competing products discovery (COMPETITORS productid)\n"
+        "- PORTFOLIO: FDA device portfolio discovery (PORTFOLIO orgname)\n\n"
+        "Return strict JSON: { \"decision\": \"yes\"|\"no\", \"verb\": \"RUN\"|\"CONTENT\"|\"GENERATE\"|\"ENRICH\"|\"FEELGOOD\"|\"PROFILE\"|\"COMPETITORS\"|\"PORTFOLIO\"|\"GENERIC\", \"confidence\": 0.0–1.0, \"reason\": \"...\" }. "
+        "If intent is unclear (<0.6 confidence), set decision to \"no\" and verb to \"GENERIC\"."
     )
 
 
@@ -92,40 +97,42 @@ async def agent_language_capo(message_body: Dict[str, Any]) -> Tuple[str, float,
         logger.warning(f"  Decision: no (confidence: 1.0) - {reason}")
         return ("no", 1.0, reason, "GENERIC")
 
-    # Try LLM-based classification first
+    # Use LLM for classification
     api_key = os.getenv("OPENAI_API_KEY")
-    if api_key:
-        try:
-            client = OpenAI(api_key=api_key)
-            system_prompt = get_capo_system_prompt()
+    if not api_key:
+        reason = "OPENAI_API_KEY not set. Cannot classify intent."
+        logger.error(f"[LanguageCapo] {reason}")
+        return ("no", 0.0, reason, "GENERIC")
 
-            response = await _call_openai_async(
-                client=client,
-                system_prompt=system_prompt,
-                user_message=f"Message: {text}",
-                model="gpt-4o-mini",
-                temperature=0.0,
-                timeout=5.0,
-            )
+    try:
+        client = OpenAI(api_key=api_key)
+        system_prompt = get_capo_system_prompt()
 
-            data = json.loads(response)
-            decision = data.get("decision", "no")
-            verb = (data.get("verb", "") or "").strip().upper()
-            # Validate verb exists
-            if verb not in ("RULE", "CONTENT", "CARD", "GENERATE", "ENRICH", "FEELGOOD", "PROFILE", "COMPETITORS", "PORTFOLIO"):
-                verb = "GENERIC"
-                decision = "no"
-            confidence = float(data.get("confidence", 0.55))
-            reason = data.get("reason", "")
+        response = await _call_openai_async(
+            client=client,
+            system_prompt=system_prompt,
+            user_message=f"Message: {text}",
+            model="gpt-4o-mini",
+            temperature=0.0,
+            timeout=5.0,
+        )
 
-            logger.info(f"  LLM: Verb={verb}, decision={decision}, confidence={confidence:.2f}")
-            return (decision, confidence, reason, verb)
-        except Exception as e:
-            logger.warning(f"[LanguageCapo] LLM classification failed, falling back to heuristics: {e}")
+        data = json.loads(response)
+        decision = data.get("decision", "no")
+        verb = (data.get("verb", "") or "").strip().upper()
+        # Validate verb exists in LLM response
+        if verb not in ("RUN", "CONTENT", "CARD", "GENERATE", "ENRICH", "FEELGOOD", "PROFILE", "COMPETITORS", "PORTFOLIO", "GENERIC"):
+            verb = "GENERIC"
+            decision = "no"
+        confidence = float(data.get("confidence", 0.55))
+        reason = data.get("reason", "")
 
-    # Fallback: heuristic classification (extract first word as verb)
-    logger.info("  Using heuristic classification")
-    return _heuristic_language_capo(text)
+        logger.info(f"  LLM: Verb={verb}, decision={decision}, confidence={confidence:.2f}")
+        return (decision, confidence, reason, verb)
+    except Exception as e:
+        reason = f"LLM classification failed: {e}"
+        logger.error(f"[LanguageCapo] {reason}")
+        return ("no", 0.0, reason, "GENERIC")
 
 
 async def _call_openai_async(*, client: OpenAI, system_prompt: str, user_message: str, model: str, temperature: float, timeout: float) -> str:
@@ -147,138 +154,6 @@ async def _call_openai_async(*, client: OpenAI, system_prompt: str, user_message
 
     return await asyncio.to_thread(_call_sync)
 
-
-def _heuristic_language_capo(text: str) -> Tuple[str, float, str, str]:
-    """Heuristic-based language classification (keyword scoring). Fallback when LLM is unavailable."""
-    text_lower = text.lower()
-
-    # Heuristics for RULE vs CONTENT
-    rule_keywords = [
-        "show",
-        "find",
-        "list",
-        "get",
-        "query",
-        "pattern",
-        "view",
-        "select",
-        "where",
-        "group",
-        "having",
-        "order",
-        "sql",
-        "guests",
-        "organizations",
-        "posts",
-        "orgs",
-    ]
-
-    content_keywords = [
-        "extract",
-        "analyze",
-        "parse",
-        "read",
-        "import",
-        "ingest",
-        "newsletter",
-        "podcast",
-        "transcript",
-        "article",
-        "content",
-        "url",
-        "link",
-        "upload",
-        "entities",
-        "entity",
-    ]
-    
-    enrich_keywords = [
-        "enrich",
-        "funding",
-        "revenue",
-        "annual sales",
-        "annual revenue",
-        "valuation",
-    ]
-    
-    feelgood_keywords = [
-        "feelgood",
-        "superiority",
-        "competitive advantage",
-        "advantage",
-    ]
-    
-    profile_keywords = [
-        "profile",
-        "fda",
-        "device description",
-        "intended use",
-        "indications for use",
-    ]
-    
-    portfolio_keywords = [
-        "portfolio",
-        "fda-cleared devices",
-        "device portfolio",
-        "cleared devices",
-    ]
-
-    rule_score = sum(1 for kw in rule_keywords if kw in text_lower)
-    content_score = sum(1 for kw in content_keywords if kw in text_lower)
-    enrich_score = sum(1 for kw in enrich_keywords if kw in text_lower)
-    feelgood_score = sum(1 for kw in feelgood_keywords if kw in text_lower)
-    profile_score = sum(1 for kw in profile_keywords if kw in text_lower)
-    portfolio_score = sum(1 for kw in portfolio_keywords if kw in text_lower)
-
-    # Determine highest score
-    scores = {
-        "ENRICH": enrich_score,
-        "FEELGOOD": feelgood_score,
-        "PROFILE": profile_score,
-        "PORTFOLIO": portfolio_score,
-        "RULE": rule_score,
-        "CONTENT": content_score,
-    }
-    max_score = max(scores.values())
-    
-    # If PORTFOLIO, FEELGOOD, or PROFILE wins, return that
-    if portfolio_score == max_score and portfolio_score > 0:
-        verb = "PORTFOLIO"
-        confidence = min(0.95, 0.5 + (portfolio_score * 0.1))
-        reason = f"User is asking for portfolio discovery (detected {portfolio_score} PORTFOLIO keywords)"
-        return ("yes", confidence, reason, verb)
-    
-    if feelgood_score == max_score and feelgood_score > 0:
-        verb = "FEELGOOD"
-        confidence = min(0.95, 0.5 + (feelgood_score * 0.1))
-        reason = f"User is asking for competitive advantage analysis (detected {feelgood_score} FEELGOOD keywords)"
-        return ("yes", confidence, reason, verb)
-    
-    if profile_score == max_score and profile_score > 0:
-        verb = "PROFILE"
-        confidence = min(0.95, 0.5 + (profile_score * 0.1))
-        reason = f"User is asking for FDA device profile (detected {profile_score} PROFILE keywords)"
-        return ("yes", confidence, reason, verb)
-
-    if enrich_score > rule_score and enrich_score > content_score:
-        verb = "ENRICH"
-        confidence = min(0.95, 0.5 + (enrich_score * 0.1))
-        reason = f"User is asking for organization enrichment (detected {enrich_score} ENRICH keywords)"
-    elif rule_score > content_score:
-        verb = "RULE"
-        confidence = min(0.95, 0.5 + (rule_score * 0.1))
-        reason = f"User is asking for data query/view (detected {rule_score} RULE keywords)"
-    elif content_score > rule_score:
-        verb = "CONTENT"
-        confidence = min(0.95, 0.5 + (content_score * 0.1))
-        reason = f"User is asking for content extraction (detected {content_score} CONTENT keywords)"
-    else:
-        # Default to RULE if ambiguous
-        verb = "RULE"
-        confidence = 0.55
-        reason = "Ambiguous intent, defaulting to RULE workflow"
-
-    return ("yes", confidence, reason, verb)
 
 
 def _extract_verb_object(raw_text: str) -> Optional[str]:
