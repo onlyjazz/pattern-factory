@@ -1,5 +1,4 @@
-"""
-Pattern Factory Message Protocol v1.1
+"""Pattern Factory Message Protocol v1.1
 Unified envelope for all front-end <-> backend communication.
 
 All messages (request, response, error) share this structure:
@@ -8,7 +7,7 @@ All messages (request, response, error) share this structure:
 - timestamp: milliseconds since epoch
 - session_id: conversation session ID
 - request_id: unique request ID (req-001, req-002, ...)
-- verb: RULE | CONTENT | GENERATE
+- verb: RUN | CONTENT | GENERATE | ENRICH | FEELGOOD | PROFILE | COMPETITORS | PORTFOLIO | CARD | GENERIC
 - nextAgent: name of agent Pitboss will call next (e.g., model.Capo)
 - returnCode: 0=continue, 1=success, negative=error
 - decision: yes | no (for branching)
@@ -33,10 +32,10 @@ class MessageType(str, Enum):
 
 class Verb(str, Enum):
     """Message verb (what the message is about)."""
-    RULE = "RULE"
-    CONTENT = "CONTENT"
-    CARD = "CARD"
+    RUN = "RUN"  # Query/view building (execute rules -> SQL -> materialized views)
+    CONTENT = "CONTENT"  # Extract entities from URLs
     GENERATE = "GENERATE"  # Generate risk model from card URL
+    CARD = "CARD"  # Alias for GENERATE
     ENRICH = "ENRICH"  # Enrich organization data (funding, revenue)
     FEELGOOD = "FEELGOOD"  # Extract product superiority claims from web search
     PROFILE = "PROFILE"  # Extract FDA device profile (device_description, intended_use, indications_for_use)
@@ -65,7 +64,7 @@ class MessageEnvelope:
     request_id: str = ""
     
     # Message semantics
-    verb: Verb = Verb.RULE
+    verb: Verb = Verb.RUN
     nextAgent: Optional[str] = None
     
     # Response metadata

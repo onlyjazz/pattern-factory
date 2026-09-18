@@ -33,7 +33,7 @@ class WorkflowEngine:
     Executes Pattern Factory agents.
     
     Responsibilities:
-    - start a RULE or CONTENT flow where agents determine nextAgent
+    - start a RUN or CONTENT flow where agents determine nextAgent
     - Track current position in decision tree
     - Branch on agent decisions (yes/no)
     - Route to terminal nodes (sendMessageToChat, etc)
@@ -51,8 +51,8 @@ class WorkflowEngine:
         Load workflow definitions.
         Currently hardcoded; will be replaced with YAML loading.
         """
-        # RULE Flow
-        self.workflows["RULE"] = {
+        # RUN Flow
+        self.workflows["RUN"] = {
             "model.Capo": WorkflowNode(
                 agent_name="model.Capo",
                 branch_yes="model.verifyRequest",
@@ -325,10 +325,10 @@ class WorkflowEngine:
         }
         self.workflows["PORTFOLIO"] = portfolio_workflow
         
-        logger.info(f"✅ Loaded {len(self.workflows)} workflows (RULE, CONTENT, GENERATE, ENRICH, FEELGOOD, PROFILE, COMPETITORS, PORTFOLIO)")
+        logger.info(f"✅ Loaded {len(self.workflows)} workflows (RUN, CONTENT, GENERATE, ENRICH, FEELGOOD, PROFILE, COMPETITORS, PORTFOLIO)")
     
     def get_workflow(self, verb: str) -> Dict[str, WorkflowNode]:
-        """Get workflow by verb (RULE or CONTENT)."""
+        """Get workflow by verb (RUN, CONTENT, GENERATE, ENRICH, etc)."""
         if verb not in self.workflows:
             raise ValueError(f"Unknown workflow: {verb}")
         return self.workflows[verb]
@@ -343,7 +343,7 @@ class WorkflowEngine:
         Get the next agent based on current agent and decision.
         
         Args:
-            verb: RULE or CONTENT
+            verb: RUN, CONTENT, GENERATE, ENRICH, etc.
             current_agent: Name of current agent
             decision: "yes" or "no"
         
@@ -383,10 +383,10 @@ class WorkflowEngine:
         After a NO decision (HITL), recommend which agent to call when the human replies.
         Defaults to sendMessageToChat unless explicitly mapped.
         """
-        if verb == "RULE":
+        if verb == "RUN":
             if current_agent == "model.verifySQL":
                 return "tool.executeSQL"
-        elif verb == "CARD":
+        elif verb == "GENERATE" or verb == "CARD":
             if current_agent == "model.verifyRequest":
                 return "model.requestToExtractRiskModel"
             elif current_agent == "model.requestToExtractRiskModel":
