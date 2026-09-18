@@ -383,8 +383,15 @@ class WorkflowEngine:
         After a NO decision (HITL), recommend which agent to call when the human replies.
         Defaults to sendMessageToChat unless explicitly mapped.
         """
-        if verb == "RUN":
+        if verb == "RULE":
             if current_agent == "model.verifySQL":
+                return "tool.executeSQL"
+        elif verb == "CONTENT":
+            if current_agent == "model.verifyRequest":
+                return "model.requestToExtractEntities"
+            elif current_agent == "model.requestToExtractEntities":
+                return "model.verifyUpsert"
+            elif current_agent == "model.verifyUpsert":
                 return "tool.executeSQL"
         elif verb == "GENERATE" or verb == "CARD":
             if current_agent == "model.verifyRequest":

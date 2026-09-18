@@ -47,6 +47,10 @@ class PitbossSupervisor:
         self.context_builder = ContextBuilder(db_connection)
         self.tool_registry = ToolRegistry(db_connection, self.config)
         self.workflow_engine = WorkflowEngine()
+        
+        # Session state: track HITL context (rule_code, sql_query, etc.) for each session
+        # Maps session_id -> {"verb": str, "last_agent": str, "messageBody": dict, "hitl_next_agent": str}
+        self.hitl_sessions: dict = {}
 
         logger.info("🧠 Pitboss Supervisor initialized")
 
@@ -82,11 +86,23 @@ class PitbossSupervisor:
             return
         
         verb_str = (env.verb.value if isinstance(env.verb, Verb) else str(env.verb)).strip().upper()
-
+        raw_text = (env.messageBody.get("raw_text") or "").strip().lower()
+        
         # Check if this is a HITL return from human
         is_hitl_return = env.nextAgent and env.nextAgent not in ("model.LanguageCapo", "sendMessageToChat", None)
         
-        if is_hitl_return:
+        # Check if this is a simple HITL approval ("ok", "yes", "approve", etc.)
+        is_hitl_approval = raw_text in ("ok", "yes", "approve", "ok.", "yes.") and session_id in self.hitl_sessions
+        
+        if is_hitl_approval:
+            # Resume from saved HITL session
+            logger.info(f"📋 HITL approval detected ('{raw_text}') - resuming from saved context")
+            saved = self.hitl_sessions[session_id]
+            verb_str = saved["verb"]
+            current_agent = saved["hitl_next_agent"]
+            env.messageBody = saved["messageBody"].copy()
+            is_hitl_return = True
+        elif is_hitl_return:
             # HITL return: skip classification, go directly to nextAgent
             logger.info(f"📋 HITL return from human - routing to {env.nextAgent}")
             verb_str = env.verb.value if isinstance(env.verb, Verb) else str(env.verb)
@@ -183,6 +199,14 @@ class PitbossSupervisor:
 
             # HITL on decision=no
             if dec_enum == Decision.NO:
+                # Save HITL session state so user can approve with simple "ok"
+                self.hitl_sessions[env.session_id] = {
+                    "verb": verb_str,
+                    "last_agent": current_agent,
+                    "messageBody": env.messageBody.copy(),
+                    "hitl_next_agent": hitl_next
+                }
+                logger.info(f"💾 Saved HITL session for {env.session_id}: {current_agent} → {hitl_next}")
                 return
 
             # Terminal
@@ -194,6 +218,11 @@ class PitbossSupervisor:
                         "rule_code": env.messageBody.get("rule_code"),
                         "rule_name": env.messageBody.get("rule_name")
                     })
+                
+                # Clear HITL session state
+                if env.session_id in self.hitl_sessions:
+                    del self.hitl_sessions[env.session_id]
+                    logger.info(f"✅ Cleared HITL session for {env.session_id}")
                 
                 success = make_success(
                     session_id=env.session_id,
