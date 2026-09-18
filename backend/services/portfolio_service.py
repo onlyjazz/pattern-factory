@@ -15,13 +15,13 @@ from typing import Any, Dict, Optional
 logger = logging.getLogger(__name__)
 
 
-async def search_portfolio_via_exa(company: str, timeout: int = 300) -> Dict[str, Any]:
+async def search_portfolio_via_exa(company: str, timeout: int = 540) -> Dict[str, Any]:
     """
     Search for all FDA-cleared devices for a company using Exa agent API.
 
     Args:
         company: Company name (e.g., "Medtronic", "Siemens Healthineers")
-        timeout: Maximum seconds to wait for Exa run completion (default 300s = 5min)
+        timeout: Maximum seconds to wait for Exa run completion (default 540s = 9min)
 
     Returns:
         Dictionary with structure:
