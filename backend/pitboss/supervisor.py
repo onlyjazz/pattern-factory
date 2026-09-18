@@ -151,6 +151,19 @@ class PitbossSupervisor:
                         ).to_dict())
                     return
                 
+                # If verb is GENERIC, it means LanguageCapo couldn't classify - return error
+                if verb_determined == "GENERIC":
+                    error_msg = "Could not classify intent. Please be more specific. Use format: VERB OBJECT (e.g., 'portfolio Medtronic', 'enrich Acme Corp')"
+                    logger.warning(f"Cannot route GENERIC verb: {error_msg}")
+                    if self.websocket:
+                        await self.websocket.send_json(make_error(
+                            session_id=env.session_id,
+                            request_id=env.request_id,
+                            verb=Verb.GENERIC,
+                            error_message=error_msg
+                        ).to_dict())
+                    return
+                
                 verb_str = verb_determined
             else:
                 verb_str = env.verb.value if isinstance(env.verb, Verb) else str(env.verb)
