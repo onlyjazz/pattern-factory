@@ -187,8 +187,8 @@ class PitbossSupervisor:
 
             # Terminal
             if next_agent is None or self.workflow_engine.is_terminal(next_agent):
-                # Send views:refresh event if rule was executed (RUN verb)
-                if env.verb == Verb.RUN and "table_name" in env.messageBody:
+                # Send views:refresh event if rule was executed
+                if env.verb == Verb.RULE and "table_name" in env.messageBody:
                     await self._send_event("views:refresh", {
                         "table_name": env.messageBody.get("table_name"),
                         "rule_code": env.messageBody.get("rule_code"),

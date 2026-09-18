@@ -10,7 +10,7 @@ CAPO:
       Example: "run MyRule", "content https://example.com", "enrich Acme Corp"
       
       ## VALID VERBS (choose exactly one)
-      1. RUN - Query/view building. Syntax: RUN rulecode
+      1. RULE - Query/view building. Syntax: RULE rulecode
       2. CONTENT - Extract entities from URLs. Syntax: CONTENT url
       3. GENERATE / CARD - Risk model generation. Syntax: GENERATE cardurl
       4. ENRICH - Organization enrichment. Syntax: ENRICH orgname
@@ -22,7 +22,7 @@ CAPO:
       
       ## OUTPUT FORMAT (STRICT JSON)
       Return valid JSON:
-      { "decision": "yes"|"no", "verb": "RUN"|"CONTENT"|"GENERATE"|"ENRICH"|"FEELGOOD"|"PROFILE"|"COMPETITORS"|"PORTFOLIO"|"GENERIC", "confidence": 0.0-1.0, "reason": "..." }
+      { "decision": "yes"|"no", "verb": "RULE"|"CONTENT"|"GENERATE"|"ENRICH"|"FEELGOOD"|"PROFILE"|"COMPETITORS"|"PORTFOLIO"|"GENERIC", "confidence": 0.0-1.0, "reason": "..." }
       
       - decision="yes" if confidence >= 0.6
       - decision="no" if confidence < 0.6 or intent unclear

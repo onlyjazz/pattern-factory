@@ -46,7 +46,7 @@ def test_envelope_creation():
     req = make_request(
         session_id="sess-001",
         request_id="req-001",
-        verb=Verb.RUN,
+        verb=Verb.RULE,
         message_body={"rule_text": "Show me patterns in episodes"}
     )
     

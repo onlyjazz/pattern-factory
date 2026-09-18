@@ -32,7 +32,7 @@ class MessageType(str, Enum):
 
 class Verb(str, Enum):
     """Message verb (what the message is about)."""
-    RUN = "RUN"  # Query/view building (execute rules -> SQL -> materialized views)
+    RULE = "RULE"  # Execute rules -> SQL -> materialized views
     CONTENT = "CONTENT"  # Extract entities from URLs
     GENERATE = "GENERATE"  # Generate risk model from card URL
     CARD = "CARD"  # Alias for GENERATE
@@ -64,7 +64,7 @@ class MessageEnvelope:
     request_id: str = ""
     
     # Message semantics
-    verb: Verb = Verb.RUN
+    verb: Verb = Verb.RULE
     nextAgent: Optional[str] = None
     
     # Response metadata

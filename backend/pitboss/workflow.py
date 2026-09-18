@@ -51,8 +51,8 @@ class WorkflowEngine:
         Load workflow definitions.
         Currently hardcoded; will be replaced with YAML loading.
         """
-        # RUN Flow
-        self.workflows["RUN"] = {
+        # RULE Flow (RUN is API name, RULE is internal workflow key)
+        self.workflows["RULE"] = {
             "model.Capo": WorkflowNode(
                 agent_name="model.Capo",
                 branch_yes="model.verifyRequest",
