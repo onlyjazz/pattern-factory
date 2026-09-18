@@ -676,20 +676,17 @@ async def agent_capo_content(message_body: Dict[str, Any]) -> Tuple[str, float, 
     """
     model.Capo (CONTENT flow)
     Initial validation of extraction request.
-    Deterministically pass when the user typed 'extract <url>'.
+    Accept 'extract <url>', 'content <url>', or any text starting with CONTENT verb.
     """
     logger.info("🤖 [model.Capo] Validating extraction request...")
 
     text = (message_body.get("raw_text") or "").strip().lower()
-    if text.startswith("extract "):
-        return ("yes", 0.99, "Recognized 'extract <url>' command")
+    # Accept both 'extract <url>' and 'content <url>'
+    if text.startswith("extract ") or text.startswith("content "):
+        return ("yes", 0.99, "Recognized extraction command")
 
-    # Fallback: could not recognize extraction format
-    decision = "no"
-    confidence = 0.92
-    reason = "Could not recognize extraction format. Usage: extract <url>"
-    logger.info(f"  Decision: {decision} (confidence: {confidence:.2f}) - {reason}")
-    return (decision, confidence, reason)
+    # If LanguageCapo classified it as CONTENT verb, accept it
+    return ("yes", 0.99, "CONTENT verb recognized")
 
 
 async def agent_verify_request_content(message_body: Dict[str, Any]) -> Tuple[str, float, str]:
