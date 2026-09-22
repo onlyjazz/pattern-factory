@@ -266,21 +266,6 @@
     margin-top: 0.5rem;
   }
   
-  .link-button {
-    background: none;
-    border: none;
-    padding: 0;
-    color: #0066cc;
-    cursor: pointer;
-    text-decoration: underline;
-    font-size: inherit;
-    font-family: inherit;
-  }
-
-  .link-button:hover {
-    color: #0052a3;
-  }
-  
   .enterprise-header {
     margin-top: 1.5rem;
     padding: 1rem;
@@ -313,13 +298,6 @@
     color: #666;
   }
   
-  .enterprise-header-table td.value .link-button {
-    color: #0066cc;
-  }
-  
-  .enterprise-header-table td.value .link-button:hover {
-    color: #0052a3;
-  }
 
   .chart-container {
     background: white;
@@ -386,44 +364,9 @@
     background-color: #fafafa;
   }
   
-  .threat-tag {
-    text-align: center;
-    font-weight: 600;
-    width: 120px;
-  }
-  
   .threat-description {
     max-width: 300px;
     white-space: normal;
-  }
-  
-  .summary-table table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.8em;
-    font-weight: 400;
-  }
-  
-  .summary-table th {
-    background-color: #f5f5f5;
-    padding: 0.75rem;
-    text-align: center;
-    font-weight: 400;
-    border-bottom: 2px solid #ddd;
-  }
-  
-  .summary-table th:first-child {
-    text-align: left;
-  }
-  
-  .summary-table td {
-    padding: 0.75rem;
-    border-bottom: 1px solid #eee;
-    font-weight: 400;
-  }
-  
-  .summary-table tr:hover {
-    background-color: #fafafa;
   }
   
   .threat-name {
