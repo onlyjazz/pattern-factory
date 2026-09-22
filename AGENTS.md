@@ -1,5 +1,10 @@
 # AGENTS.md
 
+## Agent conversation continuity
+
+Never cd /Users/dl/code/pattern-factory 
+
+
 Pattern Factory's agent-driven architecture orchestrates natural language processing, data extraction, and threat modeling through a multi-workflow supervisor system. This document describes all agents, their responsibilities, decision flows, and database interactions.
 
 ## Database Connection
