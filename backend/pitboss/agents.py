@@ -731,6 +731,7 @@ async def agent_execute_sql(message_body: Dict[str, Any]) -> Tuple[str, float, s
             sql_query = message_body.get("sql_query", "").strip()
             rule_code = message_body.get("rule_code", "").strip()
             rule_name = message_body.get("rule_name", rule_code).strip()
+            rule_description = message_body.get("rule_description", "").strip()
             rule_logic = message_body.get("rule_logic", "").strip()
             
             if not sql_query:
@@ -770,6 +771,7 @@ async def agent_execute_sql(message_body: Dict[str, Any]) -> Tuple[str, float, s
                 "register_view",
                 table_name=table_name,
                 name=rule_name,
+                description=rule_description,
                 sql_query=sql_query
             )
             

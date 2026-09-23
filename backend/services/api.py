@@ -1775,6 +1775,7 @@ async def get_views(
             - id: View ID in registry
             - name: Human-readable view name
             - table_name: SQL table/view name for use with /query endpoint
+            - description: Human-readable rule description
             - mode: Application mode ('explore' or 'model')
             - created_at: Creation timestamp
             - updated_at: Last update timestamp
@@ -1793,7 +1794,7 @@ async def get_views(
     async with pool.acquire() as conn:
         rows = await conn.fetch(
             """
-            SELECT id, name, table_name, mode, created_at, updated_at
+            SELECT id, name, table_name, description, mode, created_at, updated_at
             FROM public.views_registry
             WHERE mode = $1
             ORDER BY updated_at DESC

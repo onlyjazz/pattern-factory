@@ -1304,6 +1304,12 @@ textarea.input__text {
 .page-title {
 	margin-bottom: 32px;
 }
+.view-description {
+	margin-top: 8px;
+	font-size: 13px;
+	line-height: 18px;
+	color: rgba(0,0,0,0.54);
+}
 .page-title .button {
 	float: right;
 	margin-top: 6px;

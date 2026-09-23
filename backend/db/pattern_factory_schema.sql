@@ -201,6 +201,7 @@ CREATE TABLE IF NOT EXISTS views_registry (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR,                       -- YAML rule name e.g "Organizations who were on the podcast"
     table_name TEXT NOT NULL UNIQUE,    -- YAML rule rule_code e.g LIST_ORGS this will be the name of the view
+    description TEXT,                   -- YAML rule description e.g "Active companies with 1 product..."
     sql TEXT NOT NULL,                  -- generated SQL e.g. DROP VIEW IF EXISTS, create view 
 
     created_at TIMESTAMP DEFAULT now(),

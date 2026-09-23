@@ -177,32 +177,34 @@ class RegisterViewTool(Tool):
     - id: serial primary key
     - name: human-readable name from YAML rule
     - table_name: YAML rule_code (stable identifier, unique constraint)
+    - description: human-readable description from YAML rule
     - sql: generated SQL for the view
     - created_at, updated_at: timestamps
     
     Uses UPSERT on table_name to ensure idempotency:
-    - If table_name already exists, updates name, sql, and updated_at
+    - If table_name already exists, updates name, description, sql, and updated_at
     - Otherwise, inserts a new entry
     """
 
     def __init__(self, db_pool):
         super().__init__("register_view", db_pool)
 
-    async def execute(self, table_name: str, name: str, sql_query: str, **kwargs):
+    async def execute(self, table_name: str, name: str, sql_query: str, description: str = None, **kwargs):
         start = datetime.now()
         try:
             async with self.db_pool.acquire() as conn:
                 # UPSERT on table_name (stable identifier from YAML rule_code)
-                # If table_name already exists, update name, sql, and updated_at
+                # If table_name already exists, update name, description, sql, and updated_at
                 # This ensures re-running the same rule updates the existing view entry
                 await conn.execute("""
-                    INSERT INTO views_registry (name, table_name, sql)
-                    VALUES ($1, $2, $3)
+                    INSERT INTO views_registry (name, table_name, description, sql)
+                    VALUES ($1, $2, $3, $4)
                     ON CONFLICT (table_name) DO UPDATE SET
                         name        = EXCLUDED.name,
+                        description = EXCLUDED.description,
                         sql         = EXCLUDED.sql,
                         updated_at  = CURRENT_TIMESTAMP
-                """, name, table_name, sql_query)
+                """, name, table_name, description, sql_query)
 
             duration = (datetime.now() - start).total_seconds()
             self.log_execution(True, duration)

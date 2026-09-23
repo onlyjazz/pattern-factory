@@ -8,7 +8,7 @@
   
   let viewName = '';
   let viewTitle = 'Views';
-  let viewSummary = '';
+  let viewDescription = '';
   let data: any[] = [];
   let columns: string[] = [];
   let loading = true;
@@ -103,7 +103,7 @@
     error = '';
     data = [];
     columns = [];
-    viewSummary = '';
+    viewDescription = '';
     sortColumn = null;
     sortDirection = 'asc';
     
@@ -115,7 +115,7 @@
         const viewEntry = registryData.find((v: any) => v.table_name === view);
         if (viewEntry) {
           viewTitle = viewEntry.name || getDisplayName();
-          viewSummary = viewEntry.summary || '';
+          viewDescription = viewEntry.description || '';
         } else {
           viewTitle = getDisplayName();
         }
@@ -262,14 +262,15 @@
 <div id="application-content-area">
   <div class="page-title">
     <h1 class="heading heading_1">{viewTitle}</h1>
+    {#if viewDescription}
+      <p class="view-description">{viewDescription}</p>
+    {/if}
   </div>
 
   <div class="grid-row">
     <!-- RIGHT TABLE (FULL WIDTH) -->
     <div class="grid-col grid-col_24">
       <div class="studies card">
-        <div class="heading heading_3">{viewSummary || getDisplayName()}</div>
-
         {#if loading}
           <div class="message">Loading data...</div>
         {:else if error}

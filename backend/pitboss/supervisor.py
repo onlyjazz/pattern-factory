@@ -164,12 +164,15 @@ class PitbossSupervisor:
                     if rule_entry:
                         logger.info(f"📋 Looked up rule from YAML: {rule_code}")
                         rule_name = rule_entry.get("name") or rule_code
+                        rule_description = rule_entry.get("description") or ""
                         rule_logic = rule_entry.get("logic") or ""
                         logger.info(f"   Rule entry keys: {list(rule_entry.keys())}")
                         logger.info(f"   Rule name: {rule_name}")
+                        logger.info(f"   Rule description: {rule_description}")
                         logger.info(f"   Rule logic ({len(rule_logic)} chars): {rule_logic[:100]}..." if rule_logic else f"   Rule logic: [EMPTY]")
                         env.messageBody["rule_code"] = rule_code
                         env.messageBody["rule_name"] = rule_name
+                        env.messageBody["rule_description"] = rule_description
                         env.messageBody["rule_logic"] = rule_logic
                         env.messageBody["_tools"] = self.tool_registry
                         env.messageBody["_ctx"] = self.context_builder

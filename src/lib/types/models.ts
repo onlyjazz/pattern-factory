@@ -137,6 +137,20 @@ export interface Pattern {
 }
 
 /**
+ * Registered view/rule metadata from the views_registry table
+ */
+export interface ViewRegistry {
+  id: number;
+  name?: string | null; // Human-readable rule name from YAML
+  table_name: string; // Stable rule_code / view name (e.g. LIST_ORGS)
+  description?: string | null; // Rule description from YAML
+  sql?: string; // Generated SQL for the view
+  mode?: 'explore' | 'model';
+  created_at?: string; // ISO timestamp
+  updated_at?: string; // ISO timestamp
+}
+
+/**
  * Helper function to format currency values
  */
 export function formatCurrency(value: number | undefined): string {
