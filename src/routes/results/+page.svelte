@@ -240,9 +240,8 @@
       .join(' ');
   }
   function getDownloadFileName(extension: 'csv' | 'json'): string {
-    const viewFileName = viewName || 'export';
-    const modelPrefix = $modeStore.activeModelName ? `${$modeStore.activeModelName}-` : '';
-    return `${modelPrefix}${viewFileName}.${extension}`;
+    const viewFileName = (viewName || 'export').toUpperCase();
+    return `${viewFileName}.${extension}`;
   }
 
   function downloadJSON() {
