@@ -93,6 +93,7 @@ export interface Product {
   product_contact_3?: string; // LinkedIn profile URL
   device_description?: string; // Device description from OpenFDA
   superiority?: string; // Competitive advantage claims from FEELGOOD flow
+  competitors?: string; // Comma-separated list of competitor company names
   org_id?: number; // Foreign key to organizations
   process_flag: boolean; // True after processing for basis-threat generation
   created_at?: string; // ISO timestamp

@@ -364,6 +364,7 @@ class ProductCreate(BaseModel):
     product_contact_3: str | None = None  # LinkedIn profile URL
     device_description: str | None = None  # Device description from OpenFDA
     superiority: str | None = None  # Competitive advantage claims from FEELGOOD flow
+    competitors: str | None = None  # Comma-separated list of competitor company names
     org_id: int | None = None  # Foreign key to organizations
     process_flag: bool = False  # True after the device is processed for basis-threat generation
 
@@ -377,12 +378,13 @@ class ProductUpdate(BaseModel):
     indications_for_use: str | None = None  # Specific medical conditions the device treats/diagnoses
     company: str | None = None
     panel: str | None = None
-    primary_product_code: str | None = None
-    product_contact_1: str | None = None
-    product_contact_2: str | None = None
-    product_contact_3: str | None = None
-    device_description: str | None = None
-    superiority: str | None = None
+    primary_product_code: str | None = None  # FDA product code
+    product_contact_1: str | None = None  # LinkedIn profile URL
+    product_contact_2: str | None = None  # LinkedIn profile URL
+    product_contact_3: str | None = None  # LinkedIn profile URL
+    device_description: str | None = None  # Device description from OpenFDA
+    superiority: str | None = None  # Competitive advantage claims from FEELGOOD flow
+    competitors: str | None = None  # Comma-separated list of competitor company names
     org_id: int | None = None
     process_flag: bool | None = None
 

@@ -1608,7 +1608,7 @@ async def get_products():
         rows = await conn.fetch("""
             SELECT id, date_of_final_decision, submission_number, device, intended_use, indications_for_use, company, panel, 
                    primary_product_code, product_contact_1, product_contact_2, product_contact_3,
-                   device_description, superiority, org_id, process_flag, created_at, updated_at
+                   device_description, superiority, competitors, org_id, process_flag, created_at, updated_at
             FROM public.products
             WHERE deleted_at IS NULL
             ORDER BY created_at DESC
@@ -1633,11 +1633,11 @@ async def create_product(product: ProductCreate):
             INSERT INTO public.products 
             (date_of_final_decision, submission_number, device, intended_use, indications_for_use, company, panel,
              primary_product_code, product_contact_1, product_contact_2, product_contact_3,
-             device_description, superiority, org_id, process_flag)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+             device_description, superiority, competitors, org_id, process_flag)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
             RETURNING id, date_of_final_decision, submission_number, device, intended_use, indications_for_use, company, panel,
                       primary_product_code, product_contact_1, product_contact_2, product_contact_3,
-                      device_description, superiority, org_id, process_flag, created_at, updated_at
+                      device_description, superiority, competitors, org_id, process_flag, created_at, updated_at
             """,
             product.date_of_final_decision,
             product.submission_number,
@@ -1652,6 +1652,7 @@ async def create_product(product: ProductCreate):
             product.product_contact_3,
             product.device_description,
             product.superiority,
+            product.competitors,
             product.org_id,
             product.process_flag
         )
@@ -1666,7 +1667,7 @@ async def get_product(product_id: int):
             """
             SELECT id, date_of_final_decision, submission_number, device, intended_use, indications_for_use, company, panel,
                    primary_product_code, product_contact_1, product_contact_2, product_contact_3,
-                   device_description, superiority, org_id, created_at, updated_at
+                   device_description, superiority, competitors, org_id, created_at, updated_at
             FROM public.products
             WHERE id = $1 AND deleted_at IS NULL
             """,
@@ -1706,13 +1707,14 @@ async def update_product(product_id: int, patch: ProductUpdate):
                 product_contact_3 = COALESCE($11, product_contact_3),
                 device_description = COALESCE($12, device_description),
                 superiority = COALESCE($13, superiority),
-                org_id = COALESCE($14, org_id),
-                process_flag = COALESCE($15, process_flag),
+                competitors = COALESCE($14, competitors),
+                org_id = COALESCE($15, org_id),
+                process_flag = COALESCE($16, process_flag),
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = $16 AND deleted_at IS NULL
+            WHERE id = $17 AND deleted_at IS NULL
             RETURNING id, date_of_final_decision, submission_number, device, intended_use, indications_for_use, company, panel,
                       primary_product_code, product_contact_1, product_contact_2, product_contact_3,
-                      device_description, superiority, org_id, process_flag, created_at, updated_at
+                      device_description, superiority, competitors, org_id, process_flag, created_at, updated_at
             """,
             patch.date_of_final_decision,
             patch.submission_number,
@@ -1727,6 +1729,7 @@ async def update_product(product_id: int, patch: ProductUpdate):
             patch.product_contact_3,
             patch.device_description,
             patch.superiority,
+            patch.competitors,
             patch.org_id,
             patch.process_flag,
             product_id

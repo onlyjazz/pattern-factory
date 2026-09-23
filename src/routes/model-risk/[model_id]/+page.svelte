@@ -24,6 +24,7 @@
     device_description?: string;
     intended_use?: string;
     competitive_advantage?: string;
+    competitors?: string;
   }
   
   let chartThreats: any[] = [];
@@ -76,7 +77,8 @@
         valuation: organization?.size,
         device_description: product?.device_description,
         intended_use: product?.intended_use,
-        competitive_advantage: product?.superiority
+        competitive_advantage: product?.superiority,
+        competitors: product?.competitors
       };
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to load model';
@@ -234,6 +236,10 @@
             <tr>
               <td class="label">Competitive Advantage</td>
               <td class="value">{header.competitive_advantage || '-'}</td>
+            </tr>
+            <tr>
+              <td class="label">Competitors</td>
+              <td class="value">{header.competitors || '-'}</td>
             </tr>
           </tbody>
         </table>
