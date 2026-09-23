@@ -119,16 +119,16 @@ async def agent_search_for_competitors(message_body: Dict[str, Any]) -> Tuple[st
                 run = exa.agent.runs.create(
                     query=query,
                     output_schema={
+                        "type": "array",
                         "items": {
-                            "additionalProperties": False,
+                            "type": "object",
                             "properties": {
                                 "company": {"type": "string"},
                                 "product": {"type": "string"},
                             },
                             "required": ["company", "product"],
-                            "type": "object",
+                            "additionalProperties": False,
                         },
-                        "type": "object",
                     },
                 )
                 # Poll until finished (timeout_ms is in milliseconds; 120000 ms = 120 seconds)
@@ -166,6 +166,11 @@ async def agent_search_for_competitors(message_body: Dict[str, Any]) -> Tuple[st
             # Store results for next agent
             message_body["competitors_found"] = competitors_found
             
+            # Generate human-readable competitors string
+            competitors_str = _unravel_competitors_to_string(competitors_found)
+            message_body["competitors_string"] = competitors_str
+            logger.info(f"  Competitors string: {competitors_str}")
+            
             reason = f"Found {len(competitors_found)} competitor(s) via Exa agent"
             logger.info(f"  Decision: yes (confidence: 0.92) - {reason}")
             return ("yes", 0.92, reason)
@@ -181,13 +186,38 @@ async def agent_search_for_competitors(message_body: Dict[str, Any]) -> Tuple[st
         return ("no", 0.10, reason)
 
 
+def _unravel_competitors_to_string(competitors_found: List[Dict[str, Any]]) -> str:
+    """
+    Convert list of competitor objects into a human-readable string.
+    Example: "Agada Medical Ltd. - Auto-Seg (Spine Auto-Seg), Materialise NV - Mimics Medical and Mighty Oak Medical - Acorn 3D Software"
+    """
+    if not competitors_found:
+        return ""
+    
+    parts = []
+    for comp in competitors_found[:3]:
+        company = (comp.get("company") or "").strip()
+        device = (comp.get("device") or "").strip()
+        if company and device:
+            parts.append(f"{company} - {device}")
+    
+    if len(parts) == 0:
+        return ""
+    elif len(parts) == 1:
+        return parts[0]
+    elif len(parts) == 2:
+        return f"{parts[0]} and {parts[1]}"
+    else:  # 3 parts
+        return f"{parts[0]}, {parts[1]} and {parts[2]}"
+
+
 def _format_exa_agent_output(
     structured_output: Dict[str, Any],
     source_company: str
 ) -> List[Dict[str, Any]]:
     """
     Format Exa agent structured output into competitor list.
-    Exa agent returns a JSON object with company and product strings.
+    Exa agent returns an array of {company: str, product: str} objects.
     
     Returns: List of {company: str, device: str, description: str, rank: int}
     """
@@ -200,13 +230,13 @@ def _format_exa_agent_output(
         
         logger.info(f"  Raw output: {structured_output}")
         
-        # Exa may return competitors as an array in a 'competitors' key
+        # Exa agent returns an array of competitor objects
         competitor_list = []
-        if "competitors" in structured_output and isinstance(structured_output["competitors"], list):
-            competitor_list = structured_output["competitors"]
-        elif "company" in structured_output and "product" in structured_output:
-            # Single object: {"company": "...", "product": "..."}
-            competitor_list = [structured_output]
+        if isinstance(structured_output, list):
+            competitor_list = structured_output
+        else:
+            logger.warning(f"  Unexpected output format (expected array): {structured_output}")
+            return []
         
         if not competitor_list:
             logger.warning(f"  No competitors in Exa output: {structured_output}")
@@ -303,6 +333,7 @@ async def agent_upsert_competitors(message_body: Dict[str, Any]) -> Tuple[str, f
         product = message_body.get("product")
         product_id = message_body.get("product_id")
         competitors_found = message_body.get("competitors_found", [])
+        competitors_string = message_body.get("competitors_string", "")
         
         if not product_id or not product:
             reason = "Product or product_id not available"
@@ -432,6 +463,18 @@ async def agent_upsert_competitors(message_body: Dict[str, Any]) -> Tuple[str, f
             except Exception as e:
                 logger.error(f"  Failed to upsert competitor: {e}", exc_info=True)
                 continue
+        
+        # Update products.competitors with the unraveled competitors string
+        if competitors_string and upserted_count > 0:
+            try:
+                await db.execute(
+                    "UPDATE public.products SET competitors = $1, updated_at = NOW() WHERE id = $2",
+                    competitors_string,
+                    product_id
+                )
+                logger.info(f"  ✓ Updated products.competitors for product {product_id}")
+            except Exception as e:
+                logger.warning(f"  Failed to update products.competitors: {e}")
         
         # Build human-readable output message
         device_name = (product.get("device") or "this device").strip()

@@ -143,19 +143,28 @@ SEARCH:
     6. Description should briefly state what the device does and that it competes with the source product
     7. If you find fewer than 3 competitors, return only what you found
     8. Return ONLY valid JSON, no markdown, no explanation
+    9. Convert the JSON array to a text string like competitor 1, competitor 2 and competitor 3 so
+    that the code can update the products.competitors column
     
     JSON Format:
     [{"company": "Company Name", "device": "Device Name", "description": "Brief description of what this device does and how it competes with the source product.", "rank": 1}]
 
   # Prompt for FEELGOOD workflow extraction of CEO-focused competitive superiority (CEO-facing distinction, not benefit)
   superiority_extraction_system_prompt: |
-    You are advising the CEO of the company. They already know their product. Identify the SINGLE most important competitive superiority—the reason this product is DIFFERENT FROM or BETTER THAN the named competitors.
+    You are advising the CEO of the company. They already know their product. 
+    In up to 25 words, write the SINGLE most important competitive superiority—the reason this product is 
+    DIFFERENT FROM or BETTER THAN the named competitors.
     
     CRITICAL DISTINCTION: A superiority is NOT a product benefit. Your sentence should only make sense BECAUSE you compared this product with these competitors.
+
+    EVIDENCE RULE:
+    Do not characterize what competitors "only" do unless the competitive
+    intelligence explicitly supports it. If the comparison is uncertain,
+    state Aprevo's specific approach without claiming competitors lack it.
     
     WHAT TO AVOID:
     - Do not write benefit language: avoid "enhancing," "allowing," "improving," "streamlining," "significantly," or similar verb modifiers.
-    - Do not describe the product, list features, or explain technology.
+    - Do not merely describe the product or list features.
     - Do not use marketing language.
     
     WHAT TO PREFER:
@@ -168,10 +177,16 @@ SEARCH:
     Then turn that comparison into the final statement.
     
     OUTPUT FORMAT:
-    Write exactly one sentence, no more than 35 words.
+      Write exactly one sentence of no more than 20 words.
+      Name the product and state its strongest evidence-supported distinction
+      from the named competitors. Use plain language.
+      You may name a competitor or category when needed to make the distinction clear.
+      Do not claim uniqueness unless the evidence supports it.
+      Output only the sentence.
 
   superiority_extraction_user_prompt: |
     Given this product and its top 3 competitors, identify the single most important competitive superiority.
+    Write exactly one sentence of no more than 20 words.
     
     Product: {device}
     Company: {company}
@@ -183,4 +198,3 @@ SEARCH:
     
     Before writing, identify: What does {company}'s {device} do that these competitors do NOT do (or do differently)? What is the core distinction?
     
-    Write exactly one sentence (no more than 35 words) stating this distinction. Focus on why this matters to the CEO, not how it benefits customers.

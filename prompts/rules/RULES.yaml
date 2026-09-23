@@ -37,7 +37,7 @@ RULES:
     name: "Focus companies"
     description: "Companies with 1 product and annual revenue from 10 to 100M"
     logic: |
-      SELECT 
+          SELECT 
           o.name, o.status,
           o.funding, 
           o.estimated_annual_sales, 
@@ -46,18 +46,17 @@ RULES:
           COUNT(p.id) AS product_count,
           COALESCE(MAX(p.superiority), '') AS superiority,
           TO_CHAR(MAX(date_of_final_decision), 'YYYY-MM-DD') as date_of_final_decision 
-      FROM 
-          public.orgs o
-      JOIN 
-          public.products p ON o.id = p.org_id
-      WHERE
-          o.estimated_annual_sales BETWEEN 10000000 AND 100000000 AND
-          (o.arm = 2 OR o.arm = 3)
-      GROUP BY 
-          o.name, o.funding, o.estimated_annual_sales, o.arm, o.size
-      HAVING 
-          COUNT(p.id) = 1;
-
+          FROM 
+            public.orgs o
+          JOIN 
+            public.products p ON o.id = p.org_id
+          WHERE
+            o.estimated_annual_sales BETWEEN 10000000 AND 100000000 AND
+          (o.arm = 2 OR o.arm = 3) AND o.status_id = 1
+          GROUP BY 
+            o.name, o.funding, o.estimated_annual_sales, o.arm, o.size, p.id
+          HAVING 
+            COUNT(p.id) = 1;
   - rule_code: PATTERNS_BY_GUEST
     name: "Patterns by Guest"
     description: "List all patterns associated with each guest and where those patterns appear."
