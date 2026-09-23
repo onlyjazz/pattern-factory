@@ -71,26 +71,51 @@ except ImportError:
 # this product before trusting any extraction. When provenance cannot be
 # established we prefer null over a plausible-but-wrong value.
 
+# Cache for SEARCH.yaml config, refreshed on mtime change so prompt edits
+# take effect without a process restart (mirrors ContextBuilder hot-reload).
 _SEARCH_CONFIG_CACHE: Optional[Dict[str, Any]] = None
+_SEARCH_CONFIG_MTIME: Optional[float] = None
+
+
+def _search_yaml_path() -> str:
+    """Absolute path to prompts/rules/SEARCH.yaml, resolved from this file."""
+    return os.path.normpath(os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "..", "..", "prompts", "rules", "SEARCH.yaml",
+    ))
 
 
 def _load_search_config() -> Dict[str, Any]:
-    """Load and cache the SEARCH section from prompts/rules/SEARCH.yaml."""
-    global _SEARCH_CONFIG_CACHE
-    if _SEARCH_CONFIG_CACHE is not None:
+    """Load the SEARCH section from prompts/rules/SEARCH.yaml, refreshing on change.
+
+    Re-reads the file whenever its mtime changes so a running server and CLI
+    runs always agree on the prompt text.
+    """
+    global _SEARCH_CONFIG_CACHE, _SEARCH_CONFIG_MTIME
+    yaml_path = _search_yaml_path()
+
+    try:
+        mtime = os.path.getmtime(yaml_path)
+    except OSError as e:
+        if _SEARCH_CONFIG_CACHE is None:
+            logger.warning(f"  Could not stat SEARCH.yaml, using defaults: {e}")
+            _SEARCH_CONFIG_CACHE = {}
         return _SEARCH_CONFIG_CACHE
+
+    if _SEARCH_CONFIG_CACHE is not None and mtime == _SEARCH_CONFIG_MTIME:
+        return _SEARCH_CONFIG_CACHE
+
     try:
         import yaml
-        yaml_path = os.path.join(
-            os.path.dirname(__file__), "..", "..", "prompts", "rules", "SEARCH.yaml",
-        )
         with open(yaml_path, "r", encoding="utf-8") as f:
             yaml_data = yaml.safe_load(f)
         _SEARCH_CONFIG_CACHE = (yaml_data.get("SEARCH") or {}) if isinstance(yaml_data, dict) else {}
+        _SEARCH_CONFIG_MTIME = mtime
         logger.info("  ✓ Loaded SEARCH.yaml profile config")
     except Exception as e:
         logger.warning(f"  Could not load SEARCH.yaml, using defaults: {e}")
-        _SEARCH_CONFIG_CACHE = {}
+        # Keep any previously loaded config; leave mtime untouched so we retry.
+        if _SEARCH_CONFIG_CACHE is None:
+            _SEARCH_CONFIG_CACHE = {}
     return _SEARCH_CONFIG_CACHE
 
 

@@ -95,7 +95,7 @@ async def agent_validate_product_id(message_body: Dict[str, Any]) -> Tuple[str, 
             if product_id:
                 result = await db.fetchrow(
                     """
-                    SELECT id, submission_number, device, company, intended_use, indications_for_use, device_description
+                    SELECT id, submission_number, device, company, intended_use, indications_for_use, device_description, competitors
                     FROM public.products
                     WHERE id = $1 AND deleted_at IS NULL
                     """,
@@ -108,7 +108,7 @@ async def agent_validate_product_id(message_body: Dict[str, Any]) -> Tuple[str, 
             elif product_device:
                 result = await db.fetchrow(
                     """
-                    SELECT id, submission_number, device, company, intended_use, indications_for_use, device_description
+                    SELECT id, submission_number, device, company, intended_use, indications_for_use, device_description, competitors
                     FROM public.products
                     WHERE device = $1 AND deleted_at IS NULL
                     """,
@@ -152,45 +152,80 @@ async def agent_validate_product_id(message_body: Dict[str, Any]) -> Tuple[str, 
         return ("no", 0.10, reason)
 
 
-# Cache for SEARCH.yaml config
+# Cache for SEARCH.yaml config, refreshed on mtime change so prompt edits
+# take effect without a process restart (mirrors ContextBuilder hot-reload).
 _SEARCH_CONFIG_CACHE_FG: Optional[Dict[str, Any]] = None
+_SEARCH_CONFIG_MTIME_FG: Optional[float] = None
+
+# Fallbacks used when SEARCH.yaml (or a key within it) is unavailable.
+_DEFAULT_SUPERIORITY_SYSTEM_PROMPT = (
+    "You are advising the CEO. Identify the single most important competitive superiority."
+)
+_DEFAULT_SUPERIORITY_USER_PROMPT = (
+    "Given this product and its competitors, identify the key distinction.\n{exa_answer}"
+)
+
+
+def _search_yaml_path() -> str:
+    """Absolute path to prompts/rules/SEARCH.yaml, resolved from this file."""
+    return os.path.normpath(os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "..", "..", "prompts", "rules", "SEARCH.yaml",
+    ))
+
 
 def _load_search_config_feelgood() -> Dict[str, Any]:
-    """Load and cache the SEARCH section from prompts/rules/SEARCH.yaml."""
-    global _SEARCH_CONFIG_CACHE_FG
-    if _SEARCH_CONFIG_CACHE_FG is not None:
+    """Load the SEARCH section from prompts/rules/SEARCH.yaml, refreshing on change.
+
+    Re-reads the file whenever its mtime changes so the running server and CLI
+    runs always agree on the prompt text.
+    """
+    global _SEARCH_CONFIG_CACHE_FG, _SEARCH_CONFIG_MTIME_FG
+    yaml_path = _search_yaml_path()
+
+    try:
+        mtime = os.path.getmtime(yaml_path)
+    except OSError as e:
+        if _SEARCH_CONFIG_CACHE_FG is None:
+            logger.warning(f"  Could not stat SEARCH.yaml, using defaults: {e}")
+            _SEARCH_CONFIG_CACHE_FG = {}
         return _SEARCH_CONFIG_CACHE_FG
+
+    if _SEARCH_CONFIG_CACHE_FG is not None and mtime == _SEARCH_CONFIG_MTIME_FG:
+        return _SEARCH_CONFIG_CACHE_FG
+
     try:
         import yaml
-        yaml_path = os.path.join(
-            os.path.dirname(__file__), "..", "..", "prompts", "rules", "SEARCH.yaml",
-        )
         with open(yaml_path, "r", encoding="utf-8") as f:
             yaml_data = yaml.safe_load(f)
         _SEARCH_CONFIG_CACHE_FG = (yaml_data.get("SEARCH") or {}) if isinstance(yaml_data, dict) else {}
+        _SEARCH_CONFIG_MTIME_FG = mtime
         logger.info("  ✓ Loaded SEARCH.yaml superiority extraction config")
     except Exception as e:
         logger.warning(f"  Could not load SEARCH.yaml, using defaults: {e}")
-        _SEARCH_CONFIG_CACHE_FG = {}
+        # Keep any previously loaded config; leave mtime untouched so we retry.
+        if _SEARCH_CONFIG_CACHE_FG is None:
+            _SEARCH_CONFIG_CACHE_FG = {}
     return _SEARCH_CONFIG_CACHE_FG
 
-# Load prompts once at module load time
+
 def _load_superiority_prompts():
-    """Load system and user prompts for superiority extraction from SEARCH.yaml."""
+    """Load system and user prompts for superiority extraction from SEARCH.yaml.
+
+    Called per invocation (not cached at import) so edits to SEARCH.yaml are
+    picked up on the next call.
+    """
     search_config = _load_search_config_feelgood()
     
     system_prompt = search_config.get(
         "superiority_extraction_system_prompt",
-        "You are advising the CEO. Identify the single most important competitive superiority."
+        _DEFAULT_SUPERIORITY_SYSTEM_PROMPT
     )
     user_prompt_template = search_config.get(
         "superiority_extraction_user_prompt",
-        "Given this product and its competitors, identify the key distinction.\n{exa_answer}"
+        _DEFAULT_SUPERIORITY_USER_PROMPT
     )
     
     return system_prompt, user_prompt_template
-
-_SUPERIORITY_EXTRACTION_SYSTEM_PROMPT, _SUPERIORITY_EXTRACTION_USER_TEMPLATE = _load_superiority_prompts()
 
 
 def _clean_superiority_text(text: str) -> str:
@@ -358,8 +393,11 @@ async def agent_extract_superiority_claim(message_body: Dict[str, Any]) -> Tuple
         intended_use = product.get("intended_use", "")
         competitors_str = product.get("competitors", "")  # Comma-separated list from DB
         
+        # Load prompts per-call so SEARCH.yaml edits apply without a restart
+        system_prompt, user_prompt_template = _load_superiority_prompts()
+
         # Build user prompt from template
-        user_prompt = _SUPERIORITY_EXTRACTION_USER_TEMPLATE.format(
+        user_prompt = user_prompt_template.format(
             device=device,
             company=company,
             intended_use=intended_use,
@@ -381,7 +419,7 @@ async def agent_extract_superiority_claim(message_body: Dict[str, Any]) -> Tuple
                 messages=[
                     {
                         "role": "system",
-                        "content": _SUPERIORITY_EXTRACTION_SYSTEM_PROMPT
+                        "content": system_prompt
                     },
                     {
                         "role": "user",

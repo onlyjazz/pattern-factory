@@ -36,45 +36,61 @@ logger = logging.getLogger(__name__)
 # Load prompts from YAML configuration files
 # ============================================================================
 
+# Cache for SEARCH.yaml prompts, refreshed on mtime change so prompt edits
+# take effect without a process restart (mirrors ContextBuilder hot-reload).
+_SEARCH_EXTRACTION_PROMPT: Optional[str] = None
+_SEARCH_EXTRACTION_PROMPT_MTIME: Optional[float] = None
+
+
+def _search_yaml_path() -> Path:
+    """Path to prompts/rules/SEARCH.yaml, resolved relative to the backend dir."""
+    return (Path(__file__).parent.parent / "../prompts/rules/SEARCH.yaml").resolve()
+
+
 def load_search_prompts() -> Dict[str, str]:
     """
     Load extraction prompts from prompts/rules/SEARCH.yaml.
-    Resolves path relative to the backend directory.
+
+    Re-reads the file whenever its mtime changes so a running server and CLI
+    runs always agree on the prompt text.
     """
+    global _SEARCH_EXTRACTION_PROMPT, _SEARCH_EXTRACTION_PROMPT_MTIME
+
+    search_yaml_path = _search_yaml_path()
     try:
-        # Find the backend directory and locate SEARCH.yaml
-        backend_dir = Path(__file__).parent.parent  # backend/
-        search_yaml_path = backend_dir / "../prompts/rules/SEARCH.yaml"
-        search_yaml_path = search_yaml_path.resolve()
-        
+        mtime = search_yaml_path.stat().st_mtime
+    except OSError:
+        mtime = None
+
+    if mtime is not None and mtime == _SEARCH_EXTRACTION_PROMPT_MTIME:
+        return {"extraction_prompt": _SEARCH_EXTRACTION_PROMPT}
+
+    try:
         if not search_yaml_path.exists():
             logger.warning(f"SEARCH.yaml not found at {search_yaml_path}, using fallback prompts")
-            return {"extraction_prompt": None}
-        
-        with open(search_yaml_path, "r") as f:
-            config = yaml.safe_load(f)
-        
-        if not config or "SEARCH" not in config:
-            logger.warning(f"SEARCH section not found in {search_yaml_path}, using fallback prompts")
-            return {"extraction_prompt": None}
-        
-        search_config = config["SEARCH"]
-        extraction_prompt = search_config.get("extraction_prompt")
-        
-        if not extraction_prompt:
-            logger.warning("extraction_prompt not found in SEARCH.yaml")
-            return {"extraction_prompt": None}
-        
-        logger.info(f"Loaded SEARCH prompts from {search_yaml_path}")
+            extraction_prompt = None
+        else:
+            with open(search_yaml_path, "r") as f:
+                config = yaml.safe_load(f)
+
+            if not config or "SEARCH" not in config:
+                logger.warning(f"SEARCH section not found in {search_yaml_path}, using fallback prompts")
+                extraction_prompt = None
+            else:
+                extraction_prompt = config["SEARCH"].get("extraction_prompt")
+                if not extraction_prompt:
+                    logger.warning("extraction_prompt not found in SEARCH.yaml")
+
+        if extraction_prompt:
+            logger.info(f"Loaded SEARCH prompts from {search_yaml_path}")
+
+        _SEARCH_EXTRACTION_PROMPT = extraction_prompt
+        _SEARCH_EXTRACTION_PROMPT_MTIME = mtime
         return {"extraction_prompt": extraction_prompt}
-        
+
     except Exception as e:
         logger.error(f"Failed to load SEARCH.yaml: {str(e)}", exc_info=True)
-        return {"extraction_prompt": None}
-
-
-# Cache loaded prompts
-_SEARCH_PROMPTS = load_search_prompts()
+        return {"extraction_prompt": _SEARCH_EXTRACTION_PROMPT}
 
 
 # ============================================================================
@@ -369,7 +385,7 @@ async def agent_verify_extraction_results(message_body: Dict[str, Any]) -> Tuple
             client = OpenAI(api_key=api_key)
             
             # Load extraction prompt from SEARCH.yaml
-            extraction_prompt_template = _SEARCH_PROMPTS.get("extraction_prompt")
+            extraction_prompt_template = load_search_prompts().get("extraction_prompt")
             if not extraction_prompt_template:
                 reason = "Extraction prompt template not loaded from SEARCH.yaml"
                 logger.error(f"  Decision: no (confidence: 0.50) - {reason}")
