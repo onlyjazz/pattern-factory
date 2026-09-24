@@ -55,11 +55,10 @@ RULES:
       SELECT 
         o.name, 
         o.funding, 
-        o.estimated_annual_sales, 
-        o.arm, 
         o.size,
         COUNT(p.id) AS product_count,
         (ARRAY_AGG(p.id))[1] AS product_id,
+        COALESCE(MAX(p.competitors), '') AS competitors,
         COALESCE(MAX(p.superiority), '') AS superiority,
         TO_CHAR(MAX(date_of_final_decision), 'YYYY-MM-DD') as date_of_final_decision 
       FROM 
@@ -71,7 +70,31 @@ RULES:
         (o.arm = 2 OR o.arm = 3) AND 
         o.status_id = 1
       GROUP BY 
-        o.id, o.name,o.funding, o.estimated_annual_sales, o.arm, o.size
+        o.id, o.name,o.funding, o.size
+      HAVING 
+        COUNT(p.id) = 1;
+
+  - rule_code: ARM1-ORGS 
+    name: "Arm 1 focus"
+    description: "Active arm 1 companies with 1 product and annual revenue from 10 to 100M"
+    logic: |
+      SELECT 
+        o.name, 
+        o.funding, 
+        o.size,
+        COUNT(p.id) AS product_count,
+        (ARRAY_AGG(p.id))[1] AS product_id,
+        COALESCE(MAX(p.competitors), '') AS competitors,
+        COALESCE(MAX(p.superiority), '') AS superiority,
+        TO_CHAR(MAX(date_of_final_decision), 'YYYY-MM-DD') as date_of_final_decision 
+      FROM 
+        public.orgs o
+      JOIN 
+        public.products p ON o.id = p.org_id
+      WHERE
+        o.estimated_annual_sales BETWEEN 10000000 AND 100000000 AND o.arm = 1::int AND o.status_id = 1
+      GROUP BY 
+        o.id, o.name,o.funding, o.size
       HAVING 
         COUNT(p.id) = 1;
 
