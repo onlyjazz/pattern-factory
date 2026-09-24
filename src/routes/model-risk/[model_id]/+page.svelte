@@ -8,6 +8,7 @@
     buildModelRiskDocDefinition,
     formatCurrency,
     getModelRiskPdfFileName,
+    SLE_LEGEND,
     type ModelRiskPdfHeader
   } from '$lib/modelRiskPdf';
 
@@ -378,8 +379,9 @@
             <thead>
               <tr>
                 <th>Threat</th>
-                <th>Gross SLE</th>
-                <th>Target SLE</th>
+                <th>Probability</th>
+                <th>Assets at risk($)</th>
+                <th>SLE after mitigation</th>
                 <th>Target Mitigation %</th>
               </tr>
             </thead>
@@ -387,6 +389,7 @@
               {#each chartThreats as threat}
                 <tr>
                   <td class="threat-name">{threat.threat_name}</td>
+                  <td class="center">{threat.threat_probability != null ? `${threat.threat_probability}%` : '-'}</td>
                   <td class="number">{threat.gross_sle.toLocaleString('en-US')}</td>
                   <td class="number">{threat.target_sle.toLocaleString('en-US')}</td>
                   <td class="center">{threat.target_mitigation_pct.toFixed(1)}%</td>
@@ -395,6 +398,7 @@
             </tbody>
           </table>
         </div>
+        <p class="report-note">{SLE_LEGEND}</p>
       </div>
     {/if}
     
@@ -408,8 +412,9 @@
               <tr>
                 <th>Name</th>
                 <th>Damage Description</th>
-                <th>Gross SLE</th>
-                <th>Target SLE</th>
+                <th>Probability</th>
+                <th>Assets at risk($)</th>
+                <th>SLE after mitigation</th>
                 <th>Target Mitigation %</th>
               </tr>
             </thead>
@@ -418,6 +423,7 @@
                 <tr>
                   <td class="threat-name">{threat.threat_name}</td>
                   <td class="threat-description">{threat.damage_description || '-'}</td>
+                  <td class="center">{threat.threat_probability != null ? `${threat.threat_probability}%` : '-'}</td>
                   <td class="number">{threat.gross_sle ? threat.gross_sle.toLocaleString('en-US') : '-'}</td>
                   <td class="number">{threat.target_sle ? threat.target_sle.toLocaleString('en-US') : '-'}</td>
                   <td class="center">{threat.target_mitigation_pct ? threat.target_mitigation_pct.toFixed(1) : '-'}%</td>
@@ -426,6 +432,7 @@
             </tbody>
           </table>
         </div>
+        <p class="report-note">{SLE_LEGEND}</p>
       </div>
     {:else if chartThreats.length === 0}
       <div class="message">No threat entities</div>

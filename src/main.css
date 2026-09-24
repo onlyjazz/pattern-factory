@@ -2400,3 +2400,10 @@ ul.tabs>li.tab>a.active{
 	font-weight: 500;
 	color: #333;
 }
+
+/* Explanatory note under a report heading (e.g. SLE formula legend) */
+.report-note {
+	margin: 8px 0 0;
+	font-size: 0.8em;
+	color: #666;
+}

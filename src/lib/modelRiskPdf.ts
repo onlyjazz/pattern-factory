@@ -24,6 +24,7 @@ export interface ModelRiskPdfHeader {
 export interface ModelRiskPdfThreat {
 	threat_name?: string;
 	damage_description?: string;
+	threat_probability?: number;
 	gross_sle?: number;
 	target_sle?: number;
 	target_mitigation_pct?: number;
@@ -45,6 +46,8 @@ const TABLE_BORDER = '#e0e0e0';
 const TAGLINE = 'The AI Chief Risk Officer for MedTech';
 const DISCLAIMER =
 	"This analysis was built entirely from publicly available information (FDA 510(k) filings, investor disclosures, press releases) and reflects OpenCRO's independent threat-modeling methodology — not an assessment, audit, or penetration test of the company’s actual systems, code, or infrastructure. No non-public or proprietary information was used or is claimed.";
+export const SLE_LEGEND =
+	'Assets at risk($) = sum(asset exposure × damage %); SLE after mitigation = Assets at risk × residual, where residual = 1 - mitigation (floored at 5%).';
 
 const TABLE_LAYOUT = {
 	hLineColor: () => TABLE_BORDER,
@@ -74,6 +77,12 @@ export function formatNumber(value?: number): string {
 export function formatPercent(value?: number): string {
 	if (value === undefined || value === null) return '-';
 	return `${value.toFixed(1)}%`;
+}
+
+// threat.threats.probability is stored as a percentage (5 = 5%).
+export function formatProbability(value?: number): string {
+	if (value === undefined || value === null) return '-';
+	return `${value}%`;
 }
 
 export function getModelRiskPdfFileName(
@@ -142,10 +151,17 @@ export function buildModelRiskDocDefinition(data: ModelRiskPdfInput): any {
 	};
 
 	const summaryTable = buildTable(
-		['Threat', 'Gross SLE', 'Target SLE', 'Target Mitigation %'],
-		['*', 'auto', 'auto', 'auto'],
+		[
+			'Threat',
+			'Probability',
+			'Assets at risk($)',
+			'SLE after mitigation',
+			'Target Mitigation %'
+		],
+		['*', 'auto', 'auto', 'auto', 'auto'],
 		chartThreats.map((t) => [
 			{ text: t.threat_name || '-', color: VALUE_COLOR },
+			{ text: formatProbability(t.threat_probability), alignment: 'center', color: VALUE_COLOR },
 			{ text: formatNumber(t.gross_sle), alignment: 'center', color: VALUE_COLOR },
 			{ text: formatNumber(t.target_sle), alignment: 'center', color: VALUE_COLOR },
 			{ text: formatPercent(t.target_mitigation_pct), alignment: 'center', color: VALUE_COLOR }
@@ -153,11 +169,19 @@ export function buildModelRiskDocDefinition(data: ModelRiskPdfInput): any {
 	);
 
 	const threatsTable = buildTable(
-		['Name', 'Damage Description', 'Gross SLE', 'Target SLE', 'Target Mitigation %'],
-		['auto', '*', 'auto', 'auto', 'auto'],
+		[
+			'Name',
+			'Damage Description',
+			'Probability',
+			'Assets at risk($)',
+			'SLE after mitigation',
+			'Target Mitigation %'
+		],
+		['auto', '*', 'auto', 'auto', 'auto', 'auto'],
 		allThreats.map((t) => [
 			{ text: t.threat_name || '-', color: VALUE_COLOR },
 			{ text: t.damage_description || '-', color: VALUE_COLOR },
+			{ text: formatProbability(t.threat_probability), alignment: 'center', color: VALUE_COLOR },
 			{ text: formatNumber(t.gross_sle), alignment: 'center', color: VALUE_COLOR },
 			{ text: formatNumber(t.target_sle), alignment: 'center', color: VALUE_COLOR },
 			{ text: formatPercent(t.target_mitigation_pct), alignment: 'center', color: VALUE_COLOR }
@@ -204,6 +228,12 @@ export function buildModelRiskDocDefinition(data: ModelRiskPdfInput): any {
 			content.push({ image: chartImage, width: 500, alignment: 'center', margin: [0, 0, 0, 12] });
 		}
 		content.push(summaryTable);
+		content.push({
+			text: SLE_LEGEND,
+			fontSize: 8.5,
+			color: '#757575',
+			margin: [0, 8, 0, 0]
+		});
 	}
 
 	if (allThreats.length > 0) {
@@ -216,6 +246,12 @@ export function buildModelRiskDocDefinition(data: ModelRiskPdfInput): any {
 			pageBreak: 'before'
 		});
 		content.push(threatsTable);
+		content.push({
+			text: SLE_LEGEND,
+			fontSize: 8.5,
+			color: '#757575',
+			margin: [0, 8, 0, 0]
+		});
 	}
 
 	const generatedOn = new Date().toLocaleDateString('en-US', {
