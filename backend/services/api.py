@@ -1464,35 +1464,30 @@ async def get_organization(org_id: int):
 @app.put("/orgs/{org_id}", tags=["Organizations"])
 async def update_organization(org_id: int, patch: OrgUpdate):
     """Update an organization.
-    
-    Size and tier are automatically recomputed when estimated_annual_sales or funding change.
+
+    An explicitly supplied size (valuation) is stored as-is. The PAT-371 trigger
+    keys off the UPDATE target list, so size is only added to the SET clause when
+    the caller provides it; when size is omitted, the trigger derives size and
+    tier from estimated_annual_sales and funding.
     """
     pool = get_pg_pool()
     async with pool.acquire() as conn:
-        row = await conn.fetchrow(
-            """
-            UPDATE public.orgs
-            SET
-                name = COALESCE($1, name),
-                description = COALESCE($2, description),
-                stage = COALESCE($3, stage),
-                funding = COALESCE($4, funding),
-                date_funded = COALESCE($5, date_funded),
-                date_founded = COALESCE($6, date_founded),
-                linkedin_company_url = COALESCE($7, linkedin_company_url),
-                content_source = COALESCE($8, content_source),
-                category_id = COALESCE($9, category_id),
-                content_url = COALESCE($10, content_url),
-                estimated_annual_sales = COALESCE($11, estimated_annual_sales),
-                employees = COALESCE($12, employees),
-                headquarters = COALESCE($13, headquarters),
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = $14 AND deleted_at IS NULL
-            RETURNING id, name, description, stage, funding, date_funded, date_founded,
-                      linkedin_company_url, content_source, category_id, content_url,
-                      estimated_annual_sales, employees, headquarters, size, tier,
-                      created_at, updated_at
-            """,
+        assignments = [
+            "name = COALESCE($1, name)",
+            "description = COALESCE($2, description)",
+            "stage = COALESCE($3, stage)",
+            "funding = COALESCE($4, funding)",
+            "date_funded = COALESCE($5, date_funded)",
+            "date_founded = COALESCE($6, date_founded)",
+            "linkedin_company_url = COALESCE($7, linkedin_company_url)",
+            "content_source = COALESCE($8, content_source)",
+            "category_id = COALESCE($9, category_id)",
+            "content_url = COALESCE($10, content_url)",
+            "estimated_annual_sales = COALESCE($11, estimated_annual_sales)",
+            "employees = COALESCE($12, employees)",
+            "headquarters = COALESCE($13, headquarters)",
+        ]
+        args = [
             patch.name,
             patch.description,
             patch.stage,
@@ -1506,7 +1501,28 @@ async def update_organization(org_id: int, patch: OrgUpdate):
             patch.estimated_annual_sales,
             patch.employees,
             patch.headquarters,
-            org_id
+        ]
+
+        # Mention size only when the caller supplies it so the trigger can tell an
+        # explicit valuation from a sales/funding-derived one.
+        if patch.size is not None:
+            args.append(patch.size)
+            assignments.append(f"size = ${len(args)}")
+
+        assignments.append("updated_at = CURRENT_TIMESTAMP")
+        args.append(org_id)
+
+        row = await conn.fetchrow(
+            f"""
+            UPDATE public.orgs
+            SET {', '.join(assignments)}
+            WHERE id = ${len(args)} AND deleted_at IS NULL
+            RETURNING id, name, description, stage, funding, date_funded, date_founded,
+                      linkedin_company_url, content_source, category_id, content_url,
+                      estimated_annual_sales, employees, headquarters, size, tier,
+                      created_at, updated_at
+            """,
+            *args,
         )
         if not row:
             raise HTTPException(status_code=404, detail="Organization not found")

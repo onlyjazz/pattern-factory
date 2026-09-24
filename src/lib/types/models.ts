@@ -29,6 +29,8 @@ export interface Organization {
   estimated_annual_sales?: number; // Estimated annual revenue in dollars
   employees?: number; // Number of employees
   headquarters?: string; // Headquarters location (city, country)
+  size?: number; // Valuation basis (explicit valuation or MAX(5×sales, 10×funding))
+  tier?: number; // 1 = Enterprise (>$500M), 2 = Mid-Market ($50M–$500M), 3 = Startup
   status_id?: number; // Foreign key to statuses (1=active, 2=closed)
   created_at?: string; // ISO timestamp
   updated_at?: string; // ISO timestamp

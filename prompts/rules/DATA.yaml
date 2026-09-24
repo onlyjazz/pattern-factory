@@ -198,6 +198,11 @@ DATA:
           - tag
           - version
           - yearly_value
+          - sle_value
+
+        asset_valuation:
+          - asset_tag
+          - valuation_percentage
 
         threats:
           - id
