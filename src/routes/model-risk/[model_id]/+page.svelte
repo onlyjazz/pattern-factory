@@ -4,6 +4,12 @@
   import { API_BASE } from '$lib/config';
   import type { Organization, Product } from '$lib/types/models';
   import { goto } from '$app/navigation';
+  import {
+    buildModelRiskDocDefinition,
+    formatCurrency,
+    getModelRiskPdfFileName,
+    type ModelRiskPdfHeader
+  } from '$lib/modelRiskPdf';
 
   interface ModelDetail {
     id: number;
@@ -12,35 +18,87 @@
     org_name?: string;
   }
 
-  interface ModelRiskHeader {
-    model_id: number;
-    model_name: string;
-    product: string;
-    company: string;
-    org_id?: number;
-    sales?: number;
-    funding?: number;
-    valuation?: number;
-    device_description?: string;
-    intended_use?: string;
-    competitive_advantage?: string;
-    competitors?: string;
-  }
+  type ModelRiskHeader = ModelRiskPdfHeader;
   
   let chartThreats: any[] = [];
   let allThreats: any[] = [];
   let header: ModelRiskHeader | null = null;
   let loading = true;
   let error = '';
+  let generatingPdf = false;
+  let pdfError = '';
   const apiBase = API_BASE;
   
-  function formatCurrency(value?: number): string {
-    if (value === undefined || value === null) return '-';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0
-    }).format(value);
+  // Rasterize the rendered Google Chart SVG so it can be embedded in the PDF.
+  async function captureChartImage(): Promise<string | null> {
+    try {
+      const chartEl = document.getElementById('curve_chart');
+      const svg = chartEl?.querySelector('svg');
+      if (!svg) return null;
+
+      const rect = svg.getBoundingClientRect();
+      const width = Math.round(rect.width) || svg.clientWidth || 800;
+      const height = Math.round(rect.height) || svg.clientHeight || 500;
+      const scale = 2;
+
+      const clone = svg.cloneNode(true) as SVGSVGElement;
+      clone.setAttribute('width', String(width));
+      clone.setAttribute('height', String(height));
+      clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+      const serialized = new XMLSerializer().serializeToString(clone);
+      const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(serialized)}`;
+
+      const image = new Image();
+      await new Promise<void>((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error('Chart image failed to load'));
+        image.src = svgUrl;
+      });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width * scale;
+      canvas.height = height * scale;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+      return canvas.toDataURL('image/png');
+    } catch (e) {
+      console.warn('Could not capture chart for PDF', e);
+      return null;
+    }
+  }
+
+  async function generatePdf() {
+    if (generatingPdf) return;
+    generatingPdf = true;
+    pdfError = '';
+    try {
+      const pdfMakeModule: any = await import('pdfmake/build/pdfmake');
+      const pdfFontsModule: any = await import('pdfmake/build/vfs_fonts');
+      const pdfMake = pdfMakeModule.default ?? pdfMakeModule;
+      const pdfFonts = pdfFontsModule.default ?? pdfFontsModule;
+      pdfMake.vfs = pdfFonts?.pdfMake?.vfs ?? pdfFonts?.vfs ?? pdfFonts;
+
+      const chartImage = await captureChartImage();
+      const docDefinition = buildModelRiskDocDefinition({
+        header,
+        chartThreats,
+        allThreats,
+        chartImage
+      });
+      pdfMake
+        .createPdf(docDefinition)
+        .download(getModelRiskPdfFileName(header, $page.params.model_id ?? ''));
+    } catch (e) {
+      console.error('Failed to generate PDF', e);
+      pdfError = e instanceof Error ? e.message : 'Failed to generate PDF';
+    } finally {
+      generatingPdf = false;
+    }
   }
 
   async function loadHeader(modelId: number): Promise<void> {
@@ -190,8 +248,22 @@
 
 <div id="application-content-area">
   <div class="page-title">
+    {#if !loading && !error}
+      <button
+        type="button"
+        class="button button_green"
+        onclick={generatePdf}
+        disabled={generatingPdf}
+        title="Download this model risk report as PDF"
+      >
+        Download PDF
+      </button>
+    {/if}
     <h1 class="heading heading_1">Model Risk</h1>
     <p class="subtitle">Top 5 Single Loss Events (SLE)</p>
+    {#if pdfError}
+      <div class="message message-error">Error: {pdfError}</div>
+    {/if}
     {#if header}
       <div class="model-risk-header">
         <table class="model-risk-header-table">
