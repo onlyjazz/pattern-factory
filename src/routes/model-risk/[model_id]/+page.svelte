@@ -6,11 +6,16 @@
   import { goto } from '$app/navigation';
   import {
     buildModelRiskDocDefinition,
+    computeSle,
+    computeSleAfterMitigation,
     formatCurrency,
+    formatNumber,
+    formatPercentCompact,
     getModelRiskPdfFileName,
     SLE_LEGEND,
     type ModelRiskPdfHeader
-  } from '$lib/modelRiskPdf';
+  } from '$lib/riskReportPdf';
+  import { captureChartImage, downloadPdf, loadImageAsDataUrl } from '$lib/pdfExport';
 
   interface ModelDetail {
     id: number;
@@ -30,82 +35,14 @@
   let pdfError = '';
   const apiBase = API_BASE;
   
-  // Rasterize the rendered Google Chart SVG so it can be embedded in the PDF.
-  async function captureChartImage(): Promise<string | null> {
-    try {
-      const chartEl = document.getElementById('curve_chart');
-      const svg = chartEl?.querySelector('svg');
-      if (!svg) return null;
-
-      const rect = svg.getBoundingClientRect();
-      const width = Math.round(rect.width) || svg.clientWidth || 800;
-      const height = Math.round(rect.height) || svg.clientHeight || 500;
-      const scale = 2;
-
-      const clone = svg.cloneNode(true) as SVGSVGElement;
-      clone.setAttribute('width', String(width));
-      clone.setAttribute('height', String(height));
-      clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-
-      const serialized = new XMLSerializer().serializeToString(clone);
-      const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(serialized)}`;
-
-      const image = new Image();
-      await new Promise<void>((resolve, reject) => {
-        image.onload = () => resolve();
-        image.onerror = () => reject(new Error('Chart image failed to load'));
-        image.src = svgUrl;
-      });
-
-      const canvas = document.createElement('canvas');
-      canvas.width = width * scale;
-      canvas.height = height * scale;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return null;
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-
-      return canvas.toDataURL('image/png');
-    } catch (e) {
-      console.warn('Could not capture chart for PDF', e);
-      return null;
-    }
-  }
-
-  // Inline the OpenCRO logo as a data URL so pdfmake can embed it without an extra request.
-  async function loadOpenCroLogo(): Promise<string | null> {
-    try {
-      const response = await fetch('/img/opencro-logo.png');
-      if (!response.ok) return null;
-      const blob = await response.blob();
-      return await new Promise<string | null>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () =>
-          resolve(typeof reader.result === 'string' ? reader.result : null);
-        reader.onerror = () => resolve(null);
-        reader.readAsDataURL(blob);
-      });
-    } catch (e) {
-      console.warn('Could not load OpenCRO logo for PDF', e);
-      return null;
-    }
-  }
-
   async function generatePdf() {
     if (generatingPdf) return;
     generatingPdf = true;
     pdfError = '';
     try {
-      const pdfMakeModule: any = await import('pdfmake/build/pdfmake');
-      const pdfFontsModule: any = await import('pdfmake/build/vfs_fonts');
-      const pdfMake = pdfMakeModule.default ?? pdfMakeModule;
-      const pdfFonts = pdfFontsModule.default ?? pdfFontsModule;
-      pdfMake.vfs = pdfFonts?.pdfMake?.vfs ?? pdfFonts?.vfs ?? pdfFonts;
-
       const [chartImage, logoImage] = await Promise.all([
-        captureChartImage(),
-        loadOpenCroLogo()
+        captureChartImage('curve_chart'),
+        loadImageAsDataUrl('/img/opencro-logo.png')
       ]);
       const docDefinition = buildModelRiskDocDefinition({
         header,
@@ -114,9 +51,10 @@
         chartImage,
         logoImage
       });
-      pdfMake
-        .createPdf(docDefinition)
-        .download(getModelRiskPdfFileName(header, $page.params.model_id ?? ''));
+      await downloadPdf(
+        docDefinition,
+        getModelRiskPdfFileName(header, $page.params.model_id ?? '')
+      );
     } catch (e) {
       console.error('Failed to generate PDF', e);
       pdfError = e instanceof Error ? e.message : 'Failed to generate PDF';
@@ -183,8 +121,11 @@
     if (!container) return;
     
     const data = google.visualization.arrayToDataTable([
-      ['Threat', 'Gross SLE', 'Target SLE'],
-      ...chartThreats.map(t => [t.threat_tag, t.gross_sle, t.target_sle])
+      ['Threat', 'SLE', 'SLE after mitigation'],
+      ...chartThreats.map((t) => {
+        const sle = computeSle(t.gross_sle, t.threat_probability) ?? 0;
+        return [t.threat_tag, sle, computeSleAfterMitigation(sle, t.target_mitigation_pct) ?? 0];
+      })
     ]);
     
     const options = {
@@ -196,7 +137,7 @@
         textStyle: { fontSize: 13, color: '#666' }
       },
       vAxis: {
-        title: 'Single Loss Expectancy (SLE)',
+        title: 'SLE ($)',
         titleTextStyle: { color: '#333', fontSize: 13 },
         textStyle: { fontSize: 13, color: '#666' },
         format: '#,###'
@@ -237,7 +178,11 @@
           t.gross_sle !== null && t.gross_sle !== undefined
         );
         
-        const sortedThreats = validThreats.sort((a: any, b: any) => (b.gross_sle || 0) - (a.gross_sle || 0));
+        const sortedThreats = validThreats.sort(
+          (a: any, b: any) =>
+            (computeSle(b.gross_sle, b.threat_probability) ?? 0) -
+            (computeSle(a.gross_sle, a.threat_probability) ?? 0)
+        );
         chartThreats = sortedThreats.slice(0, 5);
         allThreats = sortedThreats;
         
@@ -380,19 +325,21 @@
               <tr>
                 <th>Threat</th>
                 <th>Probability</th>
-                <th>Assets at risk($)</th>
-                <th>SLE after mitigation</th>
-                <th>Target Mitigation %</th>
+                <th>Assets at risk ($)</th>
+                <th>SLE ($)</th>
+                <th>Target mitigation</th>
+                <th>SLE after mitigation ($)</th>
               </tr>
             </thead>
             <tbody>
               {#each chartThreats as threat}
                 <tr>
                   <td class="threat-name">{threat.threat_name}</td>
-                  <td class="center">{threat.threat_probability != null ? `${threat.threat_probability}%` : '-'}</td>
-                  <td class="number">{threat.gross_sle.toLocaleString('en-US')}</td>
-                  <td class="number">{threat.target_sle.toLocaleString('en-US')}</td>
-                  <td class="center">{threat.target_mitigation_pct.toFixed(1)}%</td>
+                  <td class="center">{formatPercentCompact(threat.threat_probability)}</td>
+                  <td class="number">{formatNumber(threat.gross_sle)}</td>
+                  <td class="number">{formatNumber(computeSle(threat.gross_sle, threat.threat_probability))}</td>
+                  <td class="center">{formatPercentCompact(threat.target_mitigation_pct)}</td>
+                  <td class="number">{formatNumber(computeSleAfterMitigation(computeSle(threat.gross_sle, threat.threat_probability), threat.target_mitigation_pct))}</td>
                 </tr>
               {/each}
             </tbody>
@@ -413,9 +360,10 @@
                 <th>Name</th>
                 <th>Damage Description</th>
                 <th>Probability</th>
-                <th>Assets at risk($)</th>
-                <th>SLE after mitigation</th>
-                <th>Target Mitigation %</th>
+                <th>Assets at risk ($)</th>
+                <th>SLE ($)</th>
+                <th>Target mitigation</th>
+                <th>SLE after mitigation ($)</th>
               </tr>
             </thead>
             <tbody>
@@ -423,10 +371,11 @@
                 <tr>
                   <td class="threat-name">{threat.threat_name}</td>
                   <td class="threat-description">{threat.damage_description || '-'}</td>
-                  <td class="center">{threat.threat_probability != null ? `${threat.threat_probability}%` : '-'}</td>
-                  <td class="number">{threat.gross_sle ? threat.gross_sle.toLocaleString('en-US') : '-'}</td>
-                  <td class="number">{threat.target_sle ? threat.target_sle.toLocaleString('en-US') : '-'}</td>
-                  <td class="center">{threat.target_mitigation_pct ? threat.target_mitigation_pct.toFixed(1) : '-'}%</td>
+                  <td class="center">{formatPercentCompact(threat.threat_probability)}</td>
+                  <td class="number">{formatNumber(threat.gross_sle)}</td>
+                  <td class="number">{formatNumber(computeSle(threat.gross_sle, threat.threat_probability))}</td>
+                  <td class="center">{formatPercentCompact(threat.target_mitigation_pct)}</td>
+                  <td class="number">{formatNumber(computeSleAfterMitigation(computeSle(threat.gross_sle, threat.threat_probability), threat.target_mitigation_pct))}</td>
                 </tr>
               {/each}
             </tbody>

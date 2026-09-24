@@ -4,6 +4,16 @@
   import { goto } from '$app/navigation';
   import { API_BASE } from '$lib/config';
   import type { Organization } from '$lib/types/models';
+  import {
+    buildEnterpriseRiskDocDefinition,
+    computeSle,
+    computeSleAfterMitigation,
+    formatNumber,
+    formatPercentCompact,
+    getEnterpriseRiskPdfFileName,
+    SLE_LEGEND
+  } from '$lib/riskReportPdf';
+  import { captureChartImage, downloadPdf, loadImageAsDataUrl } from '$lib/pdfExport';
 
   interface EnterpriseRiskResponse {
     org_metadata: {
@@ -41,22 +51,14 @@
   let orgMetadata: EnterpriseRiskResponse['org_metadata'] | null = null;
   let loading = true;
   let error = '';
+  let generatingPdf = false;
+  let pdfError = '';
   const apiBase = API_BASE;
 
   async function navigateToModelRisk(model_id: number) {
     await goto(`/model-risk/${model_id}`);
   }
   
-  function formatNumber(num: number): string {
-    if (num >= 1000000) {
-      return (num / 1000000).toFixed(1) + 'M';
-    }
-    if (num >= 1000) {
-      return (num / 1000).toFixed(0) + 'K';
-    }
-    return num.toString();
-  }
-
   function formatCurrency(value?: number): string {
     if (value === undefined || value === null) return '-';
     return new Intl.NumberFormat('en-US', {
@@ -66,6 +68,30 @@
     }).format(value);
   }
 
+  async function generatePdf() {
+    if (generatingPdf) return;
+    generatingPdf = true;
+    pdfError = '';
+    try {
+      const [chartImage, logoImage] = await Promise.all([
+        captureChartImage('enterprise_chart'),
+        loadImageAsDataUrl('/img/opencro-logo.png')
+      ]);
+      const docDefinition = buildEnterpriseRiskDocDefinition({
+        org: orgMetadata,
+        chartThreats,
+        allThreats,
+        chartImage,
+        logoImage
+      });
+      await downloadPdf(docDefinition, getEnterpriseRiskPdfFileName(orgMetadata));
+    } catch (e) {
+      console.error('Failed to generate PDF', e);
+      pdfError = e instanceof Error ? e.message : 'Failed to generate PDF';
+    } finally {
+      generatingPdf = false;
+    }
+  }
 
   async function loadEnterpriseRisk(org_id: number): Promise<void> {
     loading = true;
@@ -81,8 +107,13 @@
           t.gross_sle !== null && t.gross_sle !== undefined
         );
         
-        chartThreats = validThreats.slice(0, 5);
-        allThreats = validThreats;
+        const sortedThreats = validThreats.sort(
+          (a: any, b: any) =>
+            (computeSle(b.gross_sle, b.threat_probability) ?? 0) -
+            (computeSle(a.gross_sle, a.threat_probability) ?? 0)
+        );
+        chartThreats = sortedThreats.slice(0, 5);
+        allThreats = sortedThreats;
         
         // Load Google Charts if we have valid threat data
         if (chartThreats.length > 0) {
@@ -122,8 +153,11 @@
     if (!container) return;
     
     const data = google.visualization.arrayToDataTable([
-      ['Threat', 'Gross SLE', 'Target SLE'],
-      ...chartThreats.map(t => [t.threat_tag, t.gross_sle, t.target_sle])
+      ['Threat', 'SLE', 'SLE after mitigation'],
+      ...chartThreats.map((t) => {
+        const sle = computeSle(t.gross_sle, t.threat_probability) ?? 0;
+        return [t.threat_tag, sle, computeSleAfterMitigation(sle, t.target_mitigation_pct) ?? 0];
+      })
     ]);
     
     const options = {
@@ -135,7 +169,7 @@
         textStyle: { fontSize: 13, color: '#666' }
       },
       vAxis: {
-        title: 'Single Loss Expectancy (SLE)',
+        title: 'SLE ($)',
         titleTextStyle: { color: '#333', fontSize: 13 },
         textStyle: { fontSize: 13, color: '#666' },
         format: '#,###'
@@ -169,8 +203,22 @@
 
 <div id="application-content-area">
   <div class="page-title">
+    {#if !loading && !error}
+      <button
+        type="button"
+        class="button button_green"
+        onclick={generatePdf}
+        disabled={generatingPdf}
+        title="Download this enterprise risk report as PDF"
+      >
+        Download PDF
+      </button>
+    {/if}
     <h1 class="heading heading_1">Enterprise Risk</h1>
     <p class="subtitle">Top 5 Single Loss Events Across Products</p>
+    {#if pdfError}
+      <div class="message message-error">Error: {pdfError}</div>
+    {/if}
 
     {#if orgMetadata}
       <div class="enterprise-header">
@@ -224,9 +272,11 @@
                 <th>Name</th>
                 <th>Product</th>
                 <th>Damage Description</th>
-                <th>Gross SLE</th>
-                <th>Target SLE</th>
-                <th>Target Mitigation %</th>
+                <th>Probability</th>
+                <th>Assets at risk ($)</th>
+                <th>SLE ($)</th>
+                <th>Target mitigation</th>
+                <th>SLE after mitigation ($)</th>
               </tr>
             </thead>
             <tbody>
@@ -244,14 +294,17 @@
                     {threat.product_name}
                   </td>
                   <td class="threat-description">{threat.damage_description || '-'}</td>
-                  <td class="number">{threat.gross_sle ? threat.gross_sle.toLocaleString('en-US') : '-'}</td>
-                  <td class="number">{threat.target_sle ? threat.target_sle.toLocaleString('en-US') : '-'}</td>
-                  <td class="center">{threat.target_mitigation_pct ? threat.target_mitigation_pct.toFixed(1) : '-'}%</td>
+                  <td class="center">{formatPercentCompact(threat.threat_probability)}</td>
+                  <td class="number">{formatNumber(threat.gross_sle)}</td>
+                  <td class="number">{formatNumber(computeSle(threat.gross_sle, threat.threat_probability))}</td>
+                  <td class="center">{formatPercentCompact(threat.target_mitigation_pct)}</td>
+                  <td class="number">{formatNumber(computeSleAfterMitigation(computeSle(threat.gross_sle, threat.threat_probability), threat.target_mitigation_pct))}</td>
                 </tr>
               {/each}
             </tbody>
           </table>
         </div>
+        <p class="report-note">{SLE_LEGEND}</p>
       </div>
     {:else if chartThreats.length === 0}
       <div class="message">No threat entities for this organization</div>
