@@ -62,6 +62,15 @@ The source of the content is a substack newsletter and videos from my Life Scien
 transcribed into text summaries using Granola.  
 Additional agents will read the content and extract patterns and antipatterns and call the API to insert/update/delete the patterns, episodes, guests, orgs, posts in the database.
 
+## Technical documentation
+
+- [Org valuation (`orgs.size`) and the asset SLE recompute](ORG_SIZE_AND_SLE.md) -
+  how an organization's valuation is calculated, when it is recalculated by the
+  `public.orgs` triggers, and how a change flows into `threat.assets.sle_value` and
+  the risk views (`THRIM`, `ENTERPRISE_RISK_TOP_5_SLE`).
+- [Residual risk calculation validation](VALIDATION_RESIDUAL_RISK_CALCULATIONS.md) -
+  the SLE / residual-exposure math.
+
 ## Rev 0.1
 Key tasks for this Release:
 - Run the API Server DONE
