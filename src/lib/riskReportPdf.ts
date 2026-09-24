@@ -76,6 +76,18 @@ export function computeSleAfterMitigation(
 	return Math.round(sle * residual);
 }
 
+// Prefer the SLE computed by the DB views; fall back to the local calculation.
+export function threatSle(threat: RiskThreat): number | null {
+	return threat.sle ?? computeSle(threat.gross_sle, threat.threat_probability);
+}
+
+export function threatSleAfterMitigation(threat: RiskThreat): number | null {
+	return (
+		threat.sle_after_mitigation ??
+		computeSleAfterMitigation(threatSle(threat), threat.target_mitigation_pct)
+	);
+}
+
 // -------------------------------------------------------------------------
 // Shared report scaffolding
 // -------------------------------------------------------------------------
@@ -87,6 +99,9 @@ export interface RiskThreat {
 	threat_probability?: number;
 	gross_sle?: number;
 	target_mitigation_pct?: number;
+	// Provided by the threat views; the helpers fall back to computing from parts.
+	sle?: number;
+	sle_after_mitigation?: number;
 }
 
 export interface RiskReportSection {
@@ -126,7 +141,7 @@ function buildThreatRow(
 	threat: RiskThreat,
 	options: { product?: boolean; description?: boolean }
 ): any[] {
-	const sle = computeSle(threat.gross_sle, threat.threat_probability);
+	const sle = threatSle(threat);
 	const row: any[] = [{ text: threat.threat_name || '-', color: VALUE_COLOR }];
 	if (options.product) {
 		row.push({ text: threat.product_name || '-', color: VALUE_COLOR });
@@ -140,7 +155,7 @@ function buildThreatRow(
 		{ text: formatNumber(sle), alignment: 'center', color: VALUE_COLOR },
 		{ text: formatPercentCompact(threat.target_mitigation_pct), alignment: 'center', color: VALUE_COLOR },
 		{
-			text: formatNumber(computeSleAfterMitigation(sle, threat.target_mitigation_pct)),
+			text: formatNumber(threatSleAfterMitigation(threat)),
 			alignment: 'center',
 			color: VALUE_COLOR
 		}

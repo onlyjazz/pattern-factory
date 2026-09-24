@@ -6,13 +6,13 @@
   import { goto } from '$app/navigation';
   import {
     buildModelRiskDocDefinition,
-    computeSle,
-    computeSleAfterMitigation,
     formatCurrency,
     formatNumber,
     formatPercentCompact,
     getModelRiskPdfFileName,
     SLE_LEGEND,
+    threatSle,
+    threatSleAfterMitigation,
     type ModelRiskPdfHeader
   } from '$lib/riskReportPdf';
   import { captureChartImage, downloadPdf, loadImageAsDataUrl } from '$lib/pdfExport';
@@ -123,8 +123,7 @@
     const data = google.visualization.arrayToDataTable([
       ['Threat', 'SLE', 'SLE after mitigation'],
       ...chartThreats.map((t) => {
-        const sle = computeSle(t.gross_sle, t.threat_probability) ?? 0;
-        return [t.threat_tag, sle, computeSleAfterMitigation(sle, t.target_mitigation_pct) ?? 0];
+        return [t.threat_tag, threatSle(t) ?? 0, threatSleAfterMitigation(t) ?? 0];
       })
     ]);
     
@@ -180,8 +179,7 @@
         
         const sortedThreats = validThreats.sort(
           (a: any, b: any) =>
-            (computeSle(b.gross_sle, b.threat_probability) ?? 0) -
-            (computeSle(a.gross_sle, a.threat_probability) ?? 0)
+            (threatSle(b) ?? 0) - (threatSle(a) ?? 0)
         );
         chartThreats = sortedThreats.slice(0, 5);
         allThreats = sortedThreats;
@@ -337,9 +335,9 @@
                   <td class="threat-name">{threat.threat_name}</td>
                   <td class="center">{formatPercentCompact(threat.threat_probability)}</td>
                   <td class="number">{formatNumber(threat.gross_sle)}</td>
-                  <td class="number">{formatNumber(computeSle(threat.gross_sle, threat.threat_probability))}</td>
+                  <td class="number">{formatNumber(threatSle(threat))}</td>
                   <td class="center">{formatPercentCompact(threat.target_mitigation_pct)}</td>
-                  <td class="number">{formatNumber(computeSleAfterMitigation(computeSle(threat.gross_sle, threat.threat_probability), threat.target_mitigation_pct))}</td>
+                  <td class="number">{formatNumber(threatSleAfterMitigation(threat))}</td>
                 </tr>
               {/each}
             </tbody>
@@ -373,9 +371,9 @@
                   <td class="threat-description">{threat.damage_description || '-'}</td>
                   <td class="center">{formatPercentCompact(threat.threat_probability)}</td>
                   <td class="number">{formatNumber(threat.gross_sle)}</td>
-                  <td class="number">{formatNumber(computeSle(threat.gross_sle, threat.threat_probability))}</td>
+                  <td class="number">{formatNumber(threatSle(threat))}</td>
                   <td class="center">{formatPercentCompact(threat.target_mitigation_pct)}</td>
-                  <td class="number">{formatNumber(computeSleAfterMitigation(computeSle(threat.gross_sle, threat.threat_probability), threat.target_mitigation_pct))}</td>
+                  <td class="number">{formatNumber(threatSleAfterMitigation(threat))}</td>
                 </tr>
               {/each}
             </tbody>

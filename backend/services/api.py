@@ -1598,6 +1598,8 @@ async def get_enterprise_risk(org_id: int, limit: int = Query(5000, description=
                 target_sle,
                 target_mitigation_pct,
                 target_residual_exposure_pct,
+                sle,
+                sle_after_mitigation,
                 rank_in_org
             FROM "ENTERPRISE_RISK_TOP_5_SLE"
             WHERE org_id_link = $1
