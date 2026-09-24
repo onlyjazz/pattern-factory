@@ -34,13 +34,17 @@ export interface ModelRiskPdfInput {
 	chartThreats: ModelRiskPdfThreat[];
 	allThreats: ModelRiskPdfThreat[];
 	chartImage: string | null;
+	logoImage: string | null;
 }
 
-const BRAND_COLOR = '#039be5';
+const BRAND_COLOR = '#FF325D';
 const TITLE_COLOR = '#263238';
 const LABEL_COLOR = '#666666';
 const VALUE_COLOR = '#333333';
 const TABLE_BORDER = '#e0e0e0';
+const TAGLINE = 'The AI Chief Risk Officer for MedTech';
+const DISCLAIMER =
+	"This analysis was built entirely from publicly available information (FDA 510(k) filings, investor disclosures, press releases) and reflects OpenCRO's independent threat-modeling methodology — not an assessment, audit, or penetration test of the company’s actual systems, code, or infrastructure. No non-public or proprietary information was used or is claimed.";
 
 const TABLE_LAYOUT = {
 	hLineColor: () => TABLE_BORDER,
@@ -83,7 +87,14 @@ export function getModelRiskPdfFileName(
 }
 
 export function buildModelRiskDocDefinition(data: ModelRiskPdfInput): any {
-	const { header, chartThreats, allThreats, chartImage } = data;
+	const { header, chartThreats, allThreats, chartImage, logoImage } = data;
+
+	const deviceName =
+		header?.product && header.product !== '-' ? header.product : null;
+	const documentTitle = `Risk Analysis: ${
+		deviceName || header?.model_name || 'AI-enabled medical device'
+	}`;
+	const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
 	const buildTable = (headers: string[], widths: any[], rows: any[][]) => ({
 		table: {
@@ -154,13 +165,26 @@ export function buildModelRiskDocDefinition(data: ModelRiskPdfInput): any {
 	);
 
 	const content: any[] = [
-		{ text: 'Model Risk', fontSize: 26, bold: true, color: TITLE_COLOR, margin: [0, 0, 0, 2] },
 		{
-			text: 'Top 5 Single Loss Events (SLE)',
-			fontSize: 12,
-			color: LABEL_COLOR,
-			margin: [0, 0, 0, 16]
-		}
+			columns: [
+				logoImage
+					? { width: '*', image: logoImage, fit: [150, 43] }
+					: { width: '*', text: 'OpenCRO', fontSize: 24, bold: true, color: BRAND_COLOR },
+				{
+					width: 'auto',
+					alignment: 'right',
+					margin: [0, 16, 0, 0],
+					text: TAGLINE,
+					italics: true,
+					fontSize: 11,
+					color: VALUE_COLOR
+				}
+			],
+			columnGap: 16
+		},
+		{ text: monthYear, bold: true, fontSize: 12, color: '#111111', margin: [0, 22, 0, 10] },
+		{ text: DISCLAIMER, fontSize: 9.5, lineHeight: 1.3, color: '#444444', margin: [0, 0, 0, 26] },
+		{ text: documentTitle, fontSize: 24, bold: true, color: '#111111', margin: [0, 0, 0, 18] }
 	];
 
 	if (factRows.length > 0) {
@@ -202,26 +226,28 @@ export function buildModelRiskDocDefinition(data: ModelRiskPdfInput): any {
 
 	return {
 		pageSize: 'A4',
-		pageMargins: [40, 80, 40, 55],
-		header: () => ({
-			table: {
-				widths: ['*'],
-				body: [
-					[
-						{
-							text: header
-								? `Pattern Factory   |   Model Risk — ${header.product}`
-								: 'Pattern Factory   |   Model Risk',
-							color: '#ffffff',
-							fontSize: 12,
-							margin: [40, 14, 40, 14],
-							fillColor: BRAND_COLOR
-						}
-					]
+		pageMargins: [40, 52, 40, 55],
+		// Page 1 carries the full OpenCRO block in the content; later pages get a slim band.
+		header: (currentPage: number) => {
+			if (currentPage === 1) return null;
+			return {
+				margin: [40, 10, 40, 0],
+				columns: [
+					logoImage
+						? { width: '*', image: logoImage, fit: [90, 26] }
+						: { width: '*', text: 'OpenCRO', fontSize: 13, bold: true, color: BRAND_COLOR },
+					{
+						width: 'auto',
+						alignment: 'right',
+						margin: [0, 8, 0, 0],
+						text: TAGLINE,
+						italics: true,
+						fontSize: 8.5,
+						color: '#999999'
+					}
 				]
-			},
-			layout: 'noBorders'
-		}),
+			};
+		},
 		content,
 		footer: (currentPage: number, pageCount: number) => ({
 			margin: [40, 10, 40, 0],

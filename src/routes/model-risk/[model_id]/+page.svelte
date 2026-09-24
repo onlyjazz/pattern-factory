@@ -72,6 +72,25 @@
     }
   }
 
+  // Inline the OpenCRO logo as a data URL so pdfmake can embed it without an extra request.
+  async function loadOpenCroLogo(): Promise<string | null> {
+    try {
+      const response = await fetch('/img/opencro-logo.png');
+      if (!response.ok) return null;
+      const blob = await response.blob();
+      return await new Promise<string | null>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () =>
+          resolve(typeof reader.result === 'string' ? reader.result : null);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(blob);
+      });
+    } catch (e) {
+      console.warn('Could not load OpenCRO logo for PDF', e);
+      return null;
+    }
+  }
+
   async function generatePdf() {
     if (generatingPdf) return;
     generatingPdf = true;
@@ -83,12 +102,16 @@
       const pdfFonts = pdfFontsModule.default ?? pdfFontsModule;
       pdfMake.vfs = pdfFonts?.pdfMake?.vfs ?? pdfFonts?.vfs ?? pdfFonts;
 
-      const chartImage = await captureChartImage();
+      const [chartImage, logoImage] = await Promise.all([
+        captureChartImage(),
+        loadOpenCroLogo()
+      ]);
       const docDefinition = buildModelRiskDocDefinition({
         header,
         chartThreats,
         allThreats,
-        chartImage
+        chartImage,
+        logoImage
       });
       pdfMake
         .createPdf(docDefinition)
