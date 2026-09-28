@@ -4,6 +4,7 @@
 	export let isEditing = false;
 	export let entityName = 'Entity';
 	export let pageTitle = 'Entity';
+	export let title: string = '';
 	export let entity: any = null;
 	export let saveError: string | null = null;
 	export let isSaving = false;
@@ -31,7 +32,7 @@
 
 					{#if isEditing}
 						<div class="entity-view-header">
-							<h2 class="heading heading_3">{entity.name}</h2>
+							<h2 class="heading heading_3">{title || entity?.name}</h2>
 							<div class="flex-row">
 								<button
 									type="button"
@@ -51,7 +52,7 @@
 						</form>
 					{:else}
 						<div class="entity-view-header">
-							<h2 class="heading heading_3">{entity.name}</h2>
+							<h2 class="heading heading_3">{title || entity?.name}</h2>
 							<button class="button button_green" onclick={onEdit}>
 								EDIT
 							</button>

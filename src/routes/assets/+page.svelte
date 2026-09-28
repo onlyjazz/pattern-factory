@@ -17,22 +17,24 @@ import { API_BASE } from '$lib/config';
 	
 	const apiBase = API_BASE;
 	
-onMount(async () => {
+onMount(() => {
 	const unsubscribe = modeStore.subscribe((state) => {
 		activeModelId = state.activeModel;
 	});
-	
-	try {
-		const response = await fetch(`${apiBase}/assets`);
-		if (!response.ok) throw new Error('Failed to fetch assets');
-		const data = await response.json();
-		assets = data.map((a: any) => ({ ...a, id: String(a.id) }));
-	} catch (e) {
-		error = e instanceof Error ? e.message : 'Unknown error';
-	} finally {
-		loading = false;
-	}
-	
+
+	(async () => {
+		try {
+			const response = await fetch(`${apiBase}/assets`);
+			if (!response.ok) throw new Error('Failed to fetch assets');
+			const data = await response.json();
+			assets = data.map((a: any) => ({ ...a, id: String(a.id) }));
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Unknown error';
+		} finally {
+			loading = false;
+		}
+	})();
+
 	return unsubscribe;
 });
 	
@@ -52,19 +54,20 @@ function doFilterAssets(items: Asset[], search: string): Asset[] {
 	
 	function sortAssets() {
 		if (!sortField) return;
+		const field = sortField;
 		filteredAssets = [...filteredAssets].sort((a, b) => {
-			const aVal = a[sortField] || '';
-			const bVal = b[sortField] || '';
+			const aVal = a[field] || '';
+			const bVal = b[field] || '';
 			
 			let comparison: number;
 			
 			// Numeric sorting for tag (A1, A2, A10) and sle_value
-			if (sortField === 'tag' || sortField === 'sle_value') {
+			if (field === 'tag' || field === 'sle_value') {
 				// Extract numbers for tag (e.g., 'A1' -> 1)
-				const aNum = sortField === 'tag' ? 
+				const aNum = field === 'tag' ? 
 					parseInt(String(aVal).replace(/\D/g, '')) || 0 :
 					parseFloat(String(aVal)) || 0;
-				const bNum = sortField === 'tag' ?
+				const bNum = field === 'tag' ?
 					parseInt(String(bVal).replace(/\D/g, '')) || 0 :
 					parseFloat(String(bVal)) || 0;
 				comparison = aNum - bNum;
@@ -119,7 +122,6 @@ $: {
 			
 			if (!response.ok) throw new Error('Failed to delete asset');
 			assets = assets.filter(a => a.id !== assetId);
-			filterAssets();
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to delete asset';
 		}

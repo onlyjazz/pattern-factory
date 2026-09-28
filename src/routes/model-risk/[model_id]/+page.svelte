@@ -154,7 +154,7 @@
   
   onMount(async () => {
     try {
-      const modelId = parseInt($page.params.model_id, 10);
+      const modelId = parseInt($page.params.model_id ?? '', 10);
       if (isNaN(modelId)) {
         error = 'Invalid model ID';
         loading = false;
@@ -246,7 +246,7 @@
                   <button 
                     type="button"
                     class="link-button"
-                    onclick={() => navigateToOrgRisk(header.org_id)}
+                    onclick={() => navigateToOrgRisk(header?.org_id)}
                     title="Navigate to organization enterprise risk"
                   >
                     {header.company}
@@ -485,11 +485,6 @@
   
   .threats-table tr:hover {
     background-color: #fafafa;
-  }
-  
-  .threat-tag {
-    text-align: center;
-    font-weight: 600;
   }
   
   .threat-description {

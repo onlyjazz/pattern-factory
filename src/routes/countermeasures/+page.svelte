@@ -30,22 +30,24 @@ import { API_BASE } from '$lib/config';
 	
 	const apiBase = API_BASE;
 	
-onMount(async () => {
+onMount(() => {
 	const unsubscribe = modeStore.subscribe((state) => {
 		activeModelId = state.activeModel;
 	});
-	
-	try {
-		const response = await fetch(`${apiBase}/countermeasures`);
-		if (!response.ok) throw new Error('Failed to fetch countermeasures');
-		const data = await response.json();
-		countermeasures = data.map((c: any) => ({ ...c, id: String(c.id) }));
-	} catch (e) {
-		error = e instanceof Error ? e.message : 'Unknown error';
-	} finally {
-		loading = false;
-	}
-	
+
+	(async () => {
+		try {
+			const response = await fetch(`${apiBase}/countermeasures`);
+			if (!response.ok) throw new Error('Failed to fetch countermeasures');
+			const data = await response.json();
+			countermeasures = data.map((c: any) => ({ ...c, id: String(c.id) }));
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Unknown error';
+		} finally {
+			loading = false;
+		}
+	})();
+
 	return unsubscribe;
 });
 
@@ -270,7 +272,7 @@ $: filteredCountermeasures = (() => {
 <!-- ADD MODAL -->
 {#if showAddModal}
 	<div class="modal-overlay" onclick={closeAddModal} onkeydown={(e) => e.key === 'Escape' && closeAddModal()} role="presentation">
-		<div class="modal-content" role="dialog" aria-labelledby="add-modal-title" tabindex="0" onclick={(e) => e.stopPropagation()}>
+		<div class="modal-content" role="dialog" aria-labelledby="add-modal-title" tabindex="0" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && closeAddModal()}>
 			<div class="modal-header">
 				<h2 id="add-modal-title" class="heading heading_2">Add Countermeasure</h2>
 				<button

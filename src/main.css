@@ -1145,7 +1145,8 @@ textarea.input__text {
 	display: flex;
 	flex-direction: column;
 }
-.detail-field label {
+.detail-field label,
+.detail-field .detail-field__label {
 	font-size: 12px;
 	font-weight: 600;
 	text-transform: uppercase;
@@ -2406,4 +2407,43 @@ ul.tabs>li.tab>a.active{
 	margin: 8px 0 0;
 	font-size: 0.8em;
 	color: #666;
+}
+
+/**/
+/* list pages (Product workspace + shared index pages) */
+/**/
+.card-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 1rem;
+}
+.entity-row {
+	cursor: pointer;
+}
+th.sortable {
+	cursor: pointer;
+	user-select: none;
+	position: relative;
+}
+th.sortable:hover {
+	background-color: #f0f0f0;
+}
+th.sortable::after {
+	content: ' ↕';
+	opacity: 0.4;
+	font-size: 0.85em;
+}
+th.sortable.sorted-asc::after {
+	content: ' ▲';
+	opacity: 1;
+	color: #0066cc;
+}
+th.sortable.sorted-desc::after {
+	content: ' ▼';
+	opacity: 1;
+	color: #0066cc;
+}
+.message-error {
+	color: #c0392b;
 }

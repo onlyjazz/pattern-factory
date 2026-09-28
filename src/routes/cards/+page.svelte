@@ -22,8 +22,10 @@ import { API_BASE } from '$lib/config';
 	// Pattern search/autocomplete for add modal
 	let patternSearchQuery = '';
 	let patternSearchResults: Pattern[] = [];
+	let editPatternSearchResults: Pattern[] = [];
 	let selectedPatternId: number | null = null;
 	let showPatternDropdown = false;
+	let editShowPatternDropdown = false;
 	
 	const apiBase = API_BASE;
 	
@@ -55,10 +57,11 @@ import { API_BASE } from '$lib/config';
 	}
 	
 	function sortCards() {
-		if (!sortField) return;
+		const field = sortField;
+		if (!field) return;
 		filteredCards = [...filteredCards].sort((a, b) => {
-			const aVal = a[sortField] || '';
-			const bVal = b[sortField] || '';
+			const aVal = a[field] || '';
+			const bVal = b[field] || '';
 			const comparison = String(aVal).localeCompare(String(bVal));
 			return sortDirection === 'asc' ? comparison : -comparison;
 		});
@@ -306,7 +309,7 @@ import { API_BASE } from '$lib/config';
 							{#if showPatternDropdown && patternSearchResults.length > 0}
 								<div class="pattern-dropdown">
 									{#each patternSearchResults as pattern}
-										<button type="button" class="pattern-option" onclick={() => selectPattern(pattern, false)} onkeydown={(e) => e.key === 'Enter' && selectPattern(pattern, false)}>
+										<button type="button" class="pattern-option" onclick={() => selectPattern(pattern)} onkeydown={(e) => e.key === 'Enter' && selectPattern(pattern)}>
 											<div class="pattern-name">{pattern.name}</div>
 											<div class="pattern-description">{pattern.description}</div>
 										</button>

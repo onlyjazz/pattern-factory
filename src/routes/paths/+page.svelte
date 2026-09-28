@@ -44,9 +44,10 @@ import { API_BASE } from '$lib/config';
 
 	function sortPaths() {
 		if (!sortField) return;
+		const field = sortField;
 		filteredPaths = [...filteredPaths].sort((a, b) => {
-			const aVal = a[sortField] || '';
-			const bVal = b[sortField] || '';
+			const aVal = a[field] || '';
+			const bVal = b[field] || '';
 			// For numeric fields like node count, use numeric comparison
 			if (sortField === 'name') {
 				const comparison = String(aVal).localeCompare(String(bVal));
@@ -78,7 +79,7 @@ import { API_BASE } from '$lib/config';
 
 	function closeEditModal() {
 		showEditModal = false;
-		pathToEdit = {};
+		pathToEdit = {} as Path;
 	}
 
 	function closeAddModal() {
@@ -305,7 +306,7 @@ import { API_BASE } from '$lib/config';
 								type="text"
 								bind:value={newPath.name}
 								class="input__text"
-								class:input__text_changed={newPath.name?.length > 0}
+								class:input__text_changed={(newPath.name?.length ?? 0) > 0}
 								placeholder=""
 								required
 							/>

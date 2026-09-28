@@ -173,6 +173,8 @@ from backend.services.models import (
     PathUpdate,
     PatternCreate,
     PatternUpdate,
+    PersonCreate,
+    PersonUpdate,
     ProductCreate,
     ProductUpdate,
     ThreatCreate,
@@ -1811,6 +1813,146 @@ async def delete_product(product_id: int):
         if result == "UPDATE 0":
             raise HTTPException(status_code=404, detail="Product not found")
     return {"status": "ok", "deleted_id": product_id}
+
+# -------------------------------------------------------------------------
+# People CRUD (public.people) — Product workspace
+# -------------------------------------------------------------------------
+@app.get("/people", tags=["People"])
+async def get_people():
+    """Get all people (guests)."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT id, name, description, linkedin_url, job_description, content_source,
+                   org_id, post_id, content_url, email, company_url, created_at, updated_at
+            FROM public.people
+            WHERE deleted_at IS NULL
+            ORDER BY name ASC
+        """)
+    return [dict(r) for r in rows]
+
+@app.post("/people", tags=["People"])
+async def create_person(person: PersonCreate):
+    """Create a new person (guest)."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        if person.org_id is not None:
+            org_exists = await conn.fetchval(
+                "SELECT id FROM public.orgs WHERE id = $1", person.org_id
+            )
+            if not org_exists:
+                raise HTTPException(status_code=400, detail="Organization not found")
+
+        row = await conn.fetchrow(
+            """
+            INSERT INTO public.people
+            (name, description, linkedin_url, job_description, content_source,
+             org_id, post_id, content_url, email, company_url)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            RETURNING id, name, description, linkedin_url, job_description, content_source,
+                      org_id, post_id, content_url, email, company_url, created_at, updated_at
+            """,
+            person.name,
+            person.description,
+            person.linkedin_url,
+            person.job_description,
+            person.content_source,
+            person.org_id,
+            person.post_id,
+            person.content_url,
+            person.email,
+            person.company_url,
+        )
+        return dict(row)
+
+@app.get("/people/{person_id}", tags=["People"])
+async def get_person(person_id: int):
+    """Get a single person (guest)."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT id, name, description, linkedin_url, job_description, content_source,
+                   org_id, post_id, content_url, email, company_url, created_at, updated_at
+            FROM public.people
+            WHERE id = $1 AND deleted_at IS NULL
+            """,
+            person_id
+        )
+    if not row:
+        raise HTTPException(status_code=404, detail="Person not found")
+    return dict(row)
+
+@app.put("/people/{person_id}", tags=["People"])
+async def update_person(person_id: int, patch: PersonUpdate):
+    """Update a person (guest)."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        if patch.org_id is not None:
+            org_exists = await conn.fetchval(
+                "SELECT id FROM public.orgs WHERE id = $1", patch.org_id
+            )
+            if not org_exists:
+                raise HTTPException(status_code=400, detail="Organization not found")
+
+        row = await conn.fetchrow(
+            """
+            UPDATE public.people
+            SET
+                name = COALESCE($1, name),
+                description = COALESCE($2, description),
+                linkedin_url = COALESCE($3, linkedin_url),
+                job_description = COALESCE($4, job_description),
+                content_source = COALESCE($5, content_source),
+                org_id = COALESCE($6, org_id),
+                post_id = COALESCE($7, post_id),
+                content_url = COALESCE($8, content_url),
+                email = COALESCE($9, email),
+                company_url = COALESCE($10, company_url),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $11 AND deleted_at IS NULL
+            RETURNING id, name, description, linkedin_url, job_description, content_source,
+                      org_id, post_id, content_url, email, company_url, created_at, updated_at
+            """,
+            patch.name,
+            patch.description,
+            patch.linkedin_url,
+            patch.job_description,
+            patch.content_source,
+            patch.org_id,
+            patch.post_id,
+            patch.content_url,
+            patch.email,
+            patch.company_url,
+            person_id,
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="Person not found")
+        return dict(row)
+
+@app.delete("/people/{person_id}", tags=["People"])
+async def delete_person(person_id: int):
+    """Delete a person (guest) (soft delete)."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        result = await conn.execute(
+            "UPDATE public.people SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1",
+            person_id
+        )
+        if result == "UPDATE 0":
+            raise HTTPException(status_code=404, detail="Person not found")
+    return {"status": "ok", "deleted_id": person_id}
+
+# -------------------------------------------------------------------------
+# Statuses (Organization lifecycle lookup)
+# -------------------------------------------------------------------------
+@app.get("/statuses", tags=["Organizations"])
+async def get_statuses():
+    """List organization lifecycle statuses (public.statuses)."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("SELECT id, name FROM public.statuses ORDER BY id ASC")
+    return [dict(r) for r in rows]
 
 # -------------------------------------------------------------------------
 # GET /views  (Mode-aware view registry)

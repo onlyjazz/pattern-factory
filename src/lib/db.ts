@@ -1,6 +1,13 @@
 import { API_BASE } from './config';
 export type ID = string
-export interface Pattern { id: ID; name: string; description: string; kind: string; story_md?: string | null; taxonomy?: string | null; }
+
+/** Item shape used by the SingleSelect picker. */
+export interface SelectItem {
+    id: string;
+    name: string;
+    description?: string;
+}
+export interface Pattern { id: ID; name: string; description: string; kind: string; story_md?: string | null; story?: string | null; taxonomy?: string | null; }
 
 export interface Threat {
     id: ID;
@@ -31,6 +38,7 @@ export interface Card {
     name: string; 
     description: string; 
     markdown?: string | null; 
+    story?: string | null;
     order_index?: number; 
     domain?: string | null; 
     audience?: string | null; 
@@ -53,6 +61,7 @@ export interface Asset {
     include_fixed_value: boolean;
     include_recurring_value: boolean;
     yearly_value: number;
+    sle_value?: number | null;
     disabled: boolean;
     model_id: number;
     created_at?: string;
@@ -131,7 +140,78 @@ export interface Path {
     yaml?: {
         nodes: PathNode[];
         edges: PathEdge[];
+        youAreHere?: number;
     };
+    created_at?: string;
+    updated_at?: string;
+}
+
+/** Organization lifecycle status (public.statuses). */
+export interface Status {
+    id: number;
+    name: string;
+}
+
+/** Organization (public.orgs) — Product workspace entity. */
+export interface Organization {
+    id: ID;
+    name: string;
+    name_before_acquisition?: string | null;
+    description?: string | null;
+    stage?: string | null;
+    funding?: number | null;
+    date_funded?: string | null;
+    date_founded?: string | null;
+    linkedin_company_url?: string | null;
+    content_source?: string | null;
+    category_id?: number | null;
+    content_url?: string | null;
+    estimated_annual_sales?: number | null;
+    employees?: number | null;
+    headquarters?: string | null;
+    size?: number | null;
+    tier?: number | null;
+    status_id?: number | null;
+    created_at?: string;
+    updated_at?: string;
+}
+
+/** FDA-cleared AI-enabled medical device (public.products) — Product workspace entity. */
+export interface Product {
+    id: ID;
+    submission_number: string;
+    device: string;
+    date_of_final_decision?: string | null;
+    intended_use?: string | null;
+    indications_for_use?: string | null;
+    company?: string | null;
+    panel?: string | null;
+    primary_product_code?: string | null;
+    product_contact_1?: string | null;
+    product_contact_2?: string | null;
+    product_contact_3?: string | null;
+    device_description?: string | null;
+    superiority?: string | null;
+    competitors?: string | null;
+    org_id?: number | null;
+    process_flag?: boolean;
+    created_at?: string;
+    updated_at?: string;
+}
+
+/** Person / guest (public.people) — Product workspace entity. */
+export interface Person {
+    id: ID;
+    name: string;
+    description?: string | null;
+    linkedin_url?: string | null;
+    job_description?: string | null;
+    content_source?: string | null;
+    org_id?: number | null;
+    post_id?: number | null;
+    content_url?: string | null;
+    email?: string | null;
+    company_url?: string | null;
     created_at?: string;
     updated_at?: string;
 }

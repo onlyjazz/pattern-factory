@@ -1,7 +1,7 @@
 import { writable } from 'svelte/store';
 import { API_BASE } from './config';
 
-export type AppMode = 'explore' | 'model';
+export type AppMode = 'explore' | 'model' | 'product';
 
 interface ModeState {
 	mode: AppMode;
@@ -24,7 +24,7 @@ function createModeStore() {
 		const storedActiveModel = localStorage.getItem(STORAGE_KEY_ACTIVE_MODEL);
 		const storedActiveModelName = localStorage.getItem(STORAGE_KEY_ACTIVE_MODEL_NAME);
 
-		if (storedMode === 'model' || storedMode === 'explore') {
+		if (storedMode === 'model' || storedMode === 'explore' || storedMode === 'product') {
 			initialMode = storedMode;
 		}
 		if (storedActiveModel) {

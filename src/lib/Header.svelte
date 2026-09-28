@@ -6,10 +6,12 @@
 	
 	export let onChatClick = () => {};
 	
-	async function switchMode(newMode: 'explore' | 'model') {
+	async function switchMode(newMode: 'explore' | 'model' | 'product') {
 		await modeStore.switchMode(newMode);
 		if (newMode === 'explore') {
 			await goto('/patterns');
+		} else if (newMode === 'product') {
+			await goto('/products');
 		} else {
 			await goto('/models');
 		}
@@ -38,8 +40,18 @@
 		>
 			Model
 		</button>
+		<button
+			class="mode-button"
+			class:mode-button_active={$modeStore.mode === 'product'}
+			on:click={() => switchMode('product')}
+			title="Switch to Product mode"
+		>
+			Product
+		</button>
 		{#if $modeStore.mode === 'explore'}
 			<span class="mode-context mode-context_active">Explore mode</span>
+		{:else if $modeStore.mode === 'product'}
+			<span class="mode-context mode-context_active">Product mode</span>
 		{:else if $modeStore.activeModelName}
 			<span class="model-name model-name_active">{$modeStore.activeModelName}</span>
 		{/if}

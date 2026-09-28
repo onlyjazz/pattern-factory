@@ -55,17 +55,17 @@ import { API_BASE } from '$lib/config';
 						<h3>Basic Information</h3>
 						<div class="detail-row">
 							<div class="detail-field">
-								<label>Description</label>
+								<span class="detail-field__label">Description</span>
 								<p>{pattern.description}</p>
 							</div>
 							<div class="detail-field">
-								<label>Kind</label>
+								<span class="detail-field__label">Kind</span>
 								<p>{pattern.kind}</p>
 							</div>
 						</div>
 						<div class="detail-row full">
 							<div class="detail-field">
-								<label>Taxonomy</label>
+								<span class="detail-field__label">Taxonomy</span>
 								<p>{pattern.taxonomy || '-'}</p>
 							</div>
 						</div>

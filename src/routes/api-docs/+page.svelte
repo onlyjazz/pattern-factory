@@ -15,7 +15,7 @@
       src={swaggerUrl}
       title="Swagger UI - Interactive API Documentation"
       sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals"
-    />
+    ></iframe>
   </div>
 </div>
 

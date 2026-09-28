@@ -33,22 +33,24 @@ import { API_BASE } from '$lib/config';
 	
 	$: filteredThreats = updateFilteredThreats(threats, $globalSearch, sortField, sortDirection);
 	
-onMount(async () => {
+onMount(() => {
 	const unsubscribe = modeStore.subscribe((state) => {
 		activeModelId = state.activeModel;
 	});
-	
-	try {
-		const response = await fetch(`${apiBase}/threats`);
-		if (!response.ok) throw new Error('Failed to fetch threats');
-		const data = await response.json();
-		threats = data.map((t: any) => ({ ...t, id: String(t.id) }));
-	} catch (e) {
-		error = e instanceof Error ? e.message : 'Unknown error';
-	} finally {
-		loading = false;
-	}
-	
+
+	(async () => {
+		try {
+			const response = await fetch(`${apiBase}/threats`);
+			if (!response.ok) throw new Error('Failed to fetch threats');
+			const data = await response.json();
+			threats = data.map((t: any) => ({ ...t, id: String(t.id) }));
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Unknown error';
+		} finally {
+			loading = false;
+		}
+	})();
+
 	return unsubscribe;
 });
 	
@@ -83,9 +85,10 @@ function updateFilteredThreats(items: Threat[], search: string, field: keyof Thr
 	
 	function sortThreats() {
 		if (!sortField) return;
+		const field = sortField;
 		filteredThreats = [...filteredThreats].sort((a, b) => {
-			const aVal = a[sortField] || '';
-			const bVal = b[sortField] || '';
+			const aVal = a[field] || '';
+			const bVal = b[field] || '';
 			const comparison = String(aVal).localeCompare(String(bVal));
 			return sortDirection === 'asc' ? comparison : -comparison;
 		});
@@ -173,7 +176,6 @@ async function searchCards(query: string, isEdit: boolean = false) {
 			if (!response.ok) throw new Error('Failed to update threat');
 		const updated = await response.json();
 		threats = threats.map(t => t.id === String(updated.id) ? { ...updated, id: String(updated.id) } : t);
-			closeEditModal();
 		} catch (e) {
 			editModalError = e instanceof Error ? e.message : 'Failed to save threat';
 		}
@@ -551,31 +553,5 @@ async function searchCards(query: string, isEdit: boolean = false) {
 		content: ' ▼';
 		opacity: 1;
 		color: #0066cc;
-	}
-
-	.stride-checkboxes {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 12px;
-		padding: 12px 0;
-		border: 1px solid #ddd;
-		border-radius: 4px;
-		padding: 12px;
-		background: #f9f9f9;
-	}
-
-	.checkbox-label {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		cursor: pointer;
-		font-size: 14px;
-		margin: 0;
-	}
-
-	.checkbox-label input[type="checkbox"] {
-		cursor: pointer;
-		width: 16px;
-		height: 16px;
 	}
 </style>

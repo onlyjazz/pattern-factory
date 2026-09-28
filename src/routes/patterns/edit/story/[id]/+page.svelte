@@ -79,7 +79,7 @@ import { API_BASE } from '$lib/config';
 
 					<div class="story-editor-container">
 						<div class="story-editor-editor">
-							<label class="editor-label">Story (Markdown)</label>
+							<label for="story-editor-textarea" class="editor-label">Story (Markdown)</label>
 							<textarea
 								id="story-editor-textarea"
 								bind:value={storyContent}
@@ -88,7 +88,7 @@ import { API_BASE } from '$lib/config';
 							></textarea>
 						</div>
 						<div class="story-editor-preview">
-							<label class="preview-label">Preview</label>
+							<span class="preview-label">Preview</span>
 							<div class="story-editor-preview-content">
 								{@html marked(storyContent)}
 							</div>

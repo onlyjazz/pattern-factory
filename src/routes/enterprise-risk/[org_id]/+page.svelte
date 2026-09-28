@@ -187,7 +187,7 @@
 
   onMount(async () => {
     try {
-      const orgId = parseInt($page.params.org_id, 10);
+      const orgId = parseInt($page.params.org_id ?? '', 10);
       if (isNaN(orgId)) {
         error = 'Invalid organization ID';
         loading = false;

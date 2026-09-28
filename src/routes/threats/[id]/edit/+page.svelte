@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import ThreatDetail from '$lib/ThreatDetail.svelte';
-	import type { SelectItem } from '$lib/SingleSelect.svelte';
+	import type { SelectItem } from '$lib/db';
 import { API_BASE } from '$lib/config';
 
 	let threat: any = null;
