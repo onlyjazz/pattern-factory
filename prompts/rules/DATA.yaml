@@ -69,6 +69,7 @@ DATA:
         orgs:
           - id
           - name
+          - name_before_acquisition
           - description
           - stage
           - funding

@@ -1,0 +1,320 @@
+#!/bin/bash
+# =============================================================================
+# orgs-update-status - Resolve org lifecycle status via the Exa agent
+#
+# Runs the ORG_STATUS agent flow over a set of orgs and writes the result to
+# public.orgs.status_id (statuses: active, closed, acquired, duplicate, renamed).
+#
+# For each org the flow:
+#   1. validateOrgId    - confirm the org exists in public.orgs
+#   2. resolveOrgStatus - Exa agent structured research -> status + evidence
+#   3. updateOrgStatus  - write status_id (+ orgs.portfolio.status audit blob)
+#
+# Usage:
+#   ./bin/orgs-update-status --org-ids <SPEC> [options]
+#
+# Runtime parameters:
+#   --org-ids SPEC       Required. Comma-separated ids and/or inclusive ranges,
+#                        e.g. --org-ids 1-50, --org-ids 3,17,42,
+#                        --org-ids 1-10,42
+#
+# Optional:
+#   --confidence N       Minimum resolver confidence required to write.
+#                        Float between 0.0 and 1.0. Default: 0.70.
+#   --dry-run            Resolve statuses but do not write to the database.
+#   --output PATH        Export a per-org results report to this CSV.
+#   -h, --help           Show this help.
+#
+# Examples:
+#   ./bin/orgs-update-status --org-ids 1-50
+#   ./bin/orgs-update-status --org-ids 3,17,42
+#   ./bin/orgs-update-status --org-ids 1-50 --confidence 0.80
+#   ./bin/orgs-update-status --org-ids 1-50 --dry-run
+#   ./bin/orgs-update-status --org-ids 1-50 --output /tmp/org_status.csv
+#
+# Required environment (loaded from .env in the project root):
+#   DATABASE_URL    PostgreSQL connection string
+#   EXA_API_KEY     Exa key for the agent research
+#
+# Logs are written to stdout and /tmp/orgs_update_status.log.
+# =============================================================================
+
+set -euo pipefail
+
+# Show help if requested
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    # Print the header comment block (skip the shebang), stripping the leading "# "
+    awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "$0"
+    exit 0
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+BACKEND_DIR="$PROJECT_ROOT/backend"
+
+# Load environment from .env
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    set -a
+    # shellcheck disable=SC1091
+    source "$PROJECT_ROOT/.env"
+    set +a
+fi
+
+if [ -z "${DATABASE_URL:-}" ]; then
+    echo "Error: DATABASE_URL not set (checked .env in $PROJECT_ROOT)" >&2
+    exit 1
+fi
+
+if [ -z "${EXA_API_KEY:-}" ]; then
+    echo "Warning: EXA_API_KEY not set - the Exa agent research step will fail" >&2
+fi
+
+# ---------------------------------------------------------------------------
+# Parse arguments
+# ---------------------------------------------------------------------------
+ORG_IDS_SPEC=""
+CONFIDENCE="0.70"
+DRY_RUN="false"
+OUTPUT_CSV=""
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --org-ids)
+            ORG_IDS_SPEC="${2:-}"
+            shift 2
+            ;;
+        --org-ids=*)
+            ORG_IDS_SPEC="${1#*=}"
+            shift
+            ;;
+        --confidence)
+            CONFIDENCE="${2:-}"
+            shift 2
+            ;;
+        --confidence=*)
+            CONFIDENCE="${1#*=}"
+            shift
+            ;;
+        --dry-run)
+            DRY_RUN="true"
+            shift
+            ;;
+        --output)
+            OUTPUT_CSV="${2:-}"
+            shift 2
+            ;;
+        --output=*)
+            OUTPUT_CSV="${1#*=}"
+            shift
+            ;;
+        *)
+            echo "Error: unknown option '$1'" >&2
+            echo "Usage: $0 --org-ids <SPEC> [--confidence N] [--dry-run] [--output PATH]" >&2
+            exit 1
+            ;;
+    esac
+done
+
+if [ -z "$ORG_IDS_SPEC" ]; then
+    echo "Error: --org-ids is required (e.g. --org-ids 1-50 or --org-ids 3,17,42)" >&2
+    exit 1
+fi
+
+export PROJECT_ROOT BACKEND_DIR ORG_IDS_SPEC CONFIDENCE DRY_RUN OUTPUT_CSV
+
+cd "$BACKEND_DIR" || exit 1
+
+python3 - <<'PYTHON_SCRIPT'
+import asyncio
+import csv
+import json
+import logging
+import os
+import sys
+from datetime import datetime
+from pathlib import Path
+
+project_root = Path(os.environ.get("PROJECT_ROOT", "."))
+backend_dir = Path(os.environ.get("BACKEND_DIR", "backend"))
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
+
+import asyncpg  # noqa: E402
+
+from pitboss.logging_util import log_event  # noqa: E402
+from pitboss.org_status import run_org_status_flow  # noqa: E402
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)-8s | %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler("/tmp/orgs_update_status.log"),
+    ],
+)
+logger = logging.getLogger("orgs-update-status")
+
+SUMMARY_KEYS = [
+    "updated",
+    "dry_run",
+    "below_threshold",
+    "unknown",
+    "skipped",
+    "unresolved",
+    "write_failed",
+    "error",
+]
+
+
+def parse_org_ids(spec):
+    """Parse a comma list / range spec into a sorted, de-duplicated list."""
+    ids = set()
+    for token in spec.split(","):
+        token = token.strip()
+        if not token:
+            continue
+        if "-" in token:
+            start_str, _, end_str = token.partition("-")
+            start_str, end_str = start_str.strip(), end_str.strip()
+            if not (start_str.isdigit() and end_str.isdigit()):
+                raise ValueError(f"Invalid range token: '{token}'")
+            start, end = int(start_str), int(end_str)
+            if start > end:
+                raise ValueError(f"Invalid range (start > end): '{token}'")
+            ids.update(range(start, end + 1))
+        elif token.isdigit():
+            ids.add(int(token))
+        else:
+            raise ValueError(f"Invalid org id token: '{token}'")
+    return sorted(ids)
+
+
+async def get_db_connection():
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        conn = await asyncpg.connect(database_url)
+    else:
+        conn = await asyncpg.connect(
+            host=os.getenv("PGHOST", "127.0.0.1"),
+            port=int(os.getenv("PGPORT", 5432)),
+            user=os.getenv("PGUSER", "pattern_factory"),
+            password=os.getenv("PGPASSWORD", "314159"),
+            database=os.getenv("PGDATABASE", "pattern-factory"),
+        )
+    logger.info("Connected to PostgreSQL")
+    return conn
+
+
+def export_results_csv(results, output_path):
+    fieldnames = [
+        "org_id", "org_name", "status", "stage", "decision", "confidence",
+        "resolved_status", "current_status_id", "new_status_id", "reason",
+        "current_name", "latest_name", "name_before_acquisition", "acquirer",
+        "duplicate_of", "sources", "error",
+    ]
+    with open(output_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for result in results:
+            row = dict(result)
+            row["sources"] = json.dumps(result.get("sources") or [])
+            writer.writerow({key: row.get(key) for key in fieldnames})
+    logger.info(f"Results exported to {output_path}")
+
+
+async def main():
+    confidence = float(os.environ.get("CONFIDENCE", "0.70"))
+    dry_run = os.environ.get("DRY_RUN", "false").lower() == "true"
+    output_csv = os.environ.get("OUTPUT_CSV") or None
+
+    try:
+        org_ids = parse_org_ids(os.environ.get("ORG_IDS_SPEC", ""))
+    except ValueError as e:
+        logger.error(f"{e}")
+        sys.exit(1)
+
+    if not org_ids:
+        logger.error("--org-ids parsed to an empty list")
+        sys.exit(1)
+
+    if not (0.0 <= confidence <= 1.0):
+        logger.error(f"Confidence must be between 0.0 and 1.0, got {confidence}")
+        sys.exit(1)
+
+    db = await get_db_connection()
+    stats = {"total": len(org_ids), **{k: 0 for k in SUMMARY_KEYS}}
+    results = []
+
+    logger.info(f"\n{'=' * 80}")
+    logger.info(f"Starting org status update for {len(org_ids)} organization(s)")
+    logger.info(f"Org IDs: {org_ids}")
+    logger.info(f"Confidence threshold: {confidence}")
+    logger.info(f"Dry run: {dry_run}")
+    logger.info(f"{'=' * 80}\n")
+
+    try:
+        for i, org_id in enumerate(org_ids, 1):
+            logger.info(f"\n[{i}/{len(org_ids)}] Processing org id {org_id}")
+            result = await run_org_status_flow(
+                db, org_id, confidence_threshold=confidence, dry_run=dry_run
+            )
+            results.append(result)
+
+            status = result.get("status", "error")
+            if status in stats:
+                stats[status] += 1
+            else:
+                stats["error"] += 1
+
+            if status == "updated":
+                logger.info(f"  {result.get('reason')}")
+            elif status in ("dry_run", "below_threshold", "unknown"):
+                logger.info(f"  {status}: {result.get('reason') or result.get('resolved_status')}")
+            else:
+                logger.warning(f"  {status}: {result.get('reason') or result.get('error')}")
+
+            if i < len(org_ids):
+                await asyncio.sleep(0.5)
+
+        logger.info(f"\n{'=' * 80}")
+        logger.info("ORG STATUS BATCH COMPLETE")
+        logger.info(f"{'=' * 80}")
+        logger.info(f"Total processed:  {stats['total']}")
+        logger.info(f"Updated:          {stats['updated']}")
+        logger.info(f"Dry run:          {stats['dry_run']}")
+        logger.info(f"Below threshold:  {stats['below_threshold']}")
+        logger.info(f"Unknown:          {stats['unknown']}")
+        logger.info(f"Skipped:          {stats['skipped']}")
+        logger.info(f"Errors:           {stats['error'] + stats['write_failed']}")
+        logger.info(f"{'=' * 80}\n")
+
+        if output_csv:
+            export_results_csv(results, output_csv)
+
+        if not dry_run:
+            try:
+                await log_event(db, "ORG_STATUS_BATCH", {
+                    "total": stats["total"],
+                    "updated": stats["updated"],
+                    "below_threshold": stats["below_threshold"],
+                    "unknown": stats["unknown"],
+                    "skipped": stats["skipped"],
+                    "write_failed": stats["write_failed"],
+                    "error": stats["error"],
+                    "confidence_threshold": confidence,
+                    "timestamp": datetime.utcnow().isoformat(),
+                })
+            except Exception as e:
+                logger.warning(f"Failed to log batch summary: {e}")
+    finally:
+        await db.close()
+        logger.info("Database connection closed")
+
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("\nInterrupted by user")
+        sys.exit(0)
+PYTHON_SCRIPT

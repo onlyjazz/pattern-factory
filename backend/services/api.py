@@ -154,6 +154,7 @@ PG_POOL: Optional[asyncpg.Pool] = None
 # Import Pitboss Supervisor & Pydantic request models
 # -------------------------------------------------------------------------
 from backend.pitboss.supervisor import PitbossSupervisor
+from backend.pitboss.org_status import run_org_status_flow
 from backend.services.models import (
     AssetCreate,
     AssetUpdate,
@@ -164,6 +165,7 @@ from backend.services.models import (
     ModelCreate,
     ModelUpdate,
     OrgCreate,
+    OrgStatusUpdateRequest,
     OrgUpdate,
     PathCreate,
     PathEdge,
@@ -1398,7 +1400,7 @@ async def get_organizations():
             SELECT id, name, description, stage, funding, date_funded, date_founded,
                    linkedin_company_url, content_source, category_id, content_url,
                    estimated_annual_sales, employees, headquarters, size, tier,
-                   created_at, updated_at
+                   status_id, name_before_acquisition, created_at, updated_at
             FROM public.orgs
             WHERE deleted_at IS NULL
             ORDER BY tier ASC, size DESC, created_at DESC
@@ -1423,7 +1425,7 @@ async def create_organization(org: OrgCreate):
             RETURNING id, name, description, stage, funding, date_funded, date_founded,
                       linkedin_company_url, content_source, category_id, content_url,
                       estimated_annual_sales, employees, headquarters, size, tier,
-                      created_at, updated_at
+                      status_id, name_before_acquisition, created_at, updated_at
             """,
             org.name,
             org.description,
@@ -1451,7 +1453,7 @@ async def get_organization(org_id: int):
             SELECT id, name, description, stage, funding, date_funded, date_founded,
                    linkedin_company_url, content_source, category_id, content_url,
                    estimated_annual_sales, employees, headquarters, size, tier,
-                   created_at, updated_at
+                   status_id, name_before_acquisition, created_at, updated_at
             FROM public.orgs
             WHERE id = $1 AND deleted_at IS NULL
             """,
@@ -1503,6 +1505,15 @@ async def update_organization(org_id: int, patch: OrgUpdate):
             patch.headquarters,
         ]
 
+        # status_id may be edited directly by the UI (e.g. manual override of a
+        # status resolved by the Exa agent).
+        assignments.append(f"status_id = COALESCE(${len(args) + 1}, status_id)")
+        args.append(patch.status_id)
+
+        # Prior name recorded when the org is acquired/renamed into its current name.
+        assignments.append(f"name_before_acquisition = COALESCE(${len(args) + 1}, name_before_acquisition)")
+        args.append(patch.name_before_acquisition)
+
         # Mention size only when the caller supplies it so the trigger can tell an
         # explicit valuation from a sales/funding-derived one.
         if patch.size is not None:
@@ -1520,7 +1531,7 @@ async def update_organization(org_id: int, patch: OrgUpdate):
             RETURNING id, name, description, stage, funding, date_funded, date_founded,
                       linkedin_company_url, content_source, category_id, content_url,
                       estimated_annual_sales, employees, headquarters, size, tier,
-                      created_at, updated_at
+                      status_id, name_before_acquisition, created_at, updated_at
             """,
             *args,
         )
@@ -1540,6 +1551,38 @@ async def delete_organization(org_id: int):
         if result == "UPDATE 0":
             raise HTTPException(status_code=404, detail="Organization not found")
     return {"status": "ok", "deleted_id": org_id}
+
+@app.post("/orgs/update-status", tags=["Organizations"])
+async def update_org_statuses(request: OrgStatusUpdateRequest):
+    """Resolve organization lifecycle status with the Exa agent and persist it.
+
+    For each requested org this runs the ORG_STATUS agent flow:
+    validateOrgId -> resolveOrgStatus (Exa agent research) -> updateOrgStatus.
+    Only orgs whose resolved status is a known value and whose confidence meets
+    ``confidence`` are written to public.orgs.status_id; set ``dry_run`` to
+    resolve without writing.
+
+    Returns per-org results plus a status summary for the frontend to display.
+    """
+    if not request.org_ids:
+        raise HTTPException(status_code=400, detail="org_ids must not be empty")
+
+    pool = get_pg_pool()
+    results = []
+    for org_id in request.org_ids:
+        results.append(await run_org_status_flow(
+            pool,
+            org_id,
+            confidence_threshold=request.confidence,
+            dry_run=request.dry_run,
+        ))
+
+    summary = {"total": len(results)}
+    for result in results:
+        key = result.get("status", "error")
+        summary[key] = summary.get(key, 0) + 1
+
+    return {"results": results, "summary": summary}
 
 # -------------------------------------------------------------------------
 # Enterprise Risk (Organization-level SLE aggregation)

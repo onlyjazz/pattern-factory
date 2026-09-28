@@ -17,6 +17,7 @@ export interface Status {
 export interface Organization {
   id: number;
   name: string;
+  name_before_acquisition?: string; // Prior name when acquired/renamed into the current name
   description?: string;
   stage?: string; // e.g., "Seed", "Series A", "Public"
   funding?: number; // Total funding amount in dollars

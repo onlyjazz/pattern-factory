@@ -10,7 +10,7 @@ the corresponding models in this file (see backend/db/AGENTS.md).
 
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 # -------------------------------------------------------------------------
@@ -19,6 +19,7 @@ from pydantic import BaseModel
 class OrgCreate(BaseModel):
     """Create a new organization."""
     name: str
+    name_before_acquisition: str | None = None
     description: str | None = None
     stage: str | None = None
     funding: float | None = None
@@ -42,6 +43,7 @@ class OrgCreate(BaseModel):
 class OrgUpdate(BaseModel):
     """Update an organization."""
     name: str | None = None
+    name_before_acquisition: str | None = None
     description: str | None = None
     stage: str | None = None
     funding: float | None = None
@@ -60,6 +62,13 @@ class OrgUpdate(BaseModel):
     randomization_seed: int | None = None
     randomized_at: str | None = None
     status_id: int | None = None
+
+
+class OrgStatusUpdateRequest(BaseModel):
+    """Resolve org lifecycle status via the Exa agent (POST /orgs/update-status)."""
+    org_ids: list[int]
+    confidence: float = Field(default=0.70, ge=0.0, le=1.0)
+    dry_run: bool = False
 
 
 # -------------------------------------------------------------------------
