@@ -28,16 +28,17 @@ import { API_BASE } from '$lib/config';
 			const cardResponse = await fetch(`${apiBase}/cards/${cardId}`);
 			if (!cardResponse.ok) throw new Error('Failed to fetch card');
 			const cardData = await cardResponse.json();
-			card = { ...cardData, id: String(cardData.id) };
+			const loadedCard: Card = { ...cardData, id: String(cardData.id) };
+			card = loadedCard;
 			
 			// Load patterns
 			const patternsResponse = await fetch(`${apiBase}/patterns`);
 			if (!patternsResponse.ok) throw new Error('Failed to fetch patterns');
 			patterns = await patternsResponse.json();
 			
-			if (card.pattern_id) {
-				selectedPatternId = card.pattern_id;
-				const selectedPattern = patterns.find(p => p.id === card.pattern_id);
+			if (loadedCard.pattern_id) {
+				selectedPatternId = loadedCard.pattern_id;
+				const selectedPattern = patterns.find(p => String(p.id) === String(loadedCard.pattern_id));
 				if (selectedPattern) {
 					patternSearchQuery = selectedPattern.name;
 				}
@@ -226,7 +227,7 @@ import { API_BASE } from '$lib/config';
 									type="text"
 									bind:value={card.domain}
 									class="input__text"
-									class:input__text_changed={card.domain?.length > 0}
+									class:input__text_changed={(card.domain?.length ?? 0) > 0}
 								/>
 								<label for="card-domain" class="input__label">Domain</label>
 							</div>
@@ -237,7 +238,7 @@ import { API_BASE } from '$lib/config';
 									type="text"
 									bind:value={card.audience}
 									class="input__text"
-									class:input__text_changed={card.audience?.length > 0}
+									class:input__text_changed={(card.audience?.length ?? 0) > 0}
 								/>
 								<label for="card-audience" class="input__label">Audience</label>
 							</div>
@@ -248,7 +249,7 @@ import { API_BASE } from '$lib/config';
 									type="text"
 									bind:value={card.maturity}
 									class="input__text"
-									class:input__text_changed={card.maturity?.length > 0}
+									class:input__text_changed={(card.maturity?.length ?? 0) > 0}
 								/>
 								<label for="card-maturity" class="input__label">Maturity</label>
 							</div>

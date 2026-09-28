@@ -24,14 +24,14 @@ RULES:
     description: "All companies"
     logic: |
       SELECT 
-          o.name, s.name AS status, o.estimated_annual_sales, o.arm,o.size,
+          o.id, o.name, s.name AS status, o.estimated_annual_sales, o.arm,o.size,
           COUNT(p.id) AS product_count
       FROM 
           public.orgs o
       JOIN public.products p ON o.id = p.org_id
       JOIN public.statuses s ON o.status_id = s.id
       GROUP BY 
-          o.name, s.name,o.estimated_annual_sales, o.arm,o.size;
+          o.id, o.name, s.name,o.estimated_annual_sales, o.arm,o.size;
 
   - rule_code: PRODUCT-IDS
     name: Focus product ids

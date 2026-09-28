@@ -19,6 +19,8 @@ EXPECTED_MODELS = [
     "VulnerabilityCreate", "VulnerabilityUpdate",
     "CountermeasureCreate", "CountermeasureUpdate",
     "ProductCreate", "ProductUpdate",
+    "PersonCreate", "PersonUpdate",
+    "OrgCreate", "OrgUpdate", "OrgStatusUpdateRequest",
 ]
 
 
@@ -47,6 +49,8 @@ def test_expected_paths_present():
         "/vulnerabilities", "/vulnerabilities/{vulnerability_id}",
         "/countermeasures", "/countermeasures/{countermeasure_id}",
         "/products", "/products/{product_id}",
+        "/people", "/people/{person_id}",
+        "/orgs", "/orgs/{org_id}", "/orgs/update-status", "/statuses",
         "/views", "/query/{table}", "/log",
     ]
     missing = [p for p in expected if p not in paths]

@@ -7,6 +7,7 @@ import { API_BASE } from '$lib/config';
 		id: string;
 		name: string;
 		description: string;
+		story?: string | null;
 	}
 
 	let card: Card | null = null;
@@ -29,8 +30,9 @@ import { API_BASE } from '$lib/config';
 				throw new Error(`Failed to load card: ${response.statusText}`);
 			}
 
-			card = await response.json();
-			storyContent = card.story || '';
+			const loadedCard: Card = await response.json();
+			card = loadedCard;
+			storyContent = loadedCard.story || '';
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Unknown error';
 		} finally {
@@ -40,7 +42,7 @@ import { API_BASE } from '$lib/config';
 
 	function getRenderedMarkdown(markdown: string): string {
 		if (!markdown) return '';
-		return marked.parse(markdown);
+		return marked.parse(markdown) as string;
 	}
 
 	async function saveStory() {
@@ -100,7 +102,7 @@ import { API_BASE } from '$lib/config';
 
 					<div class="story-editor-container">
 						<div class="story-editor-editor">
-							<label class="editor-label">Story (Markdown)</label>
+							<label for="story-editor-textarea" class="editor-label">Story (Markdown)</label>
 							<textarea
 								id="story-editor-textarea"
 								bind:value={storyContent}
@@ -109,7 +111,7 @@ import { API_BASE } from '$lib/config';
 							></textarea>
 						</div>
 						<div class="story-editor-preview">
-							<label class="preview-label">Preview</label>
+							<span class="preview-label">Preview</span>
 							<div class="story-editor-preview-content">
 								{@html marked(storyContent)}
 							</div>

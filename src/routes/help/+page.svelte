@@ -26,18 +26,18 @@
 		<p class="mb-4 text-gray-700">Having trouble with Pattern Factory? Fill out the form below and our team will get in touch.</p>
 		<form on:submit|preventDefault={submitForm} class="grid gap-4">
 			<div>
-				<label class="block mb-1 font-semibold">Name</label>
-				<input bind:value={name} class="input__text w-full" required />
+				<label for="help-name" class="block mb-1 font-semibold">Name</label>
+				<input id="help-name" bind:value={name} class="input__text w-full" required />
 			</div>
 
 			<div>
-				<label class="block mb-1 font-semibold">Email</label>
-				<input type="email" bind:value={email} class="input__text w-full" required />
+				<label for="help-email" class="block mb-1 font-semibold">Email</label>
+				<input id="help-email" type="email" bind:value={email} class="input__text w-full" required />
 			</div>
 
 			<div>
-				<label class="block mb-1 font-semibold">Message</label>
-				<textarea bind:value={message} class="input__text w-full" rows="5" required></textarea>
+				<label for="help-message" class="block mb-1 font-semibold">Message</label>
+				<textarea id="help-message" bind:value={message} class="input__text w-full" rows="5" required></textarea>
 			</div>
 
 			<button type="submit" class="button button_green mt-2 w-full">

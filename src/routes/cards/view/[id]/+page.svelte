@@ -55,11 +55,11 @@ import { API_BASE } from '$lib/config';
 						<h3>Basic Information</h3>
 						<div class="detail-row">
 							<div class="detail-field">
-								<label>Description</label>
+								<span class="detail-field__label">Description</span>
 								<p>{card.description}</p>
 							</div>
 							<div class="detail-field">
-								<label>Pattern</label>
+								<span class="detail-field__label">Pattern</span>
 								<p>{card.pattern_name || '-'}</p>
 							</div>
 						</div>
@@ -69,19 +69,19 @@ import { API_BASE } from '$lib/config';
 						<h3>Details</h3>
 						<div class="detail-row">
 							<div class="detail-field">
-								<label>Order Index</label>
+								<span class="detail-field__label">Order Index</span>
 								<p>{card.order_index || '-'}</p>
 							</div>
 							<div class="detail-field">
-								<label>Domain</label>
+								<span class="detail-field__label">Domain</span>
 								<p>{card.domain || '-'}</p>
 							</div>
 							<div class="detail-field">
-								<label>Audience</label>
+								<span class="detail-field__label">Audience</span>
 								<p>{card.audience || '-'}</p>
 							</div>
 							<div class="detail-field">
-								<label>Maturity</label>
+								<span class="detail-field__label">Maturity</span>
 								<p>{card.maturity || '-'}</p>
 							</div>
 						</div>

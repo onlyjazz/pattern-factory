@@ -32,17 +32,17 @@
 				<h3>Basic Information</h3>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Tag</label>
+						<span class="detail-field__label">Tag</span>
 						<p>C{countermeasure.id}</p>
 					</div>
 					<div class="detail-field">
-						<label>Version</label>
+						<span class="detail-field__label">Version</span>
 						<p>{countermeasure.version || 1}</p>
 					</div>
 				</div>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Name</label>
+						<label for="countermeasure-name">Name</label>
 						<div class="input">
 							<input
 								id="countermeasure-name"
@@ -61,7 +61,7 @@
 				<h3>Details</h3>
 				<div class="detail-row">
 					<div class="detail-field full">
-						<label>Description</label>
+						<label for="countermeasure-description">Description</label>
 						<div class="input">
 							<input
 								id="countermeasure-description"
@@ -79,7 +79,7 @@
 				<h3>Cost Configuration</h3>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Fixed Implementation Cost</label>
+						<label for="fixed-implementation-cost">Fixed Implementation Cost</label>
 						<div class="input">
 							<input
 								id="fixed-implementation-cost"
@@ -92,7 +92,7 @@
 						</div>
 					</div>
 					<div class="detail-field">
-						<label>Fixed Cost Period (months)</label>
+						<label for="fixed-cost-period">Fixed Cost Period (months)</label>
 						<div class="input">
 							<input
 								id="fixed-cost-period"
@@ -107,7 +107,7 @@
 				</div>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Recurring Implementation Cost</label>
+						<label for="recurring-implementation-cost">Recurring Implementation Cost</label>
 						<div class="input">
 							<input
 								id="recurring-implementation-cost"
@@ -168,17 +168,17 @@
 				<h3>Basic Information</h3>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Tag</label>
+						<span class="detail-field__label">Tag</span>
 						<p>C{countermeasure.id}</p>
 					</div>
 					<div class="detail-field">
-						<label>Version</label>
+						<span class="detail-field__label">Version</span>
 						<p>{countermeasure.version || 1}</p>
 					</div>
 				</div>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Name</label>
+						<span class="detail-field__label">Name</span>
 						<p>{countermeasure.name}</p>
 					</div>
 				</div>
@@ -188,7 +188,7 @@
 				<h3>Details</h3>
 				<div class="detail-row">
 					<div class="detail-field full">
-						<label>Description</label>
+						<span class="detail-field__label">Description</span>
 						<p>{countermeasure.description || '-'}</p>
 					</div>
 				</div>
@@ -198,23 +198,23 @@
 				<h3>Cost Configuration</h3>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Yearly Cost (Computed)</label>
+						<span class="detail-field__label">Yearly Cost (Computed)</span>
 						<p>{(countermeasure.yearly_cost || 0).toLocaleString()}</p>
 					</div>
 				</div>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Fixed Implementation Cost</label>
+						<span class="detail-field__label">Fixed Implementation Cost</span>
 						<p>{(countermeasure.fixed_implementation_cost || 0).toLocaleString()}</p>
 					</div>
 					<div class="detail-field">
-						<label>Fixed Cost Period (months)</label>
+						<span class="detail-field__label">Fixed Cost Period (months)</span>
 						<p>{countermeasure.fixed_cost_period || 12}</p>
 					</div>
 				</div>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Recurring Implementation Cost</label>
+						<span class="detail-field__label">Recurring Implementation Cost</span>
 						<p>{(countermeasure.recurring_implementation_cost || 0).toLocaleString()}</p>
 					</div>
 				</div>
@@ -224,11 +224,11 @@
 				<h3>Cost Options</h3>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Include Fixed Cost</label>
+						<span class="detail-field__label">Include Fixed Cost</span>
 						<p>{countermeasure.include_fixed_cost ? 'Yes' : 'No'}</p>
 					</div>
 					<div class="detail-field">
-						<label>Include Recurring Cost</label>
+						<span class="detail-field__label">Include Recurring Cost</span>
 						<p>{countermeasure.include_recurring_cost ? 'Yes' : 'No'}</p>
 					</div>
 				</div>
@@ -238,11 +238,11 @@
 				<h3>Status</h3>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Implemented</label>
+						<span class="detail-field__label">Implemented</span>
 						<p>{countermeasure.implemented ? 'Yes' : 'No'}</p>
 					</div>
 					<div class="detail-field">
-						<label>Exclude</label>
+						<span class="detail-field__label">Exclude</span>
 						<p>{countermeasure.disabled ? 'Yes' : 'No'}</p>
 					</div>
 				</div>

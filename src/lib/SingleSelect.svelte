@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 
-	export interface SelectItem {
+	interface SelectItem {
 		id: string;
 		name: string;
 		description?: string;

@@ -32,7 +32,7 @@
 				<h3>Basic Information</h3>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Tag</label>
+						<label for="asset-tag">Tag</label>
 						<div class="input">
 							<input
 								id="asset-tag"
@@ -44,13 +44,13 @@
 						</div>
 					</div>
 					<div class="detail-field">
-						<label>Version</label>
+						<span class="detail-field__label">Version</span>
 						<p>{asset.version || 1}</p>
 					</div>
 				</div>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Name</label>
+						<label for="asset-name">Name</label>
 						<div class="input">
 							<input
 								id="asset-name"
@@ -65,7 +65,7 @@
 				</div>
 				<div class="detail-row">
 					<div class="detail-field full">
-						<label>Description</label>
+						<label for="asset-description">Description</label>
 						<div class="input">
 							<input
 								id="asset-description"
@@ -79,7 +79,7 @@
 				</div>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Yearly Value (Computed)</label>
+						<span class="detail-field__label">Yearly Value (Computed)</span>
 						<p>{(asset.yearly_value || 0).toLocaleString()}</p>
 					</div>
 				</div>
@@ -89,7 +89,7 @@
 				<h3>Financial Configuration</h3>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Fixed Value</label>
+						<label for="fixed-value">Fixed Value</label>
 						<div class="input">
 							<input
 								id="fixed-value"
@@ -102,7 +102,7 @@
 						</div>
 					</div>
 					<div class="detail-field">
-						<label>Fixed Value Period (months)</label>
+						<label for="fixed-value-period">Fixed Value Period (months)</label>
 						<div class="input">
 							<input
 								id="fixed-value-period"
@@ -117,7 +117,7 @@
 				</div>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Recurring Value</label>
+						<label for="recurring-value">Recurring Value</label>
 						<div class="input">
 							<input
 								id="recurring-value"
@@ -166,29 +166,29 @@
 				<h3>Basic Information</h3>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Tag</label>
+						<span class="detail-field__label">Tag</span>
 						<p>{asset.tag || '-'}</p>
 					</div>
 					<div class="detail-field">
-						<label>Version</label>
+						<span class="detail-field__label">Version</span>
 						<p>{asset.version || '-'}</p>
 					</div>
 				</div>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Name</label>
+						<span class="detail-field__label">Name</span>
 						<p>{asset.name}</p>
 					</div>
 				</div>
 				<div class="detail-row">
 					<div class="detail-field full">
-						<label>Description</label>
+						<span class="detail-field__label">Description</span>
 						<p>{asset.description || '-'}</p>
 					</div>
 				</div>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Yearly Value (Computed)</label>
+						<span class="detail-field__label">Yearly Value (Computed)</span>
 						<p>{(asset.yearly_value || 0).toLocaleString()}</p>
 					</div>
 				</div>
@@ -198,17 +198,17 @@
 				<h3>Financial Configuration</h3>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Fixed Value</label>
+						<span class="detail-field__label">Fixed Value</span>
 						<p>{(asset.fixed_value || 0).toLocaleString()}</p>
 					</div>
 					<div class="detail-field">
-						<label>Fixed Value Period (months)</label>
+						<span class="detail-field__label">Fixed Value Period (months)</span>
 						<p>{asset.fixed_value_period || 12}</p>
 					</div>
 				</div>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Recurring Value</label>
+						<span class="detail-field__label">Recurring Value</span>
 						<p>{(asset.recurring_value || 0).toLocaleString()}</p>
 					</div>
 				</div>
@@ -218,17 +218,17 @@
 				<h3>Options</h3>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Include Fixed Value</label>
+						<span class="detail-field__label">Include Fixed Value</span>
 						<p>{asset.include_fixed_value ? 'Yes' : 'No'}</p>
 					</div>
 					<div class="detail-field">
-						<label>Include Recurring Value</label>
+						<span class="detail-field__label">Include Recurring Value</span>
 						<p>{asset.include_recurring_value ? 'Yes' : 'No'}</p>
 					</div>
 				</div>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Exclude asset</label>
+						<span class="detail-field__label">Exclude asset</span>
 						<p>{asset.disabled ? 'Yes' : 'No'}</p>
 					</div>
 				</div>

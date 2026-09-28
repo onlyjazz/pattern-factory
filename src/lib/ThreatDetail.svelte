@@ -2,7 +2,7 @@
 	import EntityDetailLayout from './EntityDetailLayout.svelte';
 	import CheckboxField from './CheckboxField.svelte';
 	import SingleSelect from './SingleSelect.svelte';
-	import type { SelectItem } from './SingleSelect.svelte';
+	import type { SelectItem } from '$lib/db';
 
 	export let threat: any = null;
 	export let loading = false;
@@ -38,7 +38,7 @@
 				<h3>Basic Information</h3>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Name</label>
+						<label for="threat-name">Name</label>
 						<div class="input">
 							<input
 								id="threat-name"
@@ -51,7 +51,7 @@
 						</div>
 					</div>
 					<div class="detail-field">
-						<label>Tag</label>
+						<label for="threat-tag">Tag</label>
 						<div class="input">
 							<input
 								id="threat-tag"
@@ -65,7 +65,7 @@
 				</div>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Description</label>
+						<label for="threat-description">Description</label>
 						<div class="input">
 							<input
 								id="threat-description"
@@ -80,7 +80,7 @@
 				</div>
 				<div class="detail-row full">
 					<div class="detail-field">
-						<label>Associated Card</label>
+						<span class="detail-field__label">Associated Card</span>
 						<SingleSelect
 							items={cardItems}
 							bind:selectedId={selectedCardId}
@@ -96,7 +96,7 @@
 				<h3>Threat Metrics</h3>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Probability (%)</label>
+						<label for="threat-probability">Probability (%)</label>
 						<div class="input">
 							<input
 								id="threat-probability"
@@ -110,11 +110,11 @@
 						</div>
 					</div>
 					<div class="detail-field">
-						<label>Mitigation Level</label>
+						<span class="detail-field__label">Mitigation Level</span>
 						<p>{threat.mitigation_level || '-'}</p>
 					</div>
 					<div class="detail-field">
-						<label>Disabled</label>
+						<span class="detail-field__label">Disabled</span>
 						<div class="mt-sm">
 							<CheckboxField
 								id="threat-disabled"
@@ -126,7 +126,7 @@
 				</div>
 				<div class="detail-row full">
 					<div class="detail-field">
-						<label>Damage Description</label>
+						<label for="threat-damage-description">Damage Description</label>
 						<div class="input">
 							<textarea
 								id="threat-damage-description"
@@ -143,7 +143,7 @@
 				<h3>Metadata</h3>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Domain</label>
+						<label for="threat-domain">Domain</label>
 						<div class="input">
 							<input
 								id="threat-domain"
@@ -155,7 +155,7 @@
 						</div>
 					</div>
 					<div class="detail-field">
-						<label>Version</label>
+						<span class="detail-field__label">Version</span>
 						<p>{threat.version || '-'}</p>
 					</div>
 				</div>
@@ -213,20 +213,20 @@
 				<h3>Basic Information</h3>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Tag</label>
+						<span class="detail-field__label">Tag</span>
 						<p>{threat.tag || '-'}</p>
 					</div>
 				</div>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Description</label>
+						<span class="detail-field__label">Description</span>
 						<p>{threat.description}</p>
 					</div>
 				</div>
 				{#if threat.card}
 					<div class="detail-row full">
 						<div class="detail-field">
-							<label>Associated Card</label>
+							<span class="detail-field__label">Associated Card</span>
 							<h4 class="card-heading-compact">
 								{threat.card.name}
 								<a href="/cards/view/story/{threat.card.id}" target="_blank" rel="noopener noreferrer" title="View card details" class="external-link">
@@ -243,21 +243,21 @@
 				<h3>Threat Metrics</h3>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Probability</label>
+						<span class="detail-field__label">Probability</span>
 						<p>{threat.probability || '-'}</p>
 					</div>
 					<div class="detail-field">
-						<label>Mitigation Level</label>
+						<span class="detail-field__label">Mitigation Level</span>
 						<p>{threat.mitigation_level || '-'}</p>
 					</div>
 					<div class="detail-field">
-						<label>Disabled</label>
+						<span class="detail-field__label">Disabled</span>
 						<p>{threat.disabled ? 'Yes' : 'No'}</p>
 					</div>
 				</div>
 				<div class="detail-row full">
 					<div class="detail-field">
-						<label>Damage Description</label>
+						<span class="detail-field__label">Damage Description</span>
 						<p>{threat.damage_description || '-'}</p>
 					</div>
 				</div>
@@ -267,11 +267,11 @@
 				<h3>Metadata</h3>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Domain</label>
+						<span class="detail-field__label">Domain</span>
 						<p>{threat.domain || '-'}</p>
 					</div>
 					<div class="detail-field">
-						<label>Version</label>
+						<span class="detail-field__label">Version</span>
 						<p>{threat.version || '-'}</p>
 					</div>
 				</div>
@@ -281,27 +281,27 @@
 				<h3>STRIDE Classification</h3>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label>Spoofing</label>
+						<span class="detail-field__label">Spoofing</span>
 						<p>{threat.spoofing ? '✓' : '✗'}</p>
 					</div>
 					<div class="detail-field">
-						<label>Tampering</label>
+						<span class="detail-field__label">Tampering</span>
 						<p>{threat.tampering ? '✓' : '✗'}</p>
 					</div>
 					<div class="detail-field">
-						<label>Repudiation</label>
+						<span class="detail-field__label">Repudiation</span>
 						<p>{threat.repudiation ? '✓' : '✗'}</p>
 					</div>
 					<div class="detail-field">
-						<label>Info Disclosure</label>
+						<span class="detail-field__label">Info Disclosure</span>
 						<p>{threat.information_disclosure ? '✓' : '✗'}</p>
 					</div>
 					<div class="detail-field">
-						<label>Denial of Service</label>
+						<span class="detail-field__label">Denial of Service</span>
 						<p>{threat.denial_of_service ? '✓' : '✗'}</p>
 					</div>
 					<div class="detail-field">
-						<label>Elevation of Privilege</label>
+						<span class="detail-field__label">Elevation of Privilege</span>
 						<p>{threat.elevation_of_privilege ? '✓' : '✗'}</p>
 					</div>
 				</div>

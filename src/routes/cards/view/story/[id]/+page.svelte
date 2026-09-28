@@ -52,7 +52,7 @@ import { API_BASE, FRONTEND_BASE } from '$lib/config';
 
 	function getRenderedMarkdown(markdown: string): string {
 		if (!markdown) return '';
-		return marked.parse(markdown);
+		return marked.parse(markdown) as string;
 	}
 </script>
 

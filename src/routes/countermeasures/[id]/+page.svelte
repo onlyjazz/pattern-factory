@@ -37,4 +37,4 @@ import { API_BASE } from '$lib/config';
 	{error}
 	isEditing={false}
 	onEdit={handleEdit}
-|/>
+/>

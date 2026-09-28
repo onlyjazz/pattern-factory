@@ -3,7 +3,7 @@
 	import { onMount } from 'svelte';
 	import { modeStore } from '$lib/modeStore';
 	import { API_BASE } from '$lib/config';
-import { Network, FileText, Route, ListTree, AlertTriangle, Box, Bug, Shield, List, Gauge } from 'lucide-svelte';
+import { Network, FileText, Route, ListTree, AlertTriangle, Box, Bug, Shield, List, Gauge, Package, Users, Building2 } from 'lucide-svelte';
 
 	let currentPath = '';
 	let views: any[] = [];
@@ -24,7 +24,21 @@ import { Network, FileText, Route, ListTree, AlertTriangle, Box, Bug, Shield, Li
 		{ name: "Assets", href: "/assets", icon: Box }
 	];
 
-	$: links = $modeStore.mode === 'explore' ? exploreLinks : modelLinks;
+	const productLinks = [
+		{ name: "Products", href: "/products", icon: Package },
+		{ name: "People", href: "/people", icon: Users },
+		{ name: "Orgs", href: "/orgs", icon: Building2 }
+	];
+
+	type NavLink = { name: string; href: string; icon: typeof Package };
+
+	const linksByMode: Record<string, NavLink[]> = {
+		explore: exploreLinks,
+		model: modelLinks,
+		product: productLinks
+	};
+
+	$: links = linksByMode[$modeStore.mode] ?? [];
 
 	onMount(() => {
 		const unsubscribe = page.subscribe(($page) => {
@@ -51,6 +65,14 @@ import { Network, FileText, Route, ListTree, AlertTriangle, Box, Bug, Shield, Li
 	});
 
 	async function fetchViews(mode: string = 'explore') {
+		// Views belong to the Explore and Model workspaces only.
+		if (mode === 'product') {
+			views = [];
+			viewsLoading = false;
+			viewsError = '';
+			return;
+		}
+
 		try {
 			viewsLoading = true;
 			viewsError = '';
@@ -84,7 +106,7 @@ import { Network, FileText, Route, ListTree, AlertTriangle, Box, Bug, Shield, Li
 			</a>
 		{/each}
 
-		{#if views.length > 0}
+		{#if currentMode !== 'product' && views.length > 0}
 			<div class="views-section">
 				<div class="views-title">Views</div>
 				{#each views as view (view.id)}

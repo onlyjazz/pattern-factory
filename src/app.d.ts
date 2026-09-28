@@ -8,6 +8,12 @@ declare global {
 		// interface PageState {}
 		// interface Platform {}
 	}
+
+	// Google Charts / Maps globals loaded via <script src> at runtime.
+	const google: any;
+	interface Window {
+		google: any;
+	}
 }
 
 export {};
