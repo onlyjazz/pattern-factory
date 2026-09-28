@@ -20,6 +20,7 @@ import asyncio
 import json
 import logging
 import os
+import time
 from datetime import datetime
 from typing import Any, Dict, Optional, Tuple
 
@@ -38,8 +39,10 @@ logger = logging.getLogger(__name__)
 # Statuses the resolver is allowed to return (mirrors public.statuses values).
 VALID_STATUSES = ["active", "closed", "acquired", "duplicate", "renamed"]
 
-# Exa agent polling budget (milliseconds). 120s matches the competitors flow.
-EXA_AGENT_TIMEOUT_MS = 120000
+# Exa agent polling budget (milliseconds). Overridable via EXA_AGENT_TIMEOUT_MS.
+# The short org_status prompt typically completes in ~20-40s, so 90s is ample;
+# a timeout is treated as an inferred 'closed'.
+EXA_AGENT_TIMEOUT_MS = int(os.getenv("EXA_AGENT_TIMEOUT_MS", "90000"))
 
 # Resolver confidence at or below which (or an Exa timeout) we treat the result
 # as a signal that the company no longer exists, and mark it closed.
@@ -70,15 +73,16 @@ EXA_OUTPUT_SCHEMA: Dict[str, Any] = {
     "additionalProperties": False,
 }
 
+# Keep this SHORT — prompt length dominates Exa agent latency.
 _DEFAULT_AGENT_QUERY = (
-    "Investigate the current operating status of the company \"{name}\". "
-    "Context: {description}. Headquarters: {headquarters}. "
-    "Determine whether the company is: active (still operating independently), "
-    "closed (ceased operations / shut down / dissolved / bankrupt with no successor), "
-    "acquired (acquired by or merged into another company), "
-    "renamed (still operating but now under a different legal or brand name), or "
-    "duplicate (this record appears to duplicate another company already tracked). "
-    "Return a structured JSON object."
+    "what is the status of company {name} and return a string\n"
+    "  Determine which ONE of the following statuses best describes this company:\n"
+    "      - active: still operating independently under this name.\n"
+    "      - closed: ceased operations, shut down, dissolved, or liquidated\n"
+    "      - acquired: acquired by or merged into another company (name the acquirer).\n"
+    "      - renamed: still operating but now under a different name (return the new name)\n"
+    "      - duplicate: this organization appears to be a duplicate record of another company already tracked (name the canonical company).\n"
+    "      - unknown: insufficient evidence to decide.\n"
 )
 
 # mtime-cached SEARCH.yaml config (hot-reload without restart).
@@ -183,6 +187,18 @@ def _mark_inferred_closed(
         f"  Decision: yes (confidence: {EXA_LOW_CONFIDENCE:.2f}) - {resolution['reason']}"
     )
     return ("yes", EXA_LOW_CONFIDENCE, resolution["reason"])
+
+
+def _exa_cost_usd(run: Any) -> Optional[float]:
+    """Total Exa agent run cost in dollars, if reported."""
+    try:
+        cost = getattr(run, "cost_dollars", None)
+        if cost is None:
+            return None
+        total = getattr(cost, "total", None)
+        return float(total) if total is not None else None
+    except Exception:
+        return None
 
 
 # ============================================================================
@@ -292,9 +308,12 @@ async def agent_resolve_org_status(message_body: Dict[str, Any]) -> Tuple[str, f
                 run.id, timeout_ms=EXA_AGENT_TIMEOUT_MS
             )
 
+        started = time.monotonic()
         try:
             completed_run = await asyncio.to_thread(_call_exa_agent)
         except Exception as e:
+            message_body["exa_elapsed_s"] = round(time.monotonic() - started, 2)
+            message_body["exa_cost_usd"] = None
             if _looks_like_timeout(e):
                 logger.warning(
                     f"  Exa agent timed out after {EXA_AGENT_TIMEOUT_MS} ms; "
@@ -307,6 +326,9 @@ async def agent_resolve_org_status(message_body: Dict[str, Any]) -> Tuple[str, f
             reason = f"Exa agent call failed: {str(e)}"
             logger.error(f"  Decision: no (confidence: 0.10) - {reason}", exc_info=True)
             return ("no", 0.10, reason)
+
+        message_body["exa_elapsed_s"] = round(time.monotonic() - started, 2)
+        message_body["exa_cost_usd"] = _exa_cost_usd(completed_run)
 
         if not completed_run or not completed_run.output or not completed_run.output.structured:
             # The poll finished without usable output — the same effective signal
@@ -497,6 +519,8 @@ async def tool_update_org_status(message_body: Dict[str, Any]) -> Tuple[str, flo
             "name_before_acquisition": old_name if latest_name else None,
             "rename_conflict_with": rename_conflict_with,
             "inferred_closed": bool(resolution.get("inferred_closed")),
+            "exa_elapsed_s": message_body.get("exa_elapsed_s"),
+            "exa_cost_usd": message_body.get("exa_cost_usd"),
             "resolved_at": datetime.utcnow().isoformat(),
         }
 
@@ -580,6 +604,8 @@ async def tool_update_org_status(message_body: Dict[str, Any]) -> Tuple[str, flo
                     "duplicate_of": resolution.get("duplicate_of"),
                     "rename_conflict_with": rename_conflict_with,
                     "inferred_closed": bool(resolution.get("inferred_closed")),
+                    "exa_elapsed_s": message_body.get("exa_elapsed_s"),
+                    "exa_cost_usd": message_body.get("exa_cost_usd"),
                     "sources": resolution.get("sources") or [],
                 },
             )
@@ -646,6 +672,8 @@ async def run_org_status_flow(
         "duplicate_of": None,
         "sources": [],
         "inferred_closed": False,
+        "elapsed_s": None,
+        "cost_usd": None,
         "error": None,
     }
 
@@ -668,6 +696,8 @@ async def run_org_status_flow(
         # Stage 2: resolve
         result["stage"] = "resolveOrgStatus"
         decision, confidence, reason = await agent_resolve_org_status(message_body)
+        result["elapsed_s"] = message_body.get("exa_elapsed_s")
+        result["cost_usd"] = message_body.get("exa_cost_usd")
         if decision != "yes":
             result["status"] = "unresolved"
             result["decision"] = decision

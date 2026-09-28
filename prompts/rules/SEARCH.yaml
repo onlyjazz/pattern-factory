@@ -151,35 +151,24 @@ SEARCH:
 
   # ORG_STATUS workflow: Exa agent research query to classify an organization's
   # lifecycle status (public.orgs.status_id -> public.statuses).
-  # Placeholders: {name}, {description}, {headquarters}.
+  # Placeholder: {name}.
   # The agent must return the structured schema enforced in
   # backend/pitboss/org_status.py (status, confidence, reason, current_name,
   # acquirer, duplicate_of, sources).
+  #
+  # Keep this query SHORT: prompt length dominates Exa agent latency (a ~2000-char
+  # prompt runs ~2x slower than this ~600-char one). Do not add the org
+  # description or the schema/evidence boilerplate here.
   org_status:
     agent_query: |
-      Investigate the current operating status of the company "{name}".
-      Context: {description}
-      Headquarters: {headquarters}
-
-      Determine which ONE of the following statuses best describes this company today:
-      - active: still operating independently under this name.
-      - closed: ceased operations, shut down, dissolved, or liquidated with no successor entity.
-      - acquired: acquired by or merged into another company (name the acquirer).
-      - renamed: still operating but now under a different legal or brand name (give the current name).
-      - duplicate: this organization appears to be a duplicate record of another company already tracked (name the canonical company).
-      - unknown: insufficient evidence to decide.
-
-      IMPORTANT - current_name (latest operating name):
-      When the company was acquired or renamed, set current_name to the LATEST operating
-      company name, following any chain of successive acquisitions/mergers to the final parent.
-      Example: if "7D Surgical" was acquired by "SeaSpine Holdings Corporation", which later
-      merged with "Orthofix Medical", then status = acquired and current_name = "Orthofix Medical"
-      (not "SeaSpine Holdings Corporation"). If there is no distinct successor brand, use the
-      acquirer's name. Leave current_name empty when the company still operates under its own name.
-
-      Prefer the most recent evidence. If the company was acquired and later shut down, report acquired.
-      Set confidence (0.0-1.0) based on how strong and recent the evidence is, and cite source URLs.
-      Return a structured JSON object matching the provided schema.
+      what is the status of company {name} and return a string
+        Determine which ONE of the following statuses best describes this company:
+            - active: still operating independently under this name.
+            - closed: ceased operations, shut down, dissolved, or liquidated
+            - acquired: acquired by or merged into another company (name the acquirer).
+            - renamed: still operating but now under a different name (return the new name)
+            - duplicate: this organization appears to be a duplicate record of another company already tracked (name the canonical company).
+            - unknown: insufficient evidence to decide.
 
   # Prompt for FEELGOOD workflow extraction of CEO-focused competitive superiority (CEO-facing distinction, not benefit)
   superiority_extraction_system_prompt: |

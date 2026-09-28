@@ -21,6 +21,7 @@
 # Optional:
 #   --confidence N       Minimum resolver confidence required to write.
 #                        Float between 0.0 and 1.0. Default: 0.70.
+#   --concurrency N      Resolve up to N orgs in parallel (default: 1).
 #   --dry-run            Resolve statuses but do not write to the database.
 #   --output PATH        Export a per-org results report to this CSV.
 #   -h, --help           Show this help.
@@ -74,6 +75,7 @@ fi
 # ---------------------------------------------------------------------------
 ORG_IDS_SPEC=""
 CONFIDENCE="0.70"
+CONCURRENCY="1"
 DRY_RUN="false"
 OUTPUT_CSV=""
 
@@ -93,6 +95,14 @@ while [ $# -gt 0 ]; do
             ;;
         --confidence=*)
             CONFIDENCE="${1#*=}"
+            shift
+            ;;
+        --concurrency)
+            CONCURRENCY="${2:-}"
+            shift 2
+            ;;
+        --concurrency=*)
+            CONCURRENCY="${1#*=}"
             shift
             ;;
         --dry-run)
@@ -120,7 +130,12 @@ if [ -z "$ORG_IDS_SPEC" ]; then
     exit 1
 fi
 
-export PROJECT_ROOT BACKEND_DIR ORG_IDS_SPEC CONFIDENCE DRY_RUN OUTPUT_CSV
+if ! [[ "$CONCURRENCY" =~ ^[0-9]+$ ]] || [ "$CONCURRENCY" -lt 1 ]; then
+    echo "Error: --concurrency must be a positive integer (got '$CONCURRENCY')" >&2
+    exit 1
+fi
+
+export PROJECT_ROOT BACKEND_DIR ORG_IDS_SPEC CONFIDENCE CONCURRENCY DRY_RUN OUTPUT_CSV
 
 cd "$BACKEND_DIR" || exit 1
 
@@ -144,14 +159,18 @@ import asyncpg  # noqa: E402
 from pitboss.logging_util import log_event  # noqa: E402
 from pitboss.org_status import run_org_status_flow  # noqa: E402
 
+LOG_FORMAT = "%(asctime)s | %(levelname)-8s | %(message)s"
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s | %(levelname)-8s | %(message)s",
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler("/tmp/orgs_update_status.log"),
-    ],
+    format=LOG_FORMAT,
+    handlers=[logging.FileHandler("/tmp/orgs_update_status.log")],
 )
+# Keep the console clean: verbose agent logs go to the file only; the per-org
+# result line is printed below.
+_stdout_handler = logging.StreamHandler(sys.stdout)
+_stdout_handler.setLevel(logging.ERROR)
+_stdout_handler.setFormatter(logging.Formatter(LOG_FORMAT))
+logging.getLogger().addHandler(_stdout_handler)
 logger = logging.getLogger("orgs-update-status")
 
 SUMMARY_KEYS = [
@@ -189,20 +208,24 @@ def parse_org_ids(spec):
     return sorted(ids)
 
 
-async def get_db_connection():
+async def get_db_pool(concurrency: int = 1):
+    """Create an async Postgres pool sized for the requested concurrency."""
+    max_size = max(2, concurrency + 2)
+    common = dict(min_size=1, max_size=max_size)
     database_url = os.getenv("DATABASE_URL")
     if database_url:
-        conn = await asyncpg.connect(database_url)
+        pool = await asyncpg.create_pool(database_url, **common)
     else:
-        conn = await asyncpg.connect(
+        pool = await asyncpg.create_pool(
             host=os.getenv("PGHOST", "127.0.0.1"),
             port=int(os.getenv("PGPORT", 5432)),
             user=os.getenv("PGUSER", "pattern_factory"),
             password=os.getenv("PGPASSWORD", "314159"),
             database=os.getenv("PGDATABASE", "pattern-factory"),
+            **common,
         )
     logger.info("Connected to PostgreSQL")
-    return conn
+    return pool
 
 
 def export_results_csv(results, output_path):
@@ -210,7 +233,7 @@ def export_results_csv(results, output_path):
         "org_id", "org_name", "status", "stage", "decision", "confidence",
         "resolved_status", "current_status_id", "new_status_id", "reason",
         "current_name", "latest_name", "name_before_acquisition", "acquirer",
-        "duplicate_of", "sources", "inferred_closed", "error",
+        "duplicate_of", "sources", "inferred_closed", "elapsed_s", "cost_usd", "error",
     ]
     with open(output_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -241,7 +264,8 @@ async def main():
         logger.error(f"Confidence must be between 0.0 and 1.0, got {confidence}")
         sys.exit(1)
 
-    db = await get_db_connection()
+    concurrency = max(1, int(os.environ.get("CONCURRENCY", "1")))
+    db = await get_db_pool(concurrency)
     stats = {"total": len(org_ids), **{k: 0 for k in SUMMARY_KEYS}}
     results = []
 
@@ -249,44 +273,66 @@ async def main():
     logger.info(f"Starting org status update for {len(org_ids)} organization(s)")
     logger.info(f"Org IDs: {org_ids}")
     logger.info(f"Confidence threshold: {confidence}")
+    logger.info(f"Concurrency: {concurrency}")
     logger.info(f"Dry run: {dry_run}")
     logger.info(f"{'=' * 80}\n")
 
-    try:
-        for i, org_id in enumerate(org_ids, 1):
-            logger.info(f"\n[{i}/{len(org_ids)}] Processing org id {org_id}")
+    total_cost = 0.0
+    inferred_count = 0
+    sem = asyncio.Semaphore(concurrency)
+    print_lock = asyncio.Lock()
+
+    async def process_org(i, org_id):
+        nonlocal total_cost, inferred_count
+        async with sem:
             result = await run_org_status_flow(
                 db, org_id, confidence_threshold=confidence, dry_run=dry_run
             )
-            results.append(result)
 
-            status = result.get("status", "error")
-            if status in stats:
-                stats[status] += 1
-            else:
-                stats["error"] += 1
+        flow_status = result.get("status", "error")
+        stats[flow_status if flow_status in stats else "error"] += 1
 
-            if status == "updated":
-                logger.info(f"  {result.get('reason')}")
-            elif status in ("dry_run", "below_threshold", "unknown"):
-                logger.info(f"  {status}: {result.get('reason') or result.get('resolved_status')}")
-            else:
-                logger.warning(f"  {status}: {result.get('reason') or result.get('error')}")
+        resolved_status = result.get("resolved_status") or flow_status
+        if result.get("inferred_closed"):
+            resolved_status += "*"
+            inferred_count += 1
 
-            if i < len(org_ids):
-                await asyncio.sleep(0.5)
+        elapsed = result.get("elapsed_s")
+        cost = result.get("cost_usd")
+        if isinstance(cost, (int, float)):
+            total_cost += cost
 
-        logger.info(f"\n{'=' * 80}")
-        logger.info("ORG STATUS BATCH COMPLETE")
-        logger.info(f"{'=' * 80}")
-        logger.info(f"Total processed:  {stats['total']}")
-        logger.info(f"Updated:          {stats['updated']}")
-        logger.info(f"Dry run:          {stats['dry_run']}")
-        logger.info(f"Below threshold:  {stats['below_threshold']}")
-        logger.info(f"Unknown:          {stats['unknown']}")
-        logger.info(f"Skipped:          {stats['skipped']}")
-        logger.info(f"Errors:           {stats['error'] + stats['write_failed']}")
-        logger.info(f"{'=' * 80}\n")
+        org_name = result.get("org_name") or f"id={org_id}"
+        new_name = result.get("latest_name") or "-"
+        elapsed_str = f"{elapsed:.1f}s" if isinstance(elapsed, (int, float)) else "-"
+        cost_str = f"${cost:.4f}" if isinstance(cost, (int, float)) else "-"
+
+        async with print_lock:
+            print(
+                f"[{i}/{len(org_ids)}] {org_name} | {resolved_status} | "
+                f"new name: {new_name} | {elapsed_str} | Exa cost: {cost_str}",
+                flush=True,
+            )
+        return result
+
+    try:
+        results = await asyncio.gather(
+            *(process_org(i, org_id) for i, org_id in enumerate(org_ids, 1))
+        )
+
+        summary = (
+            f"done: {stats['total']} processed | updated={stats['updated']} "
+            f"skipped={stats['skipped']} unknown={stats['unknown']} "
+            f"below_threshold={stats['below_threshold']} "
+            f"errors={stats['error'] + stats['write_failed']} | "
+            f"total Exa cost: ${total_cost:.4f}"
+        )
+        if inferred_count:
+            summary += f" | inferred_closed={inferred_count}"
+        print(summary, flush=True)
+        if inferred_count:
+            print("* inferred closed (Exa timeout / near-zero confidence)", flush=True)
+        logger.info(summary)
 
         if output_csv:
             export_results_csv(results, output_csv)
