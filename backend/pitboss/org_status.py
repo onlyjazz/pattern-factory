@@ -41,6 +41,10 @@ VALID_STATUSES = ["active", "closed", "acquired", "duplicate", "renamed"]
 # Exa agent polling budget (milliseconds). 120s matches the competitors flow.
 EXA_AGENT_TIMEOUT_MS = 120000
 
+# Resolver confidence at or below which (or an Exa timeout) we treat the result
+# as a signal that the company no longer exists, and mark it closed.
+EXA_LOW_CONFIDENCE = 0.10
+
 # Structured output contract for the Exa agent. Every key is required so the
 # agent always returns a fully-populated object; empty string means "n/a".
 EXA_OUTPUT_SCHEMA: Dict[str, Any] = {
@@ -143,6 +147,42 @@ def _build_agent_query(org: Dict[str, Any]) -> str:
         description=description,
         headquarters=headquarters,
     )
+
+
+def _looks_like_timeout(exc: BaseException) -> bool:
+    """Heuristically detect an Exa polling timeout (the 2-minute poll budget)."""
+    text = f"{type(exc).__name__}: {exc}".lower()
+    return "timeout" in text or "timed out" in text
+
+
+def _inferred_closed_resolution(reason: str) -> Dict[str, Any]:
+    """Build a resolution that marks the org closed because of an Exa failure."""
+    return {
+        "status": "closed",
+        "confidence": EXA_LOW_CONFIDENCE,
+        "reason": f"Inferred closed: {reason}",
+        "current_name": None,
+        "acquirer": None,
+        "duplicate_of": None,
+        "sources": [],
+        "inferred_closed": True,
+    }
+
+
+def _mark_inferred_closed(
+    message_body: Dict[str, Any], reason: str
+) -> Tuple[str, float, str]:
+    """
+    Record an inferred 'closed' resolution when the Exa agent times out or
+    returns confidence <= EXA_LOW_CONFIDENCE, which we treat as a signal that
+    the company no longer exists.
+    """
+    resolution = _inferred_closed_resolution(reason)
+    message_body["status_resolution"] = resolution
+    logger.warning(
+        f"  Decision: yes (confidence: {EXA_LOW_CONFIDENCE:.2f}) - {resolution['reason']}"
+    )
+    return ("yes", EXA_LOW_CONFIDENCE, resolution["reason"])
 
 
 # ============================================================================
@@ -255,17 +295,42 @@ async def agent_resolve_org_status(message_body: Dict[str, Any]) -> Tuple[str, f
         try:
             completed_run = await asyncio.to_thread(_call_exa_agent)
         except Exception as e:
+            if _looks_like_timeout(e):
+                logger.warning(
+                    f"  Exa agent timed out after {EXA_AGENT_TIMEOUT_MS} ms; "
+                    f"treating as closed"
+                )
+                return _mark_inferred_closed(
+                    message_body,
+                    f"Exa agent timed out after {EXA_AGENT_TIMEOUT_MS} ms",
+                )
             reason = f"Exa agent call failed: {str(e)}"
             logger.error(f"  Decision: no (confidence: 0.10) - {reason}", exc_info=True)
             return ("no", 0.10, reason)
 
         if not completed_run or not completed_run.output or not completed_run.output.structured:
-            reason = "Exa agent returned no structured output"
-            logger.warning(f"  Decision: no (confidence: 0.70) - {reason}")
-            return ("no", 0.70, reason)
+            # The poll finished without usable output — the same effective signal
+            # as a timeout: no evidence the company is still operating.
+            logger.warning("  Exa agent returned no structured output; treating as closed")
+            return _mark_inferred_closed(
+                message_body, "Exa agent returned no structured output"
+            )
 
         raw = completed_run.output.structured
         resolution = _normalize_resolution(raw)
+
+        # A near-zero confidence is, in practice, Exa telling us it could not find
+        # an operating company. Treat that as 'closed'.
+        if resolution["confidence"] <= EXA_LOW_CONFIDENCE:
+            logger.warning(
+                f"  Exa confidence {resolution['confidence']:.2f} <= "
+                f"{EXA_LOW_CONFIDENCE:.2f}; treating as closed"
+            )
+            return _mark_inferred_closed(
+                message_body,
+                f"Exa confidence {resolution['confidence']:.2f} <= {EXA_LOW_CONFIDENCE:.2f}",
+            )
+
         message_body["status_resolution"] = resolution
 
         logger.info(f"  Resolved: status={resolution['status']} "
@@ -318,6 +383,7 @@ def _normalize_resolution(raw: Dict[str, Any]) -> Dict[str, Any]:
         "acquirer": _clean(raw.get("acquirer")),
         "duplicate_of": _clean(raw.get("duplicate_of")),
         "sources": sources,
+        "inferred_closed": False,
     }
 
 
@@ -430,6 +496,7 @@ async def tool_update_org_status(message_body: Dict[str, Any]) -> Tuple[str, flo
             "latest_name": latest_name,
             "name_before_acquisition": old_name if latest_name else None,
             "rename_conflict_with": rename_conflict_with,
+            "inferred_closed": bool(resolution.get("inferred_closed")),
             "resolved_at": datetime.utcnow().isoformat(),
         }
 
@@ -512,6 +579,7 @@ async def tool_update_org_status(message_body: Dict[str, Any]) -> Tuple[str, flo
                     "acquirer": resolution.get("acquirer"),
                     "duplicate_of": resolution.get("duplicate_of"),
                     "rename_conflict_with": rename_conflict_with,
+                    "inferred_closed": bool(resolution.get("inferred_closed")),
                     "sources": resolution.get("sources") or [],
                 },
             )
@@ -577,6 +645,7 @@ async def run_org_status_flow(
         "acquirer": None,
         "duplicate_of": None,
         "sources": [],
+        "inferred_closed": False,
         "error": None,
     }
 
@@ -619,10 +688,28 @@ async def run_org_status_flow(
         result["acquirer"] = resolution.get("acquirer")
         result["duplicate_of"] = resolution.get("duplicate_of")
         result["sources"] = resolution.get("sources") or []
+        result["inferred_closed"] = bool(resolution.get("inferred_closed"))
 
         if resolved_status not in VALID_STATUSES:
             result["status"] = "unknown"
             result["reason"] = result["reason"] or "Resolver returned no conclusive status"
+            return result
+
+        # An inferred 'closed' (Exa timeout or near-zero confidence) is written
+        # regardless of the confidence threshold: the low confidence IS the signal.
+        if result["inferred_closed"]:
+            if dry_run:
+                result["status"] = "dry_run"
+                return result
+            result["stage"] = "updateOrgStatus"
+            decision, confidence, reason = await tool_update_org_status(message_body)
+            if decision == "yes":
+                result["status"] = "updated"
+                result["new_status_id"] = _STATUS_ID_CACHE.get(resolved_status)
+                result["reason"] = reason
+            else:
+                result["status"] = "write_failed"
+                result["reason"] = reason
             return result
 
         if resolved_confidence < confidence_threshold:

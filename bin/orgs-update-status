@@ -210,7 +210,7 @@ def export_results_csv(results, output_path):
         "org_id", "org_name", "status", "stage", "decision", "confidence",
         "resolved_status", "current_status_id", "new_status_id", "reason",
         "current_name", "latest_name", "name_before_acquisition", "acquirer",
-        "duplicate_of", "sources", "error",
+        "duplicate_of", "sources", "inferred_closed", "error",
     ]
     with open(output_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
