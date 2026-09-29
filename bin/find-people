@@ -216,7 +216,7 @@ async def get_db_pool(concurrency: int = 1):
 def export_results_csv(results, output_path):
     fieldnames = [
         "org_id", "org_name", "status", "decision", "confidence",
-        "people_count", "reason", "elapsed_s", "dry_run",
+        "people_count", "reason", "elapsed_s", "cost_usd", "dry_run",
     ]
     with open(output_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -255,8 +255,10 @@ async def main():
 
     sem = asyncio.Semaphore(concurrency)
     print_lock = asyncio.Lock()
+    total_cost = 0.0
 
     async def process_org(i, org_id):
+        nonlocal total_cost
         async with sem:
             result = await run_find_people_flow(db, org_id, dry_run=dry_run)
 
@@ -266,12 +268,17 @@ async def main():
         org_name = result.get("org_name") or f"id={org_id}"
         people_count = result.get("people_count", 0)
         elapsed = result.get("elapsed_s")
+        cost = result.get("cost_usd")
+        if isinstance(cost, (int, float)):
+            total_cost += cost
+        
         elapsed_str = f"{elapsed:.1f}s" if isinstance(elapsed, (int, float)) else "-"
+        cost_str = f"${cost:.4f}" if isinstance(cost, (int, float)) else "-"
 
         async with print_lock:
             print(
                 f"[{i}/{len(org_ids)}] {org_name} | {flow_status} | "
-                f"people_found={people_count} | {elapsed_str}",
+                f"people_found={people_count} | {elapsed_str} | Exa cost: {cost_str}",
                 flush=True,
             )
         return result
@@ -284,7 +291,7 @@ async def main():
         summary = (
             f"done: {stats['total']} processed | updated={stats['updated']} "
             f"dry_run={stats['dry_run']} skipped={stats['skipped']} "
-            f"errors={stats['error']}"
+            f"errors={stats['error']} | total Exa cost: ${total_cost:.4f}"
         )
         print(summary, flush=True)
         logger.info(summary)

@@ -16,12 +16,10 @@ the API endpoint (future: POST /orgs/find-people).
 """
 
 import asyncio
-import json
 import logging
 import os
 import time
-from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import asyncpg
 
@@ -127,6 +125,18 @@ def _build_agent_query(org: Dict[str, Any]) -> Tuple[str, str]:
     return user_prompt, system_prompt
 
 
+def _exa_cost_usd(run: Any) -> Optional[float]:
+    """Total Exa agent run cost in dollars, if reported."""
+    try:
+        cost = getattr(run, "cost_dollars", None)
+        if cost is None:
+            return None
+        total = getattr(cost, "total", None)
+        return float(total) if total is not None else None
+    except Exception:
+        return None
+
+
 async def model_validate_org_id(
     db: asyncpg.Pool, org_id: int
 ) -> Tuple[str, float, str, Optional[Dict[str, Any]]]:
@@ -152,18 +162,17 @@ async def model_validate_org_id(
 async def model_find_people_via_exa(
     db: asyncpg.Pool,
     org: Dict[str, Any],
-    exa_client: Optional[Exa] = None,
-) -> Tuple[str, float, str, Optional[Dict[str, Any]]]:
+) -> Tuple[str, float, str, Optional[Dict[str, Any]], Optional[float]]:
     """
     Agent: model.findPeopleViaExa
     Search for people at the organization using Exa agent with structured extraction.
     
-    Returns: (decision, confidence, reason, extracted_people_dict)
+    Returns: (decision, confidence, reason, extracted_people_dict, cost_usd)
     """
-    if not EXA_AVAILABLE or exa_client is None:
-        reason = "Exa not available or not initialized"
+    if not EXA_AVAILABLE:
+        reason = "Exa not available (exa_py not installed)"
         logger.error(f"  Decision: no (confidence: 0.0) - {reason}")
-        return ("no", 0.0, reason, None)
+        return ("no", 0.0, reason, None, None)
 
     org_id = org.get("id")
     org_name = org.get("name", "").strip()
@@ -173,40 +182,46 @@ async def model_find_people_via_exa(
         
         logger.info(f"  Exa agent research for org {org_id} ({org_name})...")
         
-        # Call Exa agent with structured output schema
-        run = exa_client.search_and_contents(
-            query=user_prompt,
-            type="agent",
-            use_autoprompt=False,
-            num_results=5,
-            contents={
-                "text": {
-                    "max_characters": 4000,
-                },
-            },
-        )
+        # Call Exa agent using the proper agent.runs API with output schema
+        def _call_exa_agent():
+            exa = Exa(api_key=os.getenv("EXA_API_KEY"))
+            run = exa.agent.runs.create(query=user_prompt, output_schema=EXA_OUTPUT_SCHEMA)
+            return exa.agent.runs.poll_until_finished(
+                run.id, timeout_ms=EXA_AGENT_TIMEOUT_MS
+            )
         
-        # Extract the agent result (structured JSON response)
-        if hasattr(run, "agent_result"):
-            result = run.agent_result
-        else:
-            logger.warning(f"  No agent_result in Exa response for org {org_id}")
-            return ("no", 0.2, "Exa agent returned no result", None)
+        cost_usd = None
+        try:
+            completed_run = await asyncio.to_thread(_call_exa_agent)
+            cost_usd = _exa_cost_usd(completed_run)
+        except asyncio.TimeoutError:
+            logger.error(f"  Decision: no (confidence: 0.1) - Exa agent timeout for org {org_id}")
+            return ("no", 0.1, f"Exa agent timeout searching for {org_name}", None, cost_usd)
+        except Exception as e:
+            logger.error(f"  Decision: no (confidence: 0.0) - Exa agent error: {e}")
+            return ("no", 0.0, f"Exa agent error: {e}", None, cost_usd)
+        
+        # Extract the structured result from completed run
+        if not completed_run or not completed_run.output or not completed_run.output.structured:
+            logger.warning(f"  No structured output from Exa agent for org {org_id}")
+            return ("no", 0.2, "Exa agent returned no structured output", None, cost_usd)
+        
+        result = completed_run.output.structured
         
         # Validate the result is a dict with 'people' key
         if not isinstance(result, dict) or "people" not in result:
             logger.warning(f"  Exa agent result missing 'people' key for org {org_id}")
-            return ("no", 0.3, "Exa agent result missing 'people' key", None)
+            return ("no", 0.3, "Exa agent result missing 'people' key", None, cost_usd)
         
         people = result.get("people", [])
         if not isinstance(people, list):
             logger.warning(f"  Exa agent 'people' is not a list for org {org_id}")
-            return ("no", 0.3, "Exa agent 'people' is not a list", None)
+            return ("no", 0.3, "Exa agent 'people' is not a list", None, cost_usd)
         
         # Validate at least one person was found
         if not people:
             logger.warning(f"  Decision: no (confidence: 0.4) - No people found for org {org_id}")
-            return ("no", 0.4, f"Exa agent found no people for {org_name}", None)
+            return ("no", 0.4, f"Exa agent found no people for {org_name}", None, cost_usd)
         
         # Validate each person has at least a name
         valid_people = []
@@ -216,7 +231,7 @@ async def model_find_people_via_exa(
         
         if not valid_people:
             logger.warning(f"  Decision: no (confidence: 0.4) - No valid people (missing names) for org {org_id}")
-            return ("no", 0.4, "No valid people with names found", None)
+            return ("no", 0.4, "No valid people with names found", None, cost_usd)
         
         confidence = min(0.95, 0.5 + len(valid_people) * 0.15)  # Confidence grows with number of people found
         logger.info(f"  Decision: yes (confidence: {confidence:.2f}) - Found {len(valid_people)} people for org {org_id}")
@@ -225,15 +240,13 @@ async def model_find_people_via_exa(
             "yes",
             confidence,
             f"Found {len(valid_people)} people for {org_name}",
-            {"people": valid_people}
+            {"people": valid_people},
+            cost_usd,
         )
     
-    except asyncio.TimeoutError:
-        logger.error(f"  Decision: no (confidence: 0.1) - Exa agent timeout for org {org_id}")
-        return ("no", 0.1, f"Exa agent timeout searching for {org_name}", None)
     except Exception as e:
-        logger.error(f"  Decision: no (confidence: 0.0) - Exa agent error: {e}")
-        return ("no", 0.0, f"Exa agent error: {e}", None)
+        logger.error(f"  Decision: no (confidence: 0.0) - Unexpected error: {e}")
+        return ("no", 0.0, f"Unexpected error: {e}", None, None)
 
 
 async def tool_upsert_people(
@@ -318,6 +331,7 @@ async def run_find_people_flow(
         "reason": None,
         "people_count": 0,
         "elapsed_s": None,
+        "cost_usd": None,
         "dry_run": dry_run,
     }
     
@@ -338,18 +352,10 @@ async def run_find_people_flow(
         logger.info(f"[Org {result['org_name']}] Step 2: Searching for people via Exa...")
         
         # Step 2: Search for people via Exa agent
-        exa_api_key = os.getenv("EXA_API_KEY")
-        if not exa_api_key:
-            logger.error("EXA_API_KEY not set")
-            result["status"] = "error"
-            result["reason"] = "EXA_API_KEY not set"
-            result["elapsed_s"] = time.time() - start_time
-            return result
-        
-        exa_client = Exa(api_key=exa_api_key)
-        decision, confidence, reason, extracted_people = await model_find_people_via_exa(
-            db, org_record, exa_client
+        decision, confidence, reason, extracted_people, cost_usd = await model_find_people_via_exa(
+            db, org_record
         )
+        result["cost_usd"] = cost_usd
         
         if decision != "yes":
             result["status"] = "skipped"
