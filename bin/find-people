@@ -1,0 +1,317 @@
+#!/bin/bash
+# =============================================================================
+# find-people - Discover and store names/emails of key people in organizations
+#
+# Runs the FIND_PEOPLE agent flow over a set of organizations and writes the
+# results to public.people (upsert by name + org_id).
+#
+# For each org the flow:
+#   1. validateOrgId    - confirm the org exists in public.orgs
+#   2. findPeopleViaExa - Exa agent structured research -> name, email, job description
+#   3. upsertPeople     - write to public.people (upsert by name+org_id composite key)
+#
+# Usage:
+#   ./bin/find-people --org-ids <SPEC> [options]
+#
+# Runtime parameters:
+#   --org-ids SPEC       Required. Comma-separated ids and/or inclusive ranges,
+#                        e.g. --org-ids 1-50, --org-ids 3,17,42,
+#                        --org-ids 1-10,42
+#
+# Optional:
+#   --concurrency N      Find people for up to N orgs in parallel (default: 1).
+#   --dry-run            Search for people but do not write to the database.
+#   --output PATH        Export a per-org results report to this CSV.
+#   -h, --help           Show this help.
+#
+# Examples:
+#   ./bin/find-people --org-ids 1-50
+#   ./bin/find-people --org-ids 3,17,42
+#   ./bin/find-people --org-ids 1-50 --concurrency 3
+#   ./bin/find-people --org-ids 1-50 --dry-run
+#   ./bin/find-people --org-ids 1-50 --output /tmp/find_people_results.csv
+#
+# Required environment (loaded from .env in the project root):
+#   DATABASE_URL    PostgreSQL connection string
+#   EXA_API_KEY     Exa key for the agent research
+#
+# Logs are written to stdout and /tmp/find_people.log.
+# =============================================================================
+
+set -euo pipefail
+
+# Show help if requested
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    # Print the header comment block (skip the shebang), stripping the leading "# "
+    awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "$0"
+    exit 0
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+BACKEND_DIR="$PROJECT_ROOT/backend"
+
+# Load environment from .env
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    set -a
+    # shellcheck disable=SC1091
+    source "$PROJECT_ROOT/.env"
+    set +a
+fi
+
+if [ -z "${DATABASE_URL:-}" ]; then
+    echo "Error: DATABASE_URL not set (checked .env in $PROJECT_ROOT)" >&2
+    exit 1
+fi
+
+if [ -z "${EXA_API_KEY:-}" ]; then
+    echo "Warning: EXA_API_KEY not set - the Exa agent research step will fail" >&2
+fi
+
+# ---------------------------------------------------------------------------
+# Parse arguments
+# ---------------------------------------------------------------------------
+ORG_IDS_SPEC=""
+CONCURRENCY="1"
+DRY_RUN="false"
+OUTPUT_CSV=""
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --org-ids)
+            ORG_IDS_SPEC="${2:-}"
+            shift 2
+            ;;
+        --org-ids=*)
+            ORG_IDS_SPEC="${1#*=}"
+            shift
+            ;;
+        --concurrency)
+            CONCURRENCY="${2:-}"
+            shift 2
+            ;;
+        --concurrency=*)
+            CONCURRENCY="${1#*=}"
+            shift
+            ;;
+        --dry-run)
+            DRY_RUN="true"
+            shift
+            ;;
+        --output)
+            OUTPUT_CSV="${2:-}"
+            shift 2
+            ;;
+        --output=*)
+            OUTPUT_CSV="${1#*=}"
+            shift
+            ;;
+        *)
+            echo "Error: unknown option '$1'" >&2
+            echo "Usage: $0 --org-ids <SPEC> [--concurrency N] [--dry-run] [--output PATH]" >&2
+            exit 1
+            ;;
+    esac
+done
+
+if [ -z "$ORG_IDS_SPEC" ]; then
+    echo "Error: --org-ids is required (e.g. --org-ids 1-50 or --org-ids 3,17,42)" >&2
+    exit 1
+fi
+
+if ! [[ "$CONCURRENCY" =~ ^[0-9]+$ ]] || [ "$CONCURRENCY" -lt 1 ]; then
+    echo "Error: --concurrency must be a positive integer (got '$CONCURRENCY')" >&2
+    exit 1
+fi
+
+export PROJECT_ROOT BACKEND_DIR ORG_IDS_SPEC CONCURRENCY DRY_RUN OUTPUT_CSV
+
+cd "$BACKEND_DIR" || exit 1
+
+python3 - <<'PYTHON_SCRIPT'
+import asyncio
+import csv
+import json
+import logging
+import os
+import sys
+from datetime import datetime
+from pathlib import Path
+
+project_root = Path(os.environ.get("PROJECT_ROOT", "."))
+backend_dir = Path(os.environ.get("BACKEND_DIR", "backend"))
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
+
+import asyncpg  # noqa: E402
+
+from pitboss.logging_util import log_event  # noqa: E402
+from pitboss.find_people import run_find_people_flow  # noqa: E402
+
+LOG_FORMAT = "%(asctime)s | %(levelname)-8s | %(message)s"
+logging.basicConfig(
+    level=logging.INFO,
+    format=LOG_FORMAT,
+    handlers=[logging.FileHandler("/tmp/find_people.log")],
+)
+# Keep the console clean: verbose agent logs go to the file only; the per-org
+# result line is printed below.
+_stdout_handler = logging.StreamHandler(sys.stdout)
+_stdout_handler.setLevel(logging.ERROR)
+_stdout_handler.setFormatter(logging.Formatter(LOG_FORMAT))
+logging.getLogger().addHandler(_stdout_handler)
+logger = logging.getLogger("find-people")
+
+SUMMARY_KEYS = [
+    "updated",
+    "dry_run",
+    "skipped",
+    "error",
+]
+
+
+def parse_org_ids(spec):
+    """Parse a comma list / range spec into a sorted, de-duplicated list."""
+    ids = set()
+    for token in spec.split(","):
+        token = token.strip()
+        if not token:
+            continue
+        if "-" in token:
+            start_str, _, end_str = token.partition("-")
+            start_str, end_str = start_str.strip(), end_str.strip()
+            if not (start_str.isdigit() and end_str.isdigit()):
+                raise ValueError(f"Invalid range token: '{token}'")
+            start, end = int(start_str), int(end_str)
+            if start > end:
+                raise ValueError(f"Invalid range (start > end): '{token}'")
+            ids.update(range(start, end + 1))
+        elif token.isdigit():
+            ids.add(int(token))
+        else:
+            raise ValueError(f"Invalid org id token: '{token}'")
+    return sorted(ids)
+
+
+async def get_db_pool(concurrency: int = 1):
+    """Create an async Postgres pool sized for the requested concurrency."""
+    max_size = max(2, concurrency + 2)
+    common = dict(min_size=1, max_size=max_size)
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        pool = await asyncpg.create_pool(database_url, **common)
+    else:
+        pool = await asyncpg.create_pool(
+            host=os.getenv("PGHOST", "127.0.0.1"),
+            port=int(os.getenv("PGPORT", 5432)),
+            user=os.getenv("PGUSER", "pattern_factory"),
+            password=os.getenv("PGPASSWORD", "314159"),
+            database=os.getenv("PGDATABASE", "pattern-factory"),
+            **common,
+        )
+    logger.info("Connected to PostgreSQL")
+    return pool
+
+
+def export_results_csv(results, output_path):
+    fieldnames = [
+        "org_id", "org_name", "status", "decision", "confidence",
+        "people_count", "reason", "elapsed_s", "dry_run",
+    ]
+    with open(output_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for result in results:
+            row = dict(result)
+            writer.writerow({key: row.get(key) for key in fieldnames})
+    logger.info(f"Results exported to {output_path}")
+
+
+async def main():
+    dry_run = os.environ.get("DRY_RUN", "false").lower() == "true"
+    output_csv = os.environ.get("OUTPUT_CSV") or None
+
+    try:
+        org_ids = parse_org_ids(os.environ.get("ORG_IDS_SPEC", ""))
+    except ValueError as e:
+        logger.error(f"{e}")
+        sys.exit(1)
+
+    if not org_ids:
+        logger.error("--org-ids parsed to an empty list")
+        sys.exit(1)
+
+    concurrency = max(1, int(os.environ.get("CONCURRENCY", "1")))
+    db = await get_db_pool(concurrency)
+    stats = {"total": len(org_ids), **{k: 0 for k in SUMMARY_KEYS}}
+    results = []
+
+    logger.info(f"\n{'=' * 80}")
+    logger.info(f"Starting find-people for {len(org_ids)} organization(s)")
+    logger.info(f"Org IDs: {org_ids}")
+    logger.info(f"Concurrency: {concurrency}")
+    logger.info(f"Dry run: {dry_run}")
+    logger.info(f"{'=' * 80}\n")
+
+    sem = asyncio.Semaphore(concurrency)
+    print_lock = asyncio.Lock()
+
+    async def process_org(i, org_id):
+        async with sem:
+            result = await run_find_people_flow(db, org_id, dry_run=dry_run)
+
+        flow_status = result.get("status", "error")
+        stats[flow_status if flow_status in stats else "error"] += 1
+
+        org_name = result.get("org_name") or f"id={org_id}"
+        people_count = result.get("people_count", 0)
+        elapsed = result.get("elapsed_s")
+        elapsed_str = f"{elapsed:.1f}s" if isinstance(elapsed, (int, float)) else "-"
+
+        async with print_lock:
+            print(
+                f"[{i}/{len(org_ids)}] {org_name} | {flow_status} | "
+                f"people_found={people_count} | {elapsed_str}",
+                flush=True,
+            )
+        return result
+
+    try:
+        results = await asyncio.gather(
+            *(process_org(i, org_id) for i, org_id in enumerate(org_ids, 1))
+        )
+
+        summary = (
+            f"done: {stats['total']} processed | updated={stats['updated']} "
+            f"dry_run={stats['dry_run']} skipped={stats['skipped']} "
+            f"errors={stats['error']}"
+        )
+        print(summary, flush=True)
+        logger.info(summary)
+
+        if output_csv:
+            export_results_csv(results, output_csv)
+
+        if not dry_run:
+            try:
+                await log_event(db, "FIND_PEOPLE_BATCH", {
+                    "total": stats["total"],
+                    "updated": stats["updated"],
+                    "skipped": stats["skipped"],
+                    "error": stats["error"],
+                    "timestamp": datetime.utcnow().isoformat(),
+                })
+            except Exception as e:
+                logger.warning(f"Failed to log batch summary: {e}")
+    finally:
+        await db.close()
+        logger.info("Database connection closed")
+
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("\nInterrupted by user")
+        sys.exit(0)
+PYTHON_SCRIPT

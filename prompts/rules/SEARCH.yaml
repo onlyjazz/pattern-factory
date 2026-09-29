@@ -218,4 +218,15 @@ SEARCH:
     {exa_answer}
     
     Before writing, identify: What does {company}'s {device} do that these competitors do NOT do (or do differently)? What is the core distinction?
+  
+  # FIND_PEOPLE workflow: Exa agent research to discover names, emails, and
+  # job descriptions of key people (e.g., CEOs) at organizations.
+  # Placeholders: {company_name}.
+  # The agent must return the structured schema enforced in
+  # backend/pitboss/find_people.py (people: [name, email?, job_description?]).
+  #
+  # Keep queries SHORT: prompt length dominates Exa agent latency.
+  find_people:
+    user_prompt: "find the name and email of the CEO of {company_name}"
+    system_prompt: "You are an expert market researcher looking for the email of the CEO of a medical device company"
     
