@@ -8,9 +8,10 @@ and database logic. When adding or altering database tables, update
 the corresponding models in this file (see backend/db/AGENTS.md).
 """
 
+from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 # -------------------------------------------------------------------------
@@ -362,7 +363,7 @@ class ProductCreate(BaseModel):
     """Create a new FDA-cleared AI medical device product."""
     submission_number: str  # FDA 510(k) submission number (required, unique)
     device: str  # Device name (required)
-    date_of_final_decision: str | None = None
+    date_of_final_decision: datetime | None = None
     intended_use: str | None = None  # FDA-approved general function/purpose of device
     indications_for_use: str | None = None  # Specific medical conditions the device treats/diagnoses
     company: str | None = None  # Manufacturer company name
@@ -377,12 +378,20 @@ class ProductCreate(BaseModel):
     org_id: int | None = None  # Foreign key to organizations
     process_flag: bool = False  # True after the device is processed for basis-threat generation
 
+    @field_validator("date_of_final_decision", mode="before")
+    @classmethod
+    def _blank_date_to_none(cls, value: object) -> object:
+        """Treat empty/whitespace date strings as NULL."""
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
 
 class ProductUpdate(BaseModel):
     """Update an FDA-cleared AI medical device product."""
     submission_number: str | None = None
     device: str | None = None
-    date_of_final_decision: str | None = None
+    date_of_final_decision: datetime | None = None
     intended_use: str | None = None  # FDA-approved general function/purpose of device
     indications_for_use: str | None = None  # Specific medical conditions the device treats/diagnoses
     company: str | None = None
@@ -396,6 +405,14 @@ class ProductUpdate(BaseModel):
     competitors: str | None = None  # Comma-separated list of competitor company names
     org_id: int | None = None
     process_flag: bool | None = None
+
+    @field_validator("date_of_final_decision", mode="before")
+    @classmethod
+    def _blank_date_to_none(cls, value: object) -> object:
+        """Treat empty/whitespace date strings as NULL."""
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
 
 
 # -------------------------------------------------------------------------
