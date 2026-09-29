@@ -24,8 +24,8 @@ class OrgCreate(BaseModel):
     description: str | None = None
     stage: str | None = None
     funding: float | None = None
-    date_funded: str | None = None
-    date_founded: str | None = None
+    date_funded: datetime | None = None
+    date_founded: datetime | None = None
     linkedin_company_url: str | None = None
     content_source: str | None = None
     category_id: int | None = None
@@ -40,6 +40,14 @@ class OrgCreate(BaseModel):
     randomized_at: str | None = None
     status_id: int = 1
 
+    @field_validator("date_funded", "date_founded", mode="before")
+    @classmethod
+    def _blank_date_to_none(cls, value: object) -> object:
+        """Treat empty/whitespace date strings as NULL."""
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
 
 class OrgUpdate(BaseModel):
     """Update an organization."""
@@ -48,8 +56,8 @@ class OrgUpdate(BaseModel):
     description: str | None = None
     stage: str | None = None
     funding: float | None = None
-    date_funded: str | None = None
-    date_founded: str | None = None
+    date_funded: datetime | None = None
+    date_founded: datetime | None = None
     linkedin_company_url: str | None = None
     content_source: str | None = None
     category_id: int | None = None
@@ -63,6 +71,14 @@ class OrgUpdate(BaseModel):
     randomization_seed: int | None = None
     randomized_at: str | None = None
     status_id: int | None = None
+
+    @field_validator("date_funded", "date_founded", mode="before")
+    @classmethod
+    def _blank_date_to_none(cls, value: object) -> object:
+        """Treat empty/whitespace date strings as NULL."""
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
 
 
 class OrgStatusUpdateRequest(BaseModel):
