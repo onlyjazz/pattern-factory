@@ -8,7 +8,7 @@ and database logic. When adding or altering database tables, update
 the corresponding models in this file (see backend/db/AGENTS.md).
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
@@ -48,6 +48,14 @@ class OrgCreate(BaseModel):
             return None
         return value
 
+    @field_validator("date_funded", "date_founded")
+    @classmethod
+    def _normalize_date_timezone(cls, value: datetime | None) -> datetime | None:
+        """Convert aware datetimes to UTC-naive values for timestamp columns."""
+        if value is not None and value.tzinfo is not None:
+            return value.astimezone(timezone.utc).replace(tzinfo=None)
+        return value
+
 
 class OrgUpdate(BaseModel):
     """Update an organization."""
@@ -78,6 +86,14 @@ class OrgUpdate(BaseModel):
         """Treat empty/whitespace date strings as NULL."""
         if isinstance(value, str) and not value.strip():
             return None
+        return value
+
+    @field_validator("date_funded", "date_founded")
+    @classmethod
+    def _normalize_date_timezone(cls, value: datetime | None) -> datetime | None:
+        """Convert aware datetimes to UTC-naive values for timestamp columns."""
+        if value is not None and value.tzinfo is not None:
+            return value.astimezone(timezone.utc).replace(tzinfo=None)
         return value
 
 
