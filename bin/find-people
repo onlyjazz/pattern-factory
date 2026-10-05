@@ -12,13 +12,19 @@
 #
 # Usage:
 #   ./bin/find-people --org-ids <SPEC> [options]
+#   ./bin/find-people --missing-email [options]
 #
 # Runtime parameters:
-#   --org-ids SPEC       Required. Comma-separated ids and/or inclusive ranges,
+#   --org-ids SPEC       Comma-separated ids and/or inclusive ranges,
 #                        e.g. --org-ids 1-50, --org-ids 3,17,42,
-#                        --org-ids 1-10,42
+#                        --org-ids 1-10,42. Required unless --missing-email
+#                        is given (then it narrows the candidate set).
 #
 # Optional:
+#   --missing-email      Only process orgs that have no contact email in
+#                        public.people (i.e. no non-deleted people row with a
+#                        non-empty email). When --org-ids is omitted, every org
+#                        in the database is considered.
 #   --concurrency N      Find people for up to N orgs in parallel (default: 1).
 #   --dry-run            Search for people but do not write to the database.
 #   --output PATH        Export a per-org results report to this CSV.
@@ -27,6 +33,8 @@
 # Examples:
 #   ./bin/find-people --org-ids 1-50
 #   ./bin/find-people --org-ids 3,17,42
+#   ./bin/find-people --missing-email
+#   ./bin/find-people --missing-email --org-ids 45-200
 #   ./bin/find-people --org-ids 1-50 --concurrency 3
 #   ./bin/find-people --org-ids 1-50 --dry-run
 #   ./bin/find-people --org-ids 1-50 --output /tmp/find_people_results.csv
@@ -75,6 +83,7 @@ ORG_IDS_SPEC=""
 CONCURRENCY="1"
 DRY_RUN="false"
 OUTPUT_CSV=""
+MISSING_EMAIL="false"
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -98,6 +107,10 @@ while [ $# -gt 0 ]; do
             DRY_RUN="true"
             shift
             ;;
+        --missing-email)
+            MISSING_EMAIL="true"
+            shift
+            ;;
         --output)
             OUTPUT_CSV="${2:-}"
             shift 2
@@ -108,14 +121,14 @@ while [ $# -gt 0 ]; do
             ;;
         *)
             echo "Error: unknown option '$1'" >&2
-            echo "Usage: $0 --org-ids <SPEC> [--concurrency N] [--dry-run] [--output PATH]" >&2
+            echo "Usage: $0 --org-ids <SPEC> [--missing-email] [--concurrency N] [--dry-run] [--output PATH]" >&2
             exit 1
             ;;
     esac
 done
 
-if [ -z "$ORG_IDS_SPEC" ]; then
-    echo "Error: --org-ids is required (e.g. --org-ids 1-50 or --org-ids 3,17,42)" >&2
+if [ -z "$ORG_IDS_SPEC" ] && [ "$MISSING_EMAIL" != "true" ]; then
+    echo "Error: --org-ids is required unless --missing-email is given (e.g. --org-ids 1-50)" >&2
     exit 1
 fi
 
@@ -124,7 +137,7 @@ if ! [[ "$CONCURRENCY" =~ ^[0-9]+$ ]] || [ "$CONCURRENCY" -lt 1 ]; then
     exit 1
 fi
 
-export PROJECT_ROOT BACKEND_DIR ORG_IDS_SPEC CONCURRENCY DRY_RUN OUTPUT_CSV
+export PROJECT_ROOT BACKEND_DIR ORG_IDS_SPEC CONCURRENCY DRY_RUN OUTPUT_CSV MISSING_EMAIL
 
 cd "$BACKEND_DIR" || exit 1
 
@@ -146,7 +159,10 @@ if str(backend_dir) not in sys.path:
 import asyncpg  # noqa: E402
 
 from pitboss.logging_util import log_event  # noqa: E402
-from pitboss.find_people import run_find_people_flow  # noqa: E402
+from pitboss.find_people import (  # noqa: E402
+    run_find_people_flow,
+    select_org_ids_missing_contact_email,
+)
 
 LOG_FORMAT = "%(asctime)s | %(levelname)-8s | %(message)s"
 logging.basicConfig(
@@ -230,25 +246,46 @@ def export_results_csv(results, output_path):
 async def main():
     dry_run = os.environ.get("DRY_RUN", "false").lower() == "true"
     output_csv = os.environ.get("OUTPUT_CSV") or None
+    missing_email = os.environ.get("MISSING_EMAIL", "false").lower() == "true"
 
+    spec = os.environ.get("ORG_IDS_SPEC", "").strip()
     try:
-        org_ids = parse_org_ids(os.environ.get("ORG_IDS_SPEC", ""))
+        requested_ids = parse_org_ids(spec) if spec else []
     except ValueError as e:
         logger.error(f"{e}")
         sys.exit(1)
 
-    if not org_ids:
+    if not requested_ids and not missing_email:
         logger.error("--org-ids parsed to an empty list")
         sys.exit(1)
 
     concurrency = max(1, int(os.environ.get("CONCURRENCY", "1")))
     db = await get_db_pool(concurrency)
+
+    if missing_email:
+        # Only process orgs with no contact email in public.people. When no
+        # --org-ids were given, consider every org in the database.
+        org_ids = await select_org_ids_missing_contact_email(
+            db, requested_ids or None
+        )
+        logger.info(
+            f"Missing-email filter: {len(org_ids)} org(s) without a contact email"
+        )
+    else:
+        org_ids = requested_ids
+
+    if not org_ids:
+        logger.error("No organizations to process")
+        await db.close()
+        sys.exit(1)
+
     stats = {"total": len(org_ids), **{k: 0 for k in SUMMARY_KEYS}}
     results = []
 
     logger.info(f"\n{'=' * 80}")
     logger.info(f"Starting find-people for {len(org_ids)} organization(s)")
     logger.info(f"Org IDs: {org_ids}")
+    logger.info(f"Missing-email filter: {missing_email}")
     logger.info(f"Concurrency: {concurrency}")
     logger.info(f"Dry run: {dry_run}")
     logger.info(f"{'=' * 80}\n")
@@ -306,6 +343,7 @@ async def main():
                     "updated": stats["updated"],
                     "skipped": stats["skipped"],
                     "error": stats["error"],
+                    "missing_email": missing_email,
                     "timestamp": datetime.utcnow().isoformat(),
                 })
             except Exception as e:

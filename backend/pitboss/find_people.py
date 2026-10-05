@@ -19,7 +19,7 @@ import asyncio
 import logging
 import os
 import time
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import asyncpg
 
@@ -135,6 +135,41 @@ def _exa_cost_usd(run: Any) -> Optional[float]:
         return float(total) if total is not None else None
     except Exception:
         return None
+
+
+async def select_org_ids_missing_contact_email(
+    db: asyncpg.Pool,
+    org_ids: Optional[Sequence[int]] = None,
+) -> List[int]:
+    """
+    Return the ids of orgs that have no contact email recorded in public.people.
+
+    An org "has a contact email" when at least one non-deleted people row for
+    that org has a non-empty email. Orgs with no people at all are also
+    returned (they trivially lack a contact email).
+
+    When `org_ids` is provided, only those ids are considered; otherwise every
+    org in public.orgs is considered.
+    """
+    missing_email_sql = """
+        SELECT o.id
+        FROM public.orgs o
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM public.people p
+            WHERE p.org_id = o.id
+              AND p.deleted_at IS NULL
+              AND btrim(coalesce(p.email, '')) <> ''
+        )
+    """
+    if org_ids:
+        rows = await db.fetch(
+            missing_email_sql + " AND o.id = ANY($1::bigint[]) ORDER BY o.id",
+            list(org_ids),
+        )
+    else:
+        rows = await db.fetch(missing_email_sql + " ORDER BY o.id")
+    return [row["id"] for row in rows]
 
 
 async def model_validate_org_id(
