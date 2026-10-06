@@ -65,6 +65,10 @@
 					stage: org.stage || null,
 					funding: org.funding ?? null,
 					estimated_annual_sales: org.estimated_annual_sales ?? null,
+					// Always send the valuation so an explicit value survives a save that
+					// also changes funding/sales (the PAT-371 trigger keys off the UPDATE
+					// target list). See docs/ORG_SIZE_AND_SLE.md.
+					size: org.size ?? null,
 					employees: org.employees ?? null,
 					headquarters: org.headquarters || null,
 					arm: org.arm ?? null,

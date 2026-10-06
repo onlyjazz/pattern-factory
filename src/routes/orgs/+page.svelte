@@ -265,7 +265,7 @@
 									<th class="tal sortable" class:sorted-asc={sortField === 'name_before_acquisition' && sortDirection === 'asc'} class:sorted-desc={sortField === 'name_before_acquisition' && sortDirection === 'desc'} onclick={() => toggleSort('name_before_acquisition')}>Name Before Acquisition</th>
 									<th class="tal">Status</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'tier' && sortDirection === 'asc'} class:sorted-desc={sortField === 'tier' && sortDirection === 'desc'} onclick={() => toggleSort('tier')}>Tier</th>
-									<th class="tal sortable" class:sorted-asc={sortField === 'size' && sortDirection === 'asc'} class:sorted-desc={sortField === 'size' && sortDirection === 'desc'} onclick={() => toggleSort('size')}>Size</th>
+									<th class="tal sortable" class:sorted-asc={sortField === 'size' && sortDirection === 'asc'} class:sorted-desc={sortField === 'size' && sortDirection === 'desc'} onclick={() => toggleSort('size')}>Valuation</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'headquarters' && sortDirection === 'asc'} class:sorted-desc={sortField === 'headquarters' && sortDirection === 'desc'} onclick={() => toggleSort('headquarters')}>Headquarters</th>
 									<th class="tar">Actions</th>
 								</tr>
@@ -358,7 +358,7 @@
 						<label class="merge-target-option">
 							<input type="radio" name="merge-target" value={o.id} bind:group={mergeTargetId} />
 							<span class="merge-target-name">{o.name}</span>
-							<span class="merge-target-meta">{statusName(o.status_id)} · {(o.size || 0).toLocaleString()}</span>
+							<span class="merge-target-meta">{statusName(o.status_id)} · Valuation {(o.size || 0).toLocaleString()}</span>
 						</label>
 					{/each}
 				</div>

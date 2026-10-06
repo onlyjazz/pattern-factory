@@ -107,6 +107,10 @@
 						<label for="org-sales">Estimated Annual Sales</label>
 						<div class="input"><input id="org-sales" type="number" min="0" bind:value={org.estimated_annual_sales} class="input__text" class:input__text_changed={org.estimated_annual_sales} /></div>
 					</div>
+					<div class="detail-field">
+						<label for="org-valuation">Valuation</label>
+						<div class="input"><input id="org-valuation" type="number" min="0" step="1" bind:value={org.size} class="input__text" class:input__text_changed={org.size != null} /></div>
+					</div>
 				</div>
 				<div class="detail-row">
 					<div class="detail-field">
@@ -133,7 +137,6 @@
 			<div class="detail-section">
 				<h3>Index</h3>
 				<div class="detail-row">
-					<div class="detail-field"><span class="detail-field__label">Size (computed)</span><p>{(org.size || 0).toLocaleString()}</p></div>
 					<div class="detail-field"><span class="detail-field__label">Tier (computed)</span><p>{org.tier ?? '-'}</p></div>
 				</div>
 			</div>
@@ -164,6 +167,7 @@
 				<div class="detail-row">
 					<div class="detail-field"><span class="detail-field__label">Funding</span><p>{(org.funding || 0).toLocaleString()}</p></div>
 					<div class="detail-field"><span class="detail-field__label">Estimated Annual Sales</span><p>{(org.estimated_annual_sales || 0).toLocaleString()}</p></div>
+					<div class="detail-field"><span class="detail-field__label">Valuation</span><p>{(org.size || 0).toLocaleString()}</p></div>
 				</div>
 				<div class="detail-row">
 					<div class="detail-field"><span class="detail-field__label">Employees</span><p>{org.employees ?? '-'}</p></div>
@@ -178,7 +182,6 @@
 			<div class="detail-section">
 				<h3>Index</h3>
 				<div class="detail-row">
-					<div class="detail-field"><span class="detail-field__label">Size (computed)</span><p>{(org.size || 0).toLocaleString()}</p></div>
 					<div class="detail-field"><span class="detail-field__label">Tier (computed)</span><p>{org.tier ?? '-'}</p></div>
 				</div>
 			</div>

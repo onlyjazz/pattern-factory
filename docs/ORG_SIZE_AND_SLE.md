@@ -135,14 +135,28 @@ UPDATE public.orgs SET funding = funding + 1, size = size WHERE id = 177;
 
 ## Guidance for the org CRUD UI
 
-Include `size` in the update payload **whenever the org has a pinned valuation**
-(i.e. always send the valuation field, even if the user did not touch it).
-Otherwise a save that changes sales/funding will silently overwrite the valuation
-with the rule of thumb.
+`/orgs/{id}/edit` exposes `size` as an editable **Valuation** field in the
+Financials section (`src/lib/OrgDetail.svelte`), and
+`src/routes/orgs/[id]/edit/+page.svelte` **always** includes `size` in the
+`PUT /orgs/{id}` payload, even when the user did not touch it.
+
+That is deliberate: the rule of thumb (5× sales, 10× funding) is only a default,
+and a save that changes sales/funding would otherwise silently overwrite a
+manually pinned valuation. With the field always sent, the value shown in the
+form is exactly the value saved.
+
+Consequence to keep in mind: because the field round-trips a concrete number,
+editing funding/sales alone does **not** re-derive the valuation — the user must
+update the Valuation field themselves. The valuation is still derived by the
+rule of thumb on INSERT (see "INSERT behavior (known gap)") and on any UPDATE
+that omits `size` (e.g. direct SQL, CLI flows).
 
 If a sticky valuation is wanted (e.g. fall back to the rule of thumb only when
 `size` is NULL/0, or only on an explicit "recalculate" action), that is a small
 trigger change to `derive_org_size_on_update()`.
+
+The former read-only "Size (computed)" row in the Index section was removed;
+the same number is now shown once, as Valuation, in Financials.
 
 ## Inspecting the behavior
 
