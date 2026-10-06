@@ -1897,12 +1897,14 @@ async def get_products():
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
-            SELECT id, date_of_final_decision, submission_number, device, intended_use, indications_for_use, company, panel, 
-                   primary_product_code, product_contact_1, product_contact_2, product_contact_3,
-                   device_description, superiority, competitors, org_id, process_flag, created_at, updated_at
-            FROM public.products
-            WHERE deleted_at IS NULL
-            ORDER BY created_at DESC
+            SELECT p.id, p.date_of_final_decision, p.submission_number, p.device, p.intended_use, p.indications_for_use, 
+                   COALESCE(o.name, '') AS company, p.panel, 
+                   p.primary_product_code, p.product_contact_1, p.product_contact_2, p.product_contact_3,
+                   p.device_description, p.superiority, p.competitors, p.org_id, p.process_flag, p.created_at, p.updated_at
+            FROM public.products p
+            LEFT JOIN public.orgs o ON p.org_id = o.id
+            WHERE p.deleted_at IS NULL
+            ORDER BY p.created_at DESC
         """)
     return [dict(r) for r in rows]
 
@@ -1922,11 +1924,11 @@ async def create_product(product: ProductCreate):
         row = await conn.fetchrow(
             """
             INSERT INTO public.products 
-            (date_of_final_decision, submission_number, device, intended_use, indications_for_use, company, panel,
+            (date_of_final_decision, submission_number, device, intended_use, indications_for_use, panel,
              primary_product_code, product_contact_1, product_contact_2, product_contact_3,
              device_description, superiority, competitors, org_id, process_flag)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-            RETURNING id, date_of_final_decision, submission_number, device, intended_use, indications_for_use, company, panel,
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+            RETURNING id, date_of_final_decision, submission_number, device, intended_use, indications_for_use, panel,
                       primary_product_code, product_contact_1, product_contact_2, product_contact_3,
                       device_description, superiority, competitors, org_id, process_flag, created_at, updated_at
             """,
@@ -1935,7 +1937,6 @@ async def create_product(product: ProductCreate):
             product.device,
             product.intended_use,
             product.indications_for_use,
-            product.company,
             product.panel,
             product.primary_product_code,
             product.product_contact_1,
@@ -1956,11 +1957,13 @@ async def get_product(product_id: int):
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
             """
-            SELECT id, date_of_final_decision, submission_number, device, intended_use, indications_for_use, company, panel,
-                   primary_product_code, product_contact_1, product_contact_2, product_contact_3,
-                   device_description, superiority, competitors, org_id, created_at, updated_at
-            FROM public.products
-            WHERE id = $1 AND deleted_at IS NULL
+            SELECT p.id, p.date_of_final_decision, p.submission_number, p.device, p.intended_use, p.indications_for_use, 
+                   COALESCE(o.name, '') AS company, p.panel,
+                   p.primary_product_code, p.product_contact_1, p.product_contact_2, p.product_contact_3,
+                   p.device_description, p.superiority, p.competitors, p.org_id, p.created_at, p.updated_at
+            FROM public.products p
+            LEFT JOIN public.orgs o ON p.org_id = o.id
+            WHERE p.id = $1 AND p.deleted_at IS NULL
             """,
             product_id
         )
@@ -1990,20 +1993,19 @@ async def update_product(product_id: int, patch: ProductUpdate):
                 device = COALESCE($3, device),
                 intended_use = COALESCE($4, intended_use),
                 indications_for_use = COALESCE($5, indications_for_use),
-                company = COALESCE($6, company),
-                panel = COALESCE($7, panel),
-                primary_product_code = COALESCE($8, primary_product_code),
-                product_contact_1 = COALESCE($9, product_contact_1),
-                product_contact_2 = COALESCE($10, product_contact_2),
-                product_contact_3 = COALESCE($11, product_contact_3),
-                device_description = COALESCE($12, device_description),
-                superiority = COALESCE($13, superiority),
-                competitors = COALESCE($14, competitors),
-                org_id = COALESCE($15, org_id),
-                process_flag = COALESCE($16, process_flag),
+                panel = COALESCE($6, panel),
+                primary_product_code = COALESCE($7, primary_product_code),
+                product_contact_1 = COALESCE($8, product_contact_1),
+                product_contact_2 = COALESCE($9, product_contact_2),
+                product_contact_3 = COALESCE($10, product_contact_3),
+                device_description = COALESCE($11, device_description),
+                superiority = COALESCE($12, superiority),
+                competitors = COALESCE($13, competitors),
+                org_id = COALESCE($14, org_id),
+                process_flag = COALESCE($15, process_flag),
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = $17 AND deleted_at IS NULL
-            RETURNING id, date_of_final_decision, submission_number, device, intended_use, indications_for_use, company, panel,
+            WHERE id = $16 AND deleted_at IS NULL
+            RETURNING id, date_of_final_decision, submission_number, device, intended_use, indications_for_use, panel,
                       primary_product_code, product_contact_1, product_contact_2, product_contact_3,
                       device_description, superiority, competitors, org_id, process_flag, created_at, updated_at
             """,
@@ -2012,7 +2014,6 @@ async def update_product(product_id: int, patch: ProductUpdate):
             patch.device,
             patch.intended_use,
             patch.indications_for_use,
-            patch.company,
             patch.panel,
             patch.primary_product_code,
             patch.product_contact_1,

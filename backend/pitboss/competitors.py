@@ -83,7 +83,7 @@ async def agent_search_for_competitors(message_body: Dict[str, Any]) -> Tuple[st
         
         # Extract search parameters
         device = (product.get("device") or "").strip()
-        company = (product.get("company") or "").strip()
+        company = (product.get("company") or "").strip()  # From org join in validateProductId
         intended_use = (product.get("intended_use") or "").strip()
         
         if not device:
@@ -345,13 +345,18 @@ async def agent_upsert_competitors(message_body: Dict[str, Any]) -> Tuple[str, f
             logger.warning(f"  Decision: no (confidence: 0.70) - {reason}")
             return ("no", 0.70, reason)
         
-        # Get or create org for the product (company_id)
+        # Get company org from product's org_id (already linked)
+        product_org_id = product.get("org_id")
         company_name = (product.get("company") or "").strip()
         company_org_id = None
         
-        if company_name:
+        if product_org_id:
+            # Use existing org relationship
+            company_org_id = product_org_id
+            logger.info(f"  Using product's organization (id={company_org_id}): {company_name}")
+        elif company_name:
+            # Fallback: lookup or create org by name
             try:
-                # Look up company org
                 company_org = await db.fetchrow(
                     "SELECT id FROM public.orgs WHERE name = $1 AND deleted_at IS NULL",
                     company_name
@@ -371,7 +376,7 @@ async def agent_upsert_competitors(message_body: Dict[str, Any]) -> Tuple[str, f
                 logger.warning(f"  Could not get/create company org: {e}")
         
         if not company_org_id:
-            reason = f"Could not identify company organization"
+            reason = f"Could not identify company organization (missing org_id and company name)"
             logger.warning(f"  Decision: no (confidence: 0.70) - {reason}")
             return ("no", 0.70, reason)
         
@@ -427,11 +432,10 @@ async def agent_upsert_competitors(message_body: Dict[str, Any]) -> Tuple[str, f
                         try:
                             logger.info(f"  Creating new competitor product: {competitor_device}")
                             competitor_product_id = await db.fetchval(
-                                """INSERT INTO public.products (device, company, org_id, submission_number, process_flag) 
-                                   VALUES ($1, $2, $3, $4, false) 
+                                """INSERT INTO public.products (device, org_id, submission_number, process_flag) 
+                                   VALUES ($1, $2, $3, false) 
                                    RETURNING id""",
                                 competitor_device,
-                                competitor_company,
                                 competitor_org_id,
                                 placeholder_submission
                             )

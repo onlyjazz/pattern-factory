@@ -13,7 +13,7 @@ DATA:
           - intended_use
           - indications_for_use
           - device_description
-          - company
+          - company_from_fda_import_deprecated
           - panel
           - primary_product_code
           - product_contact_1

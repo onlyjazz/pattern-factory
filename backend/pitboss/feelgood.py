@@ -91,13 +91,17 @@ async def agent_validate_product_id(message_body: Dict[str, Any]) -> Tuple[str, 
         
         try:
             # Query: find product by ID or device name with required fields
+            # Include org relationship to get company name via org_id join
             result = None
             if product_id:
                 result = await db.fetchrow(
                     """
-                    SELECT id, submission_number, device, company, intended_use, indications_for_use, device_description, competitors
-                    FROM public.products
-                    WHERE id = $1 AND deleted_at IS NULL
+                    SELECT p.id, p.submission_number, p.device, p.intended_use, p.indications_for_use, 
+                           p.device_description, p.competitors, p.org_id,
+                           COALESCE(o.name, '') AS company
+                    FROM public.products p
+                    LEFT JOIN public.orgs o ON p.org_id = o.id
+                    WHERE p.id = $1 AND p.deleted_at IS NULL
                     """,
                     product_id
                 )
@@ -108,9 +112,12 @@ async def agent_validate_product_id(message_body: Dict[str, Any]) -> Tuple[str, 
             elif product_device:
                 result = await db.fetchrow(
                     """
-                    SELECT id, submission_number, device, company, intended_use, indications_for_use, device_description, competitors
-                    FROM public.products
-                    WHERE device = $1 AND deleted_at IS NULL
+                    SELECT p.id, p.submission_number, p.device, p.intended_use, p.indications_for_use, 
+                           p.device_description, p.competitors, p.org_id,
+                           COALESCE(o.name, '') AS company
+                    FROM public.products p
+                    LEFT JOIN public.orgs o ON p.org_id = o.id
+                    WHERE p.device = $1 AND p.deleted_at IS NULL
                     """,
                     product_device
                 )
@@ -124,7 +131,7 @@ async def agent_validate_product_id(message_body: Dict[str, Any]) -> Tuple[str, 
             # Validate required fields for superiority search
             missing_fields = []
             if not result.get("company"):
-                missing_fields.append("company")
+                missing_fields.append("company (via org_id)")
             if not result.get("device"):
                 missing_fields.append("device")
             

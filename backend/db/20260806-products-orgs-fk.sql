@@ -1,6 +1,7 @@
 -- ============================================
--- Add Foreign Key: products.company -> orgs.name
+-- Add Foreign Key: products.org_id -> orgs.id
 -- ============================================
+-- Matches products.company_from_fda_import_deprecated to orgs.name
 
 -- First, add an org_id column to products table for the foreign key relationship
 ALTER TABLE public.products 
@@ -9,11 +10,11 @@ ADD COLUMN IF NOT EXISTS org_id BIGINT REFERENCES public.orgs(id) ON DELETE SET 
 -- Create index on org_id for efficient lookups
 CREATE INDEX IF NOT EXISTS idx_products_org_id ON public.products(org_id);
 
--- Populate org_id by matching products.company to orgs.name
+-- Populate org_id by matching products.company_from_fda_import_deprecated to orgs.name
 UPDATE public.products p
 SET org_id = o.id
 FROM public.orgs o
-WHERE p.company = o.name
+WHERE p.company_from_fda_import_deprecated = o.name
   AND p.org_id IS NULL;
 
 -- Log the operation

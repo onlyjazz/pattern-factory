@@ -209,10 +209,11 @@ class ThreatSelectorService:
             row = await conn.fetchrow(
                 """
                 SELECT 
-                    id, device, company, indicated_use, device_description,
-                    indications_for_use, panel, primary_product_code, submission_number
-                FROM public.products
-                WHERE id = $1
+                    p.id, p.device, o.name AS company, p.indicated_use, p.device_description,
+                    p.indications_for_use, p.panel, p.primary_product_code, p.submission_number
+                FROM public.products p
+                LEFT JOIN public.orgs o ON p.org_id = o.id
+                WHERE p.id = $1
                 """,
                 device_id,
             )

@@ -105,24 +105,28 @@ class FEELGOODService:
         
         async with self.pool.acquire() as conn:
             if product_ids:
-                # Get specific products
+                # Get specific products with company from org join
                 placeholders = ", ".join(f"${i}" for i in range(1, len(product_ids) + 1))
                 query = f"""
-                    SELECT id, submission_number, device, company, intended_use, indications_for_use, device_description
-                    FROM public.products
-                    WHERE id IN ({placeholders}) AND deleted_at IS NULL
-                    ORDER BY id
+                    SELECT p.id, p.submission_number, p.device, COALESCE(o.name, '') AS company, 
+                           p.intended_use, p.indications_for_use, p.device_description
+                    FROM public.products p
+                    LEFT JOIN public.orgs o ON p.org_id = o.id
+                    WHERE p.id IN ({placeholders}) AND p.deleted_at IS NULL
+                    ORDER BY p.id
                 """
                 products = await conn.fetch(query, *product_ids)
             else:
                 # Get products without superiority claims (but with device_description)
                 products = await conn.fetch("""
-                    SELECT id, submission_number, device, company, intended_use, indications_for_use, device_description
-                    FROM public.products
-                    WHERE deleted_at IS NULL 
-                      AND (superiority IS NULL OR superiority = '')
-                      AND (device_description IS NOT NULL AND device_description != '')
-                    ORDER BY id
+                    SELECT p.id, p.submission_number, p.device, COALESCE(o.name, '') AS company, 
+                           p.intended_use, p.indications_for_use, p.device_description
+                    FROM public.products p
+                    LEFT JOIN public.orgs o ON p.org_id = o.id
+                    WHERE p.deleted_at IS NULL 
+                      AND (p.superiority IS NULL OR p.superiority = '')
+                      AND (p.device_description IS NOT NULL AND p.device_description != '')
+                    ORDER BY p.id
                     LIMIT $1
                 """, limit)
         

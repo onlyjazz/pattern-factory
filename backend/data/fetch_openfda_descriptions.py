@@ -111,22 +111,24 @@ async def fetch_and_populate(product_ids=None, batch_size=BATCH_SIZE):
         async with pool.acquire() as conn:
             # Get products to process
             if product_ids:
-                # Specific product IDs
+                # Specific product IDs with company from org join
                 placeholders = ", ".join(f"${i}" for i in range(1, len(product_ids) + 1))
                 query = f"""
-                    SELECT id, submission_number, device, company
-                    FROM public.products
-                    WHERE id IN ({placeholders}) AND deleted_at IS NULL
-                    ORDER BY id
+                    SELECT p.id, p.submission_number, p.device, COALESCE(o.name, '') AS company
+                    FROM public.products p
+                    LEFT JOIN public.orgs o ON p.org_id = o.id
+                    WHERE p.id IN ({placeholders}) AND p.deleted_at IS NULL
+                    ORDER BY p.id
                 """
                 products = await conn.fetch(query, *product_ids)
             else:
-                # All products
+                # All products with company from org join
                 products = await conn.fetch("""
-                    SELECT id, submission_number, device, company
-                    FROM public.products
-                    WHERE deleted_at IS NULL AND device_description IS NULL
-                    ORDER BY id
+                    SELECT p.id, p.submission_number, p.device, COALESCE(o.name, '') AS company
+                    FROM public.products p
+                    LEFT JOIN public.orgs o ON p.org_id = o.id
+                    WHERE p.deleted_at IS NULL AND p.device_description IS NULL
+                    ORDER BY p.id
                     LIMIT 100
                 """)
             

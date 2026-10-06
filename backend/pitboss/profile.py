@@ -455,7 +455,7 @@ async def agent_search_fda_database(message_body: Dict[str, Any]) -> Tuple[str, 
 
         submission_number = (product.get("submission_number") or "").strip()
         device = (product.get("device") or "").strip()
-        company = (product.get("company") or "").strip()
+        company = (product.get("company") or "").strip()  # From org join in validateProductId
 
         if not submission_number:
             reason = "No submission number available for FDA lookup"

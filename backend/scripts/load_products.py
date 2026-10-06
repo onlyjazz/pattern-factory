@@ -117,6 +117,7 @@ async def load_products_from_csv(csv_path: str, dry_run: bool = False) -> int:
         for row in rows_to_insert:
             try:
                 # Upsert: insert or update if submission_number exists
+                # Company data is stored via org_id relationship (populated by separate org matching process)
                 result = await conn.execute("""
                     INSERT INTO public.products (
                         date_of_final_decision,
@@ -124,16 +125,14 @@ async def load_products_from_csv(csv_path: str, dry_run: bool = False) -> int:
                         device,
                         intended_use,
                         indications_for_use,
-                        company,
                         panel,
                         primary_product_code,
                         product_contact_1,
                         product_contact_2,
                         product_contact_3
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                     ON CONFLICT (submission_number) DO UPDATE SET
                         device = EXCLUDED.device,
-                        company = EXCLUDED.company,
                         panel = EXCLUDED.panel,
                         primary_product_code = EXCLUDED.primary_product_code,
                         updated_at = now()
@@ -143,7 +142,6 @@ async def load_products_from_csv(csv_path: str, dry_run: bool = False) -> int:
                     row["device"],
                     row["intended_use"],
                     row["indications_for_use"],
-                    row["company"],
                     row["panel"],
                     row["primary_product_code"],
                     row["product_contact_1"],
