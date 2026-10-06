@@ -29,6 +29,12 @@ const TABLE_LAYOUT = {
 	paddingBottom: () => 5
 };
 
+// Threat tables carry up to eight columns (the enterprise-risk "All Threats"
+// table). At the default 10pt the auto-width columns exceed the printable page
+// width, so the table overflows the right margin and the trailing SLE columns
+// are clipped. A smaller cell font keeps every column inside the page.
+const TABLE_FONT_SIZE = 8;
+
 // -------------------------------------------------------------------------
 // Formatting and SLE math
 // -------------------------------------------------------------------------
@@ -118,19 +124,24 @@ export interface RiskReportOptions {
 }
 
 function buildTable(headers: string[], widths: any[], rows: any[][]): any {
+	// Apply the reduced font to every cell (header and body) so the table stays
+	// within the printable width regardless of how many columns it has.
+	const withFontSize = (cell: any) => ({ fontSize: TABLE_FONT_SIZE, ...cell });
 	return {
 		table: {
 			headerRows: 1,
 			widths,
 			body: [
-				headers.map((h) => ({
-					text: h,
-					bold: true,
-					color: VALUE_COLOR,
-					fillColor: '#f0f0f0',
-					alignment: 'left'
-				})),
-				...rows
+				headers.map((h) =>
+					withFontSize({
+						text: h,
+						bold: true,
+						color: VALUE_COLOR,
+						fillColor: '#f0f0f0',
+						alignment: 'left'
+					})
+				),
+				...rows.map((row) => row.map(withFontSize))
 			]
 		},
 		layout: TABLE_LAYOUT
