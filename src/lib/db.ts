@@ -172,6 +172,7 @@ export interface Organization {
     size?: number | null;
     tier?: number | null;
     status_id?: number | null;
+    product_count?: number;
     created_at?: string;
     updated_at?: string;
 }

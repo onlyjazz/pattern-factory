@@ -92,6 +92,38 @@ def test_create_product_org_not_found_returns_400(client, mock_pool, fake_conn):
     assert r.json()["detail"] == "Organization not found"
 
 
+def test_merge_orgs_returns_200(client, mock_pool, fake_conn):
+    fake_conn.fetch.return_value = [{"id": 1}, {"id": 2}]
+    fake_conn.execute.return_value = "UPDATE 1"
+    r = client.post("/orgs/merge", json={"target_org_id": 1, "source_org_ids": [2]})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["status"] == "ok"
+    assert body["target_org_id"] == 1
+    assert body["merged_org_ids"] == [2]
+    assert set(body["updated"]) == {"products", "people", "competitors", "pattern_org_link"}
+
+
+def test_merge_orgs_empty_sources_returns_400(client):
+    # Rejected before get_pg_pool() is called, so no mock_pool needed
+    r = client.post("/orgs/merge", json={"target_org_id": 1, "source_org_ids": []})
+    assert r.status_code == 400
+    assert r.json()["detail"] == "source_org_ids must not be empty"
+
+
+def test_merge_orgs_target_in_sources_returns_400(client):
+    r = client.post("/orgs/merge", json={"target_org_id": 1, "source_org_ids": [1, 2]})
+    assert r.status_code == 400
+    assert r.json()["detail"] == "target_org_id must not be one of source_org_ids"
+
+
+def test_merge_orgs_missing_org_returns_404(client, mock_pool, fake_conn):
+    fake_conn.fetch.return_value = [{"id": 1}]  # source org 2 not found
+    r = client.post("/orgs/merge", json={"target_org_id": 1, "source_org_ids": [2]})
+    assert r.status_code == 404
+    assert "2" in r.json()["detail"]
+
+
 def test_views_invalid_mode_returns_400(client):
     # 400 is raised before get_pg_pool() is called, so no mock_pool needed
     r = client.get("/views?mode=bogus")

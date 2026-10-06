@@ -104,6 +104,16 @@ class OrgStatusUpdateRequest(BaseModel):
     dry_run: bool = False
 
 
+class OrgMergeRequest(BaseModel):
+    """Merge duplicate organizations into a single target (POST /orgs/merge).
+
+    ``source_org_ids`` are the duplicate orgs that get reassigned to
+    ``target_org_id`` and then hard-deleted.
+    """
+    target_org_id: int
+    source_org_ids: list[int]
+
+
 # -------------------------------------------------------------------------
 # Patterns
 # -------------------------------------------------------------------------

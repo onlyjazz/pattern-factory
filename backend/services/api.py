@@ -155,6 +155,7 @@ PG_POOL: Optional[asyncpg.Pool] = None
 # -------------------------------------------------------------------------
 from backend.pitboss.supervisor import PitbossSupervisor
 from backend.pitboss.org_status import run_org_status_flow
+from backend.pitboss.logging_util import log_event
 from backend.services.models import (
     AssetCreate,
     AssetUpdate,
@@ -165,6 +166,7 @@ from backend.services.models import (
     ModelCreate,
     ModelUpdate,
     OrgCreate,
+    OrgMergeRequest,
     OrgStatusUpdateRequest,
     OrgUpdate,
     PathCreate,
@@ -191,6 +193,17 @@ def get_pg_pool() -> asyncpg.Pool:
     if PG_POOL is None:
         raise RuntimeError("Postgres pool not initialized")
     return PG_POOL
+
+def _asyncpg_rowcount(status: str) -> int:
+    """Extract the affected-row count from an asyncpg command status string.
+
+    asyncpg returns strings like ``"UPDATE 3"`` or ``"DELETE 0"`` from
+    ``Connection.execute``. Returns 0 when the status cannot be parsed.
+    """
+    try:
+        return int(str(status).rsplit(" ", 1)[-1])
+    except (TypeError, ValueError):
+        return 0
 
 # -------------------------------------------------------------------------
 # Startup: connect to Postgres
@@ -1395,17 +1408,27 @@ async def get_organizations():
     - Tier 3: Startup (size < $50M) — Early-stage AI companies
     
     Size is computed as MAX(5 × estimated_annual_sales, 10 × funding).
+    Each org also carries ``product_count``: the number of active products whose
+    ``org_id`` points at it. This helps callers spot duplicate orgs when deciding
+    which record to merge into.
     """
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
-            SELECT id, name, description, stage, funding, date_funded, date_founded,
-                   linkedin_company_url, content_source, category_id, content_url,
-                   estimated_annual_sales, employees, headquarters, size, tier,
-                   status_id, name_before_acquisition, created_at, updated_at
-            FROM public.orgs
-            WHERE deleted_at IS NULL
-            ORDER BY tier ASC, size DESC, created_at DESC
+            SELECT o.id, o.name, o.description, o.stage, o.funding, o.date_funded, o.date_founded,
+                   o.linkedin_company_url, o.content_source, o.category_id, o.content_url,
+                   o.estimated_annual_sales, o.employees, o.headquarters, o.size, o.tier,
+                   o.status_id, o.name_before_acquisition, o.created_at, o.updated_at,
+                   COALESCE(pc.product_count, 0) AS product_count
+            FROM public.orgs o
+            LEFT JOIN (
+                SELECT org_id, COUNT(*) AS product_count
+                FROM public.products
+                WHERE org_id IS NOT NULL AND deleted_at IS NULL
+                GROUP BY org_id
+            ) pc ON pc.org_id = o.id
+            WHERE o.deleted_at IS NULL
+            ORDER BY o.tier ASC, o.size DESC, o.created_at DESC
         """)
     return [dict(r) for r in rows]
 
@@ -1553,6 +1576,200 @@ async def delete_organization(org_id: int):
         if result == "UPDATE 0":
             raise HTTPException(status_code=404, detail="Organization not found")
     return {"status": "ok", "deleted_id": org_id}
+
+@app.post("/orgs/merge", tags=["Organizations"])
+async def merge_organizations(request: OrgMergeRequest):
+    """Merge duplicate organizations into a single target org.
+
+    Every ``products``, ``people``, ``competitors``, and ``pattern_org_link``
+    row that points at a source org is reassigned to ``target_org_id``, then
+    the source orgs are permanently deleted from ``public.orgs``. The whole
+    operation runs in a single transaction so a partial merge can never land.
+
+    Raises:
+        400: ``source_org_ids`` is empty or contains ``target_org_id``
+        404: The target or one of the source orgs does not exist
+    """
+    if not request.source_org_ids:
+        raise HTTPException(status_code=400, detail="source_org_ids must not be empty")
+
+    target = int(request.target_org_id)
+    sources = sorted({int(org_id) for org_id in request.source_org_ids})
+
+    if target in sources:
+        raise HTTPException(
+            status_code=400,
+            detail="target_org_id must not be one of source_org_ids",
+        )
+
+    pool = get_pg_pool()
+
+    async with pool.acquire() as conn:
+        existing = await conn.fetch(
+            """
+            SELECT id FROM public.orgs
+            WHERE id = ANY($1::bigint[]) AND deleted_at IS NULL
+            """,
+            [target, *sources],
+        )
+        found = {row["id"] for row in existing}
+        missing = [org_id for org_id in [target, *sources] if org_id not in found]
+        if missing:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Organizations not found: {missing}",
+            )
+
+        async with conn.transaction():
+            # products / people: plain repoint. Both FKs are ON DELETE SET NULL,
+            # so repointing before the org delete preserves the association for
+            # soft-deleted rows too (no deleted_at filter here).
+            products_result = await conn.execute(
+                """
+                UPDATE public.products
+                SET org_id = $1, updated_at = CURRENT_TIMESTAMP
+                WHERE org_id = ANY($2::bigint[])
+                """,
+                target,
+                sources,
+            )
+            people_result = await conn.execute(
+                """
+                UPDATE public.people
+                SET org_id = $1, updated_at = CURRENT_TIMESTAMP
+                WHERE org_id = ANY($2::bigint[])
+                """,
+                target,
+                sources,
+            )
+
+            # competitors: both endpoints collapse onto the target, which can
+            # collide with UNIQUE(company_id, competitor_id, product_id).
+            # 1) Drop source rows that would become self-referential.
+            await conn.execute(
+                """
+                DELETE FROM public.competitors
+                WHERE id IN (
+                    SELECT id FROM (
+                        SELECT
+                            id,
+                            CASE WHEN company_id = ANY($2::bigint[]) THEN $1 ELSE company_id END AS mapped_company,
+                            CASE WHEN competitor_id = ANY($2::bigint[]) THEN $1 ELSE competitor_id END AS mapped_competitor
+                        FROM public.competitors
+                        WHERE company_id = ANY($2::bigint[])
+                           OR competitor_id = ANY($2::bigint[])
+                    ) m
+                    WHERE mapped_company = mapped_competitor
+                )
+                """,
+                target,
+                sources,
+            )
+            # 2) Drop source rows that would duplicate an existing target row or
+            #    another source row, keeping the row already pointing at target.
+            await conn.execute(
+                """
+                DELETE FROM public.competitors
+                WHERE id IN (
+                    SELECT id FROM (
+                        SELECT
+                            id,
+                            ROW_NUMBER() OVER (
+                                PARTITION BY
+                                    CASE WHEN company_id = ANY($2::bigint[]) THEN $1 ELSE company_id END,
+                                    CASE WHEN competitor_id = ANY($2::bigint[]) THEN $1 ELSE competitor_id END,
+                                    product_id
+                                ORDER BY
+                                    (CASE WHEN company_id = $1 THEN 1 ELSE 0 END
+                                     + CASE WHEN competitor_id = $1 THEN 1 ELSE 0 END) DESC,
+                                    id ASC
+                            ) AS rn,
+                            (company_id = ANY($2::bigint[]) OR competitor_id = ANY($2::bigint[])) AS touches_source
+                        FROM public.competitors
+                        WHERE company_id = ANY($2::bigint[])
+                           OR competitor_id = ANY($2::bigint[])
+                           OR company_id = $1
+                           OR competitor_id = $1
+                    ) ranked
+                    WHERE rn > 1 AND touches_source
+                )
+                """,
+                target,
+                sources,
+            )
+            # 3) Repoint both columns in one statement (now collision-free).
+            competitors_result = await conn.execute(
+                """
+                UPDATE public.competitors
+                SET company_id = CASE WHEN company_id = ANY($2::bigint[]) THEN $1 ELSE company_id END,
+                    competitor_id = CASE WHEN competitor_id = ANY($2::bigint[]) THEN $1 ELSE competitor_id END,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE company_id = ANY($2::bigint[]) OR competitor_id = ANY($2::bigint[])
+                """,
+                target,
+                sources,
+            )
+
+            # pattern_org_link: PK is (pattern_id, org_id), so collapse source
+            # links that would duplicate a target link or another source link.
+            await conn.execute(
+                """
+                DELETE FROM public.pattern_org_link l
+                WHERE l.org_id = ANY($2::bigint[])
+                  AND (
+                      EXISTS (
+                          SELECT 1 FROM public.pattern_org_link t
+                          WHERE t.pattern_id = l.pattern_id AND t.org_id = $1
+                      )
+                      OR EXISTS (
+                          SELECT 1 FROM public.pattern_org_link t
+                          WHERE t.pattern_id = l.pattern_id
+                            AND t.org_id = ANY($2::bigint[])
+                            AND t.org_id > l.org_id
+                      )
+                  )
+                """,
+                target,
+                sources,
+            )
+            pattern_links_result = await conn.execute(
+                """
+                UPDATE public.pattern_org_link
+                SET org_id = $1
+                WHERE org_id = ANY($2::bigint[])
+                """,
+                target,
+                sources,
+            )
+
+            await conn.execute(
+                "DELETE FROM public.orgs WHERE id = ANY($1::bigint[])",
+                sources,
+            )
+
+    updated = {
+        "products": _asyncpg_rowcount(products_result),
+        "people": _asyncpg_rowcount(people_result),
+        "competitors": _asyncpg_rowcount(competitors_result),
+        "pattern_org_link": _asyncpg_rowcount(pattern_links_result),
+    }
+
+    await log_event(
+        pool,
+        "ORG_MERGE",
+        {
+            "target_org_id": target,
+            "merged_org_ids": sources,
+            "updated": updated,
+        },
+    )
+
+    return {
+        "status": "ok",
+        "target_org_id": target,
+        "merged_org_ids": sources,
+        "updated": updated,
+    }
 
 @app.post("/orgs/update-status", tags=["Organizations"])
 async def update_org_statuses(request: OrgStatusUpdateRequest):

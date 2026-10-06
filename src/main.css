@@ -2447,3 +2447,65 @@ th.sortable.sorted-desc::after {
 .message-error {
 	color: #c0392b;
 }
+.message-success {
+	color: #2e7d32;
+}
+
+/* Org merge (list selection + target picker) */
+.checkbox-input_inline {
+	display: inline-block;
+	width: 14px;
+	height: 14px;
+	min-width: 14px;
+	min-height: 14px;
+	margin-top: 0;
+	margin-right: 6px;
+	vertical-align: middle;
+}
+.merge-instructions {
+	margin: 0 0 10px;
+	font-size: 0.9em;
+	color: #666;
+}
+.merge-warning {
+	margin-bottom: 16px;
+	padding: 10px 12px;
+	border-left: 3px solid #FF9800;
+	background: #FFF8E1;
+	font-size: 0.85em;
+	line-height: 1.4;
+	color: #6d4c00;
+}
+.merge-target-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-bottom: 20px;
+}
+.merge-target-option {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 8px 10px;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	cursor: pointer;
+}
+.merge-target-option:hover {
+	background: #f5f5f5;
+}
+.merge-target-name {
+	font-weight: 500;
+}
+.merge-target-meta {
+	margin-left: auto;
+	font-size: 0.8em;
+	color: #999;
+}
+.button:disabled {
+	cursor: no-drop;
+	background: #999999;
+}
+.button:disabled:hover {
+	background: #999999;
+}

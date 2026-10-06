@@ -32,12 +32,18 @@ class FakeAsyncpgConn:
         self.fetchval = AsyncMock(return_value=1)
         self.execute = AsyncMock(return_value="DELETE 1")
 
+    @contextlib.asynccontextmanager
+    async def transaction(self):
+        """asyncpg-like transaction context manager (no real transaction)."""
+        yield None
+
 
 class FakeAsyncpgPool:
     """asyncpg.Pool-like object whose acquire() yields a FakeAsyncpgConn."""
 
     def __init__(self, conn: FakeAsyncpgConn) -> None:
         self._conn = conn
+        self.execute = AsyncMock(return_value="INSERT 0 1")
 
     @contextlib.asynccontextmanager
     async def acquire(self):

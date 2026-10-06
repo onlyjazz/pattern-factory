@@ -48,6 +48,16 @@ def test_post_products_missing_device_returns_422(client):
     assert r.status_code == 422
 
 
+def test_post_orgs_merge_missing_target_returns_422(client):
+    r = client.post("/orgs/merge", json={"source_org_ids": [1, 2]})
+    assert r.status_code == 422
+
+
+def test_post_orgs_merge_missing_sources_returns_422(client):
+    r = client.post("/orgs/merge", json={"target_org_id": 1})
+    assert r.status_code == 422
+
+
 def test_post_assets_invalid_fixed_value_type_returns_422(client):
     # fixed_value is float; a non-numeric string cannot be coerced -> 422
     r = client.post(
