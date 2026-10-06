@@ -4,17 +4,20 @@
 	import type { Product, Organization } from '$lib/db';
 	import { API_BASE } from '$lib/config';
 
-	let products: Product[] = [];
+	/** Product plus the resolved org name, so the Org column can sort and search. */
+	type ProductRow = Product & { org_name: string | null };
+
+	let products: ProductRow[] = [];
 	let orgs: Organization[] = [];
 	let loading = true;
 	let error: string | null = null;
-	let filteredProducts: Product[] = [];
+	let filteredProducts: ProductRow[] = [];
 
 	let showAddModal = false;
 	let addModalError: string | null = null;
-	let newProduct = { submission_number: '', device: '', company: '', org_id: null as number | null };
+	let newProduct = { submission_number: '', device: '', org_id: null as number | null };
 
-	let sortField: keyof Product | null = 'device';
+	let sortField: keyof ProductRow | null = 'device';
 	let sortDirection: 'asc' | 'desc' = 'asc';
 
 	const apiBase = API_BASE;
@@ -28,9 +31,13 @@
 				fetch(`${apiBase}/orgs`)
 			]);
 			if (!productsRes.ok) throw new Error('Failed to fetch products');
-			const data = await productsRes.json();
-			products = data.map((p: any) => ({ ...p, id: String(p.id) }));
 			if (orgsRes.ok) orgs = await orgsRes.json();
+			const data = await productsRes.json();
+			products = data.map((p: any): ProductRow => ({
+				...p,
+				id: String(p.id),
+				org_name: orgs.find(o => Number(o.id) === p.org_id)?.name ?? null
+			}));
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Unknown error';
 		} finally {
@@ -38,20 +45,15 @@
 		}
 	});
 
-	function orgName(orgId?: number | null): string {
-		const match = orgs.find(o => Number(o.id) === orgId);
-		return match ? match.name : '-';
-	}
-
-	function filterProducts(items: Product[], search: string, field: keyof Product | null, dir: 'asc' | 'desc'): Product[] {
+	function filterProducts(items: ProductRow[], search: string, field: keyof ProductRow | null, dir: 'asc' | 'desc'): ProductRow[] {
 		let result = items;
 		if (search.trim() !== '') {
 			const term = search.toLowerCase();
 			result = result.filter(p =>
 				(p.device || '').toLowerCase().includes(term) ||
 				(p.submission_number || '').toLowerCase().includes(term) ||
-				(p.company || '').toLowerCase().includes(term) ||
-				(p.panel || '').toLowerCase().includes(term)
+				(p.panel || '').toLowerCase().includes(term) ||
+				(p.org_name || '').toLowerCase().includes(term)
 			);
 		}
 		if (field) {
@@ -65,7 +67,7 @@
 		return result;
 	}
 
-	function toggleSort(field: keyof Product) {
+	function toggleSort(field: keyof ProductRow) {
 		if (sortField === field) {
 			sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
 		} else {
@@ -76,7 +78,7 @@
 
 	function closeAddModal() {
 		showAddModal = false;
-		newProduct = { submission_number: '', device: '', company: '', org_id: null };
+		newProduct = { submission_number: '', device: '', org_id: null };
 		addModalError = null;
 	}
 
@@ -93,7 +95,6 @@
 				body: JSON.stringify({
 					submission_number: newProduct.submission_number,
 					device: newProduct.device,
-					company: newProduct.company || null,
 					org_id: newProduct.org_id
 				})
 			});
@@ -146,9 +147,8 @@
 								<tr>
 									<th class="tal sortable" class:sorted-asc={sortField === 'submission_number' && sortDirection === 'asc'} class:sorted-desc={sortField === 'submission_number' && sortDirection === 'desc'} onclick={() => toggleSort('submission_number')}>Submission</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'device' && sortDirection === 'asc'} class:sorted-desc={sortField === 'device' && sortDirection === 'desc'} onclick={() => toggleSort('device')}>Device</th>
-									<th class="tal sortable" class:sorted-asc={sortField === 'company' && sortDirection === 'asc'} class:sorted-desc={sortField === 'company' && sortDirection === 'desc'} onclick={() => toggleSort('company')}>Company</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'panel' && sortDirection === 'asc'} class:sorted-desc={sortField === 'panel' && sortDirection === 'desc'} onclick={() => toggleSort('panel')}>Panel</th>
-									<th class="tal">Org</th>
+									<th class="tal sortable" class:sorted-asc={sortField === 'org_name' && sortDirection === 'asc'} class:sorted-desc={sortField === 'org_name' && sortDirection === 'desc'} onclick={() => toggleSort('org_name')}>Org</th>
 									<th class="tar">Actions</th>
 								</tr>
 							</thead>
@@ -157,9 +157,8 @@
 									<tr class="entity-row" onclick={() => (window.location.href = `/products/${p.id}`)}>
 										<td class="tal">{p.submission_number || '-'}</td>
 										<td class="tal">{p.device}</td>
-										<td class="tal">{p.company || '-'}</td>
 										<td class="tal">{p.panel || '-'}</td>
-										<td class="tal">{orgName(p.org_id)}</td>
+										<td class="tal">{p.org_name ?? '-'}</td>
 										<td class="tar">
 											<button class="button button_small" onclick={(e) => { e.stopPropagation(); window.location.href = `/products/${p.id}/edit`; }} title="Edit">✎</button>
 											<button class="button button_small" onclick={(e) => { e.stopPropagation(); handleDelete(p.id); }} title="Delete">🗑</button>
@@ -194,10 +193,6 @@
 					<div class="input">
 						<input id="add-submission" type="text" bind:value={newProduct.submission_number} class="input__text" class:input__text_changed={newProduct.submission_number.length > 0} required />
 						<label for="add-submission" class="input__label">Submission Number</label>
-					</div>
-					<div class="input">
-						<input id="add-company" type="text" bind:value={newProduct.company} class="input__text" class:input__text_changed={newProduct.company.length > 0} />
-						<label for="add-company" class="input__label">Company</label>
 					</div>
 					<div class="input input_select">
 						<select id="add-org" bind:value={newProduct.org_id} class="input__text" class:input__text_changed={newProduct.org_id !== null}>

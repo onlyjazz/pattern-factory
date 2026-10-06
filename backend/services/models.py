@@ -35,6 +35,7 @@ class OrgCreate(BaseModel):
     headquarters: str | None = None
     size: int | None = None
     tier: int | None = None
+    arm: int | None = None
     study_arm: str | None = None
     randomization_seed: int | None = None
     randomized_at: str | None = None
@@ -75,6 +76,7 @@ class OrgUpdate(BaseModel):
     headquarters: str | None = None
     size: int | None = None
     tier: int | None = None
+    arm: int | None = None
     study_arm: str | None = None
     randomization_seed: int | None = None
     randomized_at: str | None = None

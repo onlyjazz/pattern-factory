@@ -16,6 +16,9 @@
 	export let onEdit: (() => void) | null = null;
 	export let onCancel: (() => void) | null = null;
 	export let onSave: ((e: Event) => void) | null = null;
+
+	// Allowed values for public.orgs.study_arm (enforced by a CHECK constraint).
+	const studyArmOptions = ['', 'control', 'treatment_1', 'treatment_2'];
 </script>
 
 <EntityDetailLayout
@@ -70,6 +73,24 @@
 						<label for="org-stage">Stage</label>
 						<div class="input">
 							<input id="org-stage" type="text" bind:value={org.stage} class="input__text" class:input__text_changed={org.stage?.length > 0} />
+						</div>
+					</div>
+				</div>
+				<div class="detail-row">
+					<div class="detail-field">
+						<label for="org-arm">Arm</label>
+						<div class="input">
+							<input id="org-arm" type="number" min="1" bind:value={org.arm} class="input__text" class:input__text_changed={org.arm != null} />
+						</div>
+					</div>
+					<div class="detail-field">
+						<label for="org-study-arm">Study Arm</label>
+						<div class="input input_select">
+							<select id="org-study-arm" bind:value={org.study_arm} class="input__text" class:input__text_changed={!!org.study_arm}>
+								{#each studyArmOptions as option}
+									<option value={option}>{option || 'Not set'}</option>
+								{/each}
+							</select>
 						</div>
 					</div>
 				</div>
@@ -131,6 +152,10 @@
 				<div class="detail-row">
 					<div class="detail-field"><span class="detail-field__label">Status</span><p>{selectedStatusName || '-'}</p></div>
 					<div class="detail-field"><span class="detail-field__label">Stage</span><p>{org.stage || '-'}</p></div>
+				</div>
+				<div class="detail-row">
+					<div class="detail-field"><span class="detail-field__label">Arm</span><p>{org.arm ?? '-'}</p></div>
+					<div class="detail-field"><span class="detail-field__label">Study Arm</span><p>{org.study_arm || '-'}</p></div>
 				</div>
 			</div>
 

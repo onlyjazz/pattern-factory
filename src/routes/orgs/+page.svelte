@@ -249,15 +249,17 @@
 							<thead>
 								<tr>
 									<th class="tal sortable" class:sorted-asc={sortField === 'name' && sortDirection === 'asc'} class:sorted-desc={sortField === 'name' && sortDirection === 'desc'} onclick={() => toggleSort('name')}>
-										<input
-											type="checkbox"
-											class="checkbox-input checkbox-input_inline"
-											aria-label="Select all organizations"
-											checked={allFilteredSelected}
-											onchange={toggleSelectAll}
-											onclick={(e) => e.stopPropagation()}
-										/>
-										Name
+										<span class="cell-check-name">
+											<input
+												type="checkbox"
+												class="checkbox-input checkbox-input_inline"
+												aria-label="Select all organizations"
+												checked={allFilteredSelected}
+												onchange={toggleSelectAll}
+												onclick={(e) => e.stopPropagation()}
+											/>
+											<span>Name</span>
+										</span>
 									</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'product_count' && sortDirection === 'asc'} class:sorted-desc={sortField === 'product_count' && sortDirection === 'desc'} onclick={() => toggleSort('product_count')}>Products</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'name_before_acquisition' && sortDirection === 'asc'} class:sorted-desc={sortField === 'name_before_acquisition' && sortDirection === 'desc'} onclick={() => toggleSort('name_before_acquisition')}>Name Before Acquisition</th>
@@ -272,15 +274,17 @@
 								{#each filteredOrgs as o (o.id)}
 									<tr class="entity-row" onclick={() => (window.location.href = `/orgs/${o.id}`)}>
 										<td class="tal">
-											<input
-												type="checkbox"
-												class="checkbox-input checkbox-input_inline"
-												aria-label={`Select ${o.name}`}
-												checked={selectedOrgIds.includes(o.id)}
-												onchange={() => toggleSelection(o.id)}
-												onclick={(e) => e.stopPropagation()}
-											/>
-											{o.name}
+											<span class="cell-check-name">
+												<input
+													type="checkbox"
+													class="checkbox-input checkbox-input_inline"
+													aria-label={`Select ${o.name}`}
+													checked={selectedOrgIds.includes(o.id)}
+													onchange={() => toggleSelection(o.id)}
+													onclick={(e) => e.stopPropagation()}
+												/>
+												<span>{o.name}</span>
+											</span>
 										</td>
 										<td class="tal">{o.product_count ?? 0}</td>
 										<td class="tal">{o.name_before_acquisition || '-'}</td>

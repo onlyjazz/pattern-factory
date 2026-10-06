@@ -1417,7 +1417,7 @@ async def get_organizations():
         rows = await conn.fetch("""
             SELECT o.id, o.name, o.description, o.stage, o.funding, o.date_funded, o.date_founded,
                    o.linkedin_company_url, o.content_source, o.category_id, o.content_url,
-                   o.estimated_annual_sales, o.employees, o.headquarters, o.size, o.tier,
+                   o.estimated_annual_sales, o.employees, o.headquarters, o.size, o.tier, o.arm, o.study_arm,
                    o.status_id, o.name_before_acquisition, o.created_at, o.updated_at,
                    COALESCE(pc.product_count, 0) AS product_count
             FROM public.orgs o
@@ -1445,11 +1445,11 @@ async def create_organization(org: OrgCreate):
             INSERT INTO public.orgs
             (name, description, stage, funding, date_funded, date_founded,
              linkedin_company_url, content_source, category_id, content_url,
-             estimated_annual_sales, employees, headquarters)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+             estimated_annual_sales, employees, headquarters, arm, study_arm)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
             RETURNING id, name, description, stage, funding, date_funded, date_founded,
                       linkedin_company_url, content_source, category_id, content_url,
-                      estimated_annual_sales, employees, headquarters, size, tier,
+                      estimated_annual_sales, employees, headquarters, size, tier, arm, study_arm,
                       status_id, name_before_acquisition, created_at, updated_at
             """,
             org.name,
@@ -1464,7 +1464,9 @@ async def create_organization(org: OrgCreate):
             org.content_url,
             org.estimated_annual_sales,
             org.employees,
-            org.headquarters
+            org.headquarters,
+            org.arm,
+            org.study_arm
         )
         return dict(row)
 
@@ -1477,7 +1479,7 @@ async def get_organization(org_id: int):
             """
             SELECT id, name, description, stage, funding, date_funded, date_founded,
                    linkedin_company_url, content_source, category_id, content_url,
-                   estimated_annual_sales, employees, headquarters, size, tier,
+                   estimated_annual_sales, employees, headquarters, size, tier, arm, study_arm,
                    status_id, name_before_acquisition, created_at, updated_at
             FROM public.orgs
             WHERE id = $1 AND deleted_at IS NULL
@@ -1539,6 +1541,15 @@ async def update_organization(org_id: int, patch: OrgUpdate):
         assignments.append(f"name_before_acquisition = COALESCE(${len(args) + 1}, name_before_acquisition)")
         args.append(patch.name_before_acquisition)
 
+        # Study arm (1/2/3), editable directly by the UI.
+        assignments.append(f"arm = COALESCE(${len(args) + 1}, arm)")
+        args.append(patch.arm)
+
+        # Study arm label (control / treatment_1 / treatment_2) used as an
+        # experiment identifier.
+        assignments.append(f"study_arm = COALESCE(${len(args) + 1}, study_arm)")
+        args.append(patch.study_arm)
+
         # Mention size only when the caller supplies it so the trigger can tell an
         # explicit valuation from a sales/funding-derived one.
         if patch.size is not None:
@@ -1555,7 +1566,7 @@ async def update_organization(org_id: int, patch: OrgUpdate):
             WHERE id = ${len(args)} AND deleted_at IS NULL
             RETURNING id, name, description, stage, funding, date_funded, date_founded,
                       linkedin_company_url, content_source, category_id, content_url,
-                      estimated_annual_sales, employees, headquarters, size, tier,
+                      estimated_annual_sales, employees, headquarters, size, tier, arm, study_arm,
                       status_id, name_before_acquisition, created_at, updated_at
             """,
             *args,

@@ -2452,6 +2452,13 @@ th.sortable.sorted-desc::after {
 }
 
 /* Org merge (list selection + target picker) */
+/* Checkbox and its label sharing one table cell, so a wrapped name stays
+   inside the cell and its continuation lines align past the checkbox. */
+.cell-check-name {
+	display: inline-flex;
+	align-items: center;
+	max-width: 100%;
+}
 .checkbox-input_inline {
 	display: inline-block;
 	width: 14px;

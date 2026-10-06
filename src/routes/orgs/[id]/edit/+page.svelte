@@ -67,6 +67,8 @@
 					estimated_annual_sales: org.estimated_annual_sales ?? null,
 					employees: org.employees ?? null,
 					headquarters: org.headquarters || null,
+					arm: org.arm ?? null,
+					study_arm: org.study_arm || null,
 					date_founded: org.date_founded || null,
 					linkedin_company_url: org.linkedin_company_url || null,
 					status_id: selectedStatusId ? Number(selectedStatusId) : null

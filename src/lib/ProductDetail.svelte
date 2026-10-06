@@ -53,10 +53,8 @@
 				</div>
 				<div class="detail-row">
 					<div class="detail-field">
-						<label for="product-company">Company</label>
-						<div class="input">
-							<input id="product-company" type="text" bind:value={product.company} class="input__text" class:input__text_changed={product.company?.length > 0} />
-						</div>
+						<span class="detail-field__label">Company</span>
+						<p>{product.company || '-'}</p>
 					</div>
 					<div class="detail-field">
 						<label for="product-panel">Panel</label>

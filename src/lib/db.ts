@@ -171,6 +171,8 @@ export interface Organization {
     headquarters?: string | null;
     size?: number | null;
     tier?: number | null;
+    arm?: number | null;
+    study_arm?: string | null;
     status_id?: number | null;
     product_count?: number;
     created_at?: string;

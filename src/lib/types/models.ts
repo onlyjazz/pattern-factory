@@ -32,6 +32,8 @@ export interface Organization {
   headquarters?: string; // Headquarters location (city, country)
   size?: number; // Valuation basis (explicit valuation or MAX(5×sales, 10×funding))
   tier?: number; // 1 = Enterprise (>$500M), 2 = Mid-Market ($50M–$500M), 3 = Startup
+  arm?: number; // Study arm assignment (1, 2, 3)
+  study_arm?: string; // Study arm label: 'control' | 'treatment_1' | 'treatment_2'
   status_id?: number; // Foreign key to statuses (1=active, 2=closed)
   product_count?: number; // Derived count of active products linked to this org (GET /orgs)
   created_at?: string; // ISO timestamp
