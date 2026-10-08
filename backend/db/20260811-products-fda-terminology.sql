@@ -18,17 +18,9 @@ UPDATE public.products
 SET intended_use = indicated_use
 WHERE indicated_use IS NOT NULL AND intended_use IS NULL;
 
--- Step 3: Update the full-text search function to use both new fields
-CREATE OR REPLACE FUNCTION products_vector_update() RETURNS trigger AS $$
-BEGIN
-  NEW.search_vector :=
-    to_tsvector('english', coalesce(NEW.device,'') || ' ' || coalesce(NEW.intended_use,'') || ' ' || coalesce(NEW.indications_for_use,'') || ' ' || coalesce(NEW.company,''));
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Step 4: Rebuild search indexes for all existing products to include new columns
-UPDATE public.products SET updated_at = updated_at WHERE deleted_at IS NULL;
+-- Step 3: (removed) products full-text search was dropped — search_vector and
+-- products_vector_update() no longer exist, so there is nothing to update or
+-- rebuild here.
 
 -- Step 5: Drop old indicated_use column (after successful migration)
 -- Keeping the old column for now to avoid data loss during testing

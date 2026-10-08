@@ -6,7 +6,7 @@ The FEELGOOD agent flow for extracting product competitive advantages is fully i
 - **Agents**: Already implemented in `backend/pitboss/feelgood.py`
 - **Workflow**: Defined in `backend/pitboss/workflow.py`
 - **Service**: Created in `backend/services/feelgood_service.py`
-- **CLI**: Available at `backend/bin/feelgood`
+- **CLI**: Available at `backend/bin/product-superiority`
 - **Documentation**: Complete guide in `docs/FEELGOOD_AGENT_FLOW.md`
 
 ## Architecture
@@ -182,16 +182,16 @@ asyncio.run(main())
 
 ```bash
 # Process first 100 products
-./backend/bin/feelgood
+./backend/bin/product-superiority
 
 # Process specific range
-./backend/bin/feelgood --range=1-20
+./backend/bin/product-superiority --range=1-20
 
 # Process specific IDs
-./backend/bin/feelgood --product-ids=6,9,12
+./backend/bin/product-superiority --product-ids=6,9,12
 
 # Custom limit
-./backend/bin/feelgood --limit=50
+./backend/bin/product-superiority --limit=50
 ```
 
 ## Prerequisites
@@ -228,7 +228,7 @@ export OPENAI_API_KEY="your-openai-api-key"  # From https://openai.com
 **Implementation**:
 - `backend/services/feelgood_service.py` (388 lines) - Service orchestrator
 - `backend/pitboss/feelgood.py` (386 lines) - Agent implementations (pre-existing)
-- `backend/bin/feelgood` - CLI wrapper (pre-existing)
+- `backend/bin/product-superiority` - CLI wrapper (pre-existing)
 
 **Documentation**:
 - `docs/FEELGOOD_AGENT_FLOW.md` (403 lines) - Complete technical guide
@@ -286,7 +286,7 @@ psql $DATABASE_URL -c \
 
 ```bash
 # Small test
-./backend/bin/feelgood --product-ids=6,9 --limit=2
+./backend/bin/product-superiority --product-ids=6,9 --limit=2
 
 # Monitor output for success/failure
 # Check system_log for operations
@@ -310,11 +310,11 @@ psql $DATABASE_URL -c \
 
 ```bash
 # Process all products without superiority claims
-./backend/bin/feelgood --limit=500
+./backend/bin/product-superiority --limit=500
 
 # Or in batches:
-./backend/bin/feelgood --range=1-100
-./backend/bin/feelgood --range=101-200
+./backend/bin/product-superiority --range=1-100
+./backend/bin/product-superiority --range=101-200
 # etc
 ```
 

@@ -124,16 +124,16 @@ await service.cleanup()
 
 ```bash
 # Process up to 100 products without superiority claims
-./backend/bin/feelgood
+./backend/bin/product-superiority
 
 # Process specific products
-./backend/bin/feelgood --product-ids=1,5,10
+./backend/bin/product-superiority --product-ids=1,5,10
 
 # Process product range
-./backend/bin/feelgood --range=1-50
+./backend/bin/product-superiority --range=1-50
 
 # Process custom limit
-./backend/bin/feelgood --limit=200
+./backend/bin/product-superiority --limit=200
 ```
 
 ### Python API
@@ -375,19 +375,19 @@ All three stages use the same products table and log to system_log for audit tra
 ### Dry Run (Single Product)
 
 ```bash
-./backend/bin/feelgood --product-ids=6 --limit=1
+./backend/bin/product-superiority --product-ids=6 --limit=1
 ```
 
 ### Small Batch (5 Products)
 
 ```bash
-./backend/bin/feelgood --limit=5
+./backend/bin/product-superiority --limit=5
 ```
 
 ### Production Run (All Unpopulated)
 
 ```bash
-./backend/bin/feelgood
+./backend/bin/product-superiority
 ```
 
 ## Summary

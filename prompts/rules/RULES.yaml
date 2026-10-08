@@ -76,7 +76,7 @@ RULES:
 
   - rule_code: ARM1-ORGS 
     name: "Arm 1 focus"
-    description: "Active arm 1 companies with 1 product and annual revenue from 10 to 100M"
+    description: "Active companies with 1 product"
     logic: |
       SELECT 
         o.name, 
@@ -91,8 +91,6 @@ RULES:
         public.orgs o
       JOIN 
         public.products p ON o.id = p.org_id
-      WHERE
-        o.estimated_annual_sales BETWEEN 10000000 AND 100000000 AND o.arm = 1::int AND o.status_id = 1
       GROUP BY 
         o.id, o.name,o.funding, o.size
       HAVING 

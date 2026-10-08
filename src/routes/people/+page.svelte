@@ -12,6 +12,7 @@
 
 	let showAddModal = false;
 	let addModalError: string | null = null;
+	let existingPersonId: string | null = null;
 	let newPerson = { name: '', job_description: '', org_id: null as number | null };
 
 	let sortField: keyof Person | null = 'name';
@@ -30,7 +31,10 @@
 			if (!peopleRes.ok) throw new Error('Failed to fetch people');
 			const data = await peopleRes.json();
 			people = data.map((p: any) => ({ ...p, id: String(p.id) }));
-			if (orgsRes.ok) orgs = await orgsRes.json();
+			if (orgsRes.ok) {
+				const orgData: Organization[] = await orgsRes.json();
+				orgs = orgData.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+			}
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Unknown error';
 		} finally {
@@ -77,11 +81,13 @@
 		showAddModal = false;
 		newPerson = { name: '', job_description: '', org_id: null };
 		addModalError = null;
+		existingPersonId = null;
 	}
 
 	async function handleCreate() {
 		try {
 			addModalError = null;
+			existingPersonId = null;
 			if (!newPerson.name) {
 				addModalError = 'Name is required';
 				return;
@@ -95,6 +101,18 @@
 					org_id: newPerson.org_id
 				})
 			});
+			if (response.status === 409) {
+				let existingId: number | null = null;
+				try {
+					const body = await response.json();
+					existingId = body?.detail?.person_id ?? null;
+				} catch {
+					// keep the generic message below
+				}
+				existingPersonId = existingId != null ? String(existingId) : null;
+				addModalError = `Person already exists: ${newPerson.name}`;
+				return;
+			}
 			if (!response.ok) throw new Error('Failed to create person');
 			const created = await response.json();
 			closeAddModal();
@@ -180,7 +198,18 @@
 			</div>
 			<div class="modal-body">
 				{#if addModalError}
-					<div class="message message-error error-margin">Error: {addModalError}</div>
+					<div class="message message-error error-margin">
+						<div>Error: {addModalError}</div>
+						{#if existingPersonId}
+							<button
+								type="button"
+								class="button button_blue"
+								onclick={() => (window.location.href = `/people/${existingPersonId}`)}
+							>
+								View existing person
+							</button>
+						{/if}
+					</div>
 				{/if}
 				<form onsubmit={(e) => { e.preventDefault(); handleCreate(); }}>
 					<div class="input">

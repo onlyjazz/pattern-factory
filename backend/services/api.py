@@ -2062,7 +2062,11 @@ async def get_people():
 
 @app.post("/people", tags=["People"])
 async def create_person(person: PersonCreate):
-    """Create a new person (guest)."""
+    """Create a new person (guest).
+
+    Raises 409 (with the existing record's id) when ``name`` is already taken,
+    so the client can navigate to the existing person instead of surfacing a 500.
+    """
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         if person.org_id is not None:
@@ -2072,26 +2076,42 @@ async def create_person(person: PersonCreate):
             if not org_exists:
                 raise HTTPException(status_code=400, detail="Organization not found")
 
-        row = await conn.fetchrow(
-            """
-            INSERT INTO public.people
-            (name, description, linkedin_url, job_description, content_source,
-             org_id, post_id, content_url, email, company_url)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            RETURNING id, name, description, linkedin_url, job_description, content_source,
-                      org_id, post_id, content_url, email, company_url, created_at, updated_at
-            """,
-            person.name,
-            person.description,
-            person.linkedin_url,
-            person.job_description,
-            person.content_source,
-            person.org_id,
-            person.post_id,
-            person.content_url,
-            person.email,
-            person.company_url,
-        )
+        try:
+            row = await conn.fetchrow(
+                """
+                INSERT INTO public.people
+                (name, description, linkedin_url, job_description, content_source,
+                 org_id, post_id, content_url, email, company_url)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                RETURNING id, name, description, linkedin_url, job_description, content_source,
+                          org_id, post_id, content_url, email, company_url, created_at, updated_at
+                """,
+                person.name,
+                person.description,
+                person.linkedin_url,
+                person.job_description,
+                person.content_source,
+                person.org_id,
+                person.post_id,
+                person.content_url,
+                person.email,
+                person.company_url,
+            )
+        except asyncpg.UniqueViolationError:
+            # people_name_unique: return the existing record so the client can
+            # offer a link to it instead of crashing.
+            existing = await conn.fetchrow(
+                "SELECT id, name FROM public.people WHERE name = $1",
+                person.name,
+            )
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "message": f"Person '{person.name}' already exists",
+                    "person_id": existing["id"] if existing else None,
+                    "name": person.name,
+                },
+            )
         return dict(row)
 
 @app.get("/people/{person_id}", tags=["People"])

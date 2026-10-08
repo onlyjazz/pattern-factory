@@ -41,19 +41,8 @@ EXECUTE PROCEDURE public.update_updated_at_column();
 ALTER TABLE threat.models ADD COLUMN IF NOT EXISTS submission_number TEXT;
 CREATE INDEX IF NOT EXISTS idx_models_submission_number ON threat.models(submission_number);
 
--- Add full-text search index for products
-CREATE OR REPLACE FUNCTION products_vector_update() RETURNS trigger AS $$
-BEGIN
-  NEW.search_vector :=
-    to_tsvector('english', coalesce(NEW.device,'') || ' ' || coalesce(NEW.indicated_use,'') || ' ' || coalesce(NEW.company,''));
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-ALTER TABLE public.products ADD COLUMN IF NOT EXISTS search_vector tsvector;
-DROP INDEX IF EXISTS idx_products_vector CASCADE;
-CREATE INDEX idx_products_vector ON public.products USING GIN (search_vector);
-
-CREATE OR REPLACE TRIGGER trg_products_vector_update
-BEFORE INSERT OR UPDATE ON public.products
-FOR EACH ROW EXECUTE FUNCTION products_vector_update();
+-- Full-text search for products was removed: the search_vector column,
+-- idx_products_vector index, products_vector_update() function, and
+-- trg_products_vector_update trigger were never queried by the app, and the
+-- function referenced NEW.company, which was renamed to
+-- company_from_fda_import_deprecated.

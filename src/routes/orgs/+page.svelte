@@ -69,7 +69,7 @@
 		}
 		if (field) {
 			result = [...result].sort((a, b) => {
-				if (field === 'size' || field === 'tier' || field === 'product_count') {
+				if (field === 'size' || field === 'tier' || field === 'product_count' || field === 'arm') {
 					const av = Number(a[field] || 0);
 					const bv = Number(b[field] || 0);
 					return dir === 'asc' ? av - bv : bv - av;
@@ -265,6 +265,7 @@
 									<th class="tal sortable" class:sorted-asc={sortField === 'name_before_acquisition' && sortDirection === 'asc'} class:sorted-desc={sortField === 'name_before_acquisition' && sortDirection === 'desc'} onclick={() => toggleSort('name_before_acquisition')}>Name Before Acquisition</th>
 									<th class="tal">Status</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'tier' && sortDirection === 'asc'} class:sorted-desc={sortField === 'tier' && sortDirection === 'desc'} onclick={() => toggleSort('tier')}>Tier</th>
+									<th class="tal sortable" class:sorted-asc={sortField === 'arm' && sortDirection === 'asc'} class:sorted-desc={sortField === 'arm' && sortDirection === 'desc'} onclick={() => toggleSort('arm')}>Arm</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'size' && sortDirection === 'asc'} class:sorted-desc={sortField === 'size' && sortDirection === 'desc'} onclick={() => toggleSort('size')}>Valuation</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'headquarters' && sortDirection === 'asc'} class:sorted-desc={sortField === 'headquarters' && sortDirection === 'desc'} onclick={() => toggleSort('headquarters')}>Headquarters</th>
 									<th class="tar">Actions</th>
@@ -290,6 +291,7 @@
 										<td class="tal">{o.name_before_acquisition || '-'}</td>
 										<td class="tal">{statusName(o.status_id)}</td>
 										<td class="tal">{o.tier ?? '-'}</td>
+										<td class="tal">{o.arm ?? '-'}</td>
 										<td class="tal">{(o.size || 0).toLocaleString()}</td>
 										<td class="tal">{o.headquarters || '-'}</td>
 										<td class="tar">

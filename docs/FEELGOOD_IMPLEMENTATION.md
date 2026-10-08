@@ -102,13 +102,13 @@ POST /api/endpoint with:
 ```bash
 # Process products 1-50
 cd backend
-python -m bin.feelgood --products 1-50
+python -m bin/product-superiority --products 1-50
 
 # Process specific products
-python -m bin.feelgood --products 1,5,10,20
+python -m bin/product-superiority --products 1,5,10,20
 
 # Dry run (validation only)
-python -m bin.feelgood --products 1-50 --dry-run
+python -m bin/product-superiority --products 1-50 --dry-run
 ```
 
 ### 3. Populate device_description from OpenFDA
@@ -194,7 +194,7 @@ alerts, and deeper integration via the Aidoc platform.
 ### Created
 - `backend/db/20260811-add-product-details.sql` - Schema migration
 - `backend/pitboss/feelgood.py` - Agent implementations
-- `backend/bin/feelgood` - Batch CLI script
+- `backend/bin/product-superiority` - Batch CLI script
 - `backend/data/fetch_openfda_descriptions.py` - OpenFDA population script
 - `FEELGOOD_IMPLEMENTATION.md` - This document
 
@@ -271,13 +271,13 @@ print(result)
 
 ```bash
 # Single product through supervisor
-python -m bin.feelgood --product 1 --dry-run
+python -m bin/product-superiority --product 1 --dry-run
 
 # Batch validation
-python -m bin.feelgood --products 1-10 --dry-run
+python -m bin/product-superiority --products 1-10 --dry-run
 
 # Full execution (requires APIs)
-python -m bin.feelgood --products 1-5
+python -m bin/product-superiority --products 1-5
 ```
 
 ## Future Enhancements

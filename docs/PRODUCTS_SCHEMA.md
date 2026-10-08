@@ -23,8 +23,7 @@ CREATE TABLE public.products (
     product_contact_3 TEXT,          -- LinkedIn profile URL
     created_at TIMESTAMP DEFAULT now(),
     updated_at TIMESTAMP DEFAULT now(),
-    deleted_at TIMESTAMP,
-    search_vector tsvector           -- Full-text search index
+    deleted_at TIMESTAMP
 );
 ```
 
@@ -46,7 +45,6 @@ CREATE TABLE public.products (
 | created_at | TIMESTAMP | Row creation timestamp (auto-set) |
 | updated_at | TIMESTAMP | Row last update timestamp (auto-maintained by trigger) |
 | deleted_at | TIMESTAMP | Soft delete marker (NULL = active) |
-| search_vector | tsvector | Full-text search vector (device + indicated_use + company) |
 
 ## Relationships
 
@@ -86,7 +84,6 @@ threat.models.submission_number = "K254207"
 CREATE INDEX idx_products_submission_number ON public.products(submission_number);
 CREATE INDEX idx_products_company ON public.products(company);
 CREATE INDEX idx_products_active ON public.products(id) WHERE deleted_at IS NULL;
-CREATE INDEX idx_products_vector ON public.products USING GIN (search_vector);
 ```
 
 ## Batch Loading
@@ -191,20 +188,6 @@ Device: ClearView cCAD
 Original Company: ClearView Diagnostics
 Current Company: Koios Medical (acquired)
 Contacts: Links to original and new stakeholders
-```
-
-## Full-Text Search
-
-The `search_vector` column enables efficient full-text search across:
-- Device name
-- Indicated use
-- Company name
-
-**Query Example**:
-```sql
-SELECT * FROM public.products
-WHERE search_vector @@ plainto_tsquery('english', 'cardiac imaging')
-LIMIT 10;
 ```
 
 ## API Access

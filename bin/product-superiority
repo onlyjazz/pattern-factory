@@ -7,10 +7,10 @@ set -euo pipefail
 # Extracts competitive advantage claims for FDA-approved medical devices.
 #
 # Usage:
-#     ./feelgood --products 1-50              # Run for products 1 through 50
-#     ./feelgood --products 1,5,10,20         # Run for specific product IDs
-#     ./feelgood --product 42                 # Run for single product
-#     ./feelgood --products 1-50 --dry-run    # Validate without executing
+#     ./product-superiority --products 1-50              # Run for products 1 through 50
+#     ./product-superiority --products 1,5,10,20         # Run for specific product IDs
+#     ./product-superiority --product 42                 # Run for single product
+#     ./product-superiority --products 1-50 --dry-run    # Validate without executing
 #
 # Environment:
 #     DATABASE_URL: PostgreSQL connection string

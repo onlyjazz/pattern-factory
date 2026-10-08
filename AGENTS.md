@@ -1123,7 +1123,7 @@ wscat -c ws://localhost:8000/ws
 ./bin/enrich acme_corp
 
 # FEELGOOD flow
-./bin/feelgood --product-ids=1,5,10
+./bin/product-superiority --product-ids=1,5,10
 
 # PROFILE flow
 ./bin/profile --product-ids=1,5,10
