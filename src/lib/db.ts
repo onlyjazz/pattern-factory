@@ -175,6 +175,8 @@ export interface Organization {
     study_arm?: string | null;
     status_id?: number | null;
     product_count?: number;
+    close_send_date?: string | null;
+    close_sent?: boolean;
     created_at?: string;
     updated_at?: string;
 }
@@ -198,6 +200,8 @@ export interface Product {
     competitors?: string | null;
     org_id?: number | null;
     process_flag?: boolean;
+    close_send_date?: string | null;
+    close_sent?: boolean;
     created_at?: string;
     updated_at?: string;
 }
@@ -215,6 +219,8 @@ export interface Person {
     content_url?: string | null;
     email?: string | null;
     company_url?: string | null;
+    close_mail_send_date?: string | null;
+    close_mail_sent?: boolean;
     created_at?: string;
     updated_at?: string;
 }

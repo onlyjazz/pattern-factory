@@ -2516,3 +2516,50 @@ th.sortable.sorted-desc::after {
 .button:disabled:hover {
 	background: #999999;
 }
+
+/**/
+/* experiments (PAT-380 Send to Close) */
+/**/
+.multi-select {
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	padding: 12px;
+}
+.multi-select__search {
+	margin-bottom: 8px;
+}
+.multi-select__list {
+	max-height: 280px;
+	overflow-y: auto;
+}
+.multi-select__item {
+	display: flex;
+	align-items: center;
+	padding: 4px 0;
+	font-size: 13px;
+	cursor: pointer;
+}
+.multi-select__empty {
+	padding: 8px 0;
+	font-size: 13px;
+	color: #999;
+}
+.steps-editor__row {
+	display: flex;
+	align-items: flex-end;
+	gap: 12px;
+	margin-bottom: 8px;
+}
+.steps-editor__position {
+	min-width: 24px;
+	font-size: 13px;
+	line-height: 36px;
+	color: #666;
+}
+.steps-editor__field {
+	flex: 1;
+	min-width: 0;
+}
+.steps-editor__actions {
+	margin-top: 8px;
+}

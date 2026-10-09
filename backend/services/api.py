@@ -163,6 +163,9 @@ from backend.services.models import (
     CardUpdate,
     CountermeasureCreate,
     CountermeasureUpdate,
+    ExperimentCreate,
+    ExperimentStepModel,
+    ExperimentUpdate,
     ModelCreate,
     ModelUpdate,
     OrgCreate,
@@ -179,11 +182,13 @@ from backend.services.models import (
     PersonUpdate,
     ProductCreate,
     ProductUpdate,
+    StartExperimentRequest,
     ThreatCreate,
     ThreatUpdate,
     VulnerabilityCreate,
     VulnerabilityUpdate,
 )
+from backend.services import close_service, sanity_service
 logger.info("🧠 Imported Pitboss Supervisor successfully")
 
 # -------------------------------------------------------------------------
@@ -204,6 +209,61 @@ def _asyncpg_rowcount(status: str) -> int:
         return int(str(status).rsplit(" ", 1)[-1])
     except (TypeError, ValueError):
         return 0
+
+
+def _iso(value):
+    """Serialize datetime-like values to ISO-8601 strings; pass others through."""
+    return value.isoformat() if hasattr(value, "isoformat") else value
+
+
+def _experiment_read(exp_row, step_rows, product_link_rows):
+    """Build an ExperimentRead-shaped dict from an experiment row and its children.
+
+    ``step_rows`` must carry an ``experiment_id`` and ``product_link_rows`` must
+    carry ``experiment_id`` / ``product_id`` so rows for multiple experiments can
+    be grouped in one pass.
+    """
+    exp = dict(exp_row)
+    steps_by_experiment = {}
+    for raw in step_rows:
+        step = dict(raw)
+        steps_by_experiment.setdefault(step["experiment_id"], []).append({
+            "position": step["position"],
+            "channel": step["channel"],
+            "content_id": step.get("content_id"),
+            "content_rev": step.get("content_rev"),
+        })
+    products_by_experiment = {}
+    for raw in product_link_rows:
+        link = dict(raw)
+        products_by_experiment.setdefault(link["experiment_id"], []).append(link["product_id"])
+    return {
+        "id": exp["id"],
+        "name": exp["name"],
+        "description": exp.get("description"),
+        "arm": exp["arm"],
+        "email_header": exp.get("email_header"),
+        "email_header_status": exp["email_header_status"],
+        "steps": steps_by_experiment.get(exp["id"], []),
+        "product_ids": products_by_experiment.get(exp["id"], []),
+        "created_at": _iso(exp.get("created_at")),
+        "updated_at": _iso(exp.get("updated_at")),
+    }
+
+
+async def _validate_products(conn, product_ids):
+    """Raise 400 when any supplied product id does not exist."""
+    if not product_ids:
+        return
+    rows = await conn.fetch(
+        "SELECT id FROM public.products WHERE id = ANY($1::bigint[]) AND deleted_at IS NULL",
+        list(product_ids),
+    )
+    found = {dict(r)["id"] for r in rows}
+    missing = [pid for pid in product_ids if pid not in found]
+    if missing:
+        raise HTTPException(status_code=400, detail=f"Product(s) not found: {missing}")
+
 
 # -------------------------------------------------------------------------
 # Startup: connect to Postgres
@@ -1418,7 +1478,8 @@ async def get_organizations():
             SELECT o.id, o.name, o.description, o.stage, o.funding, o.date_funded, o.date_founded,
                    o.linkedin_company_url, o.content_source, o.category_id, o.content_url,
                    o.estimated_annual_sales, o.employees, o.headquarters, o.size, o.tier, o.arm, o.study_arm,
-                   o.status_id, o.name_before_acquisition, o.created_at, o.updated_at,
+                   o.status_id, o.name_before_acquisition, o.close_send_date, o.close_sent,
+                   o.created_at, o.updated_at,
                    COALESCE(pc.product_count, 0) AS product_count
             FROM public.orgs o
             LEFT JOIN (
@@ -1445,12 +1506,14 @@ async def create_organization(org: OrgCreate):
             INSERT INTO public.orgs
             (name, description, stage, funding, date_funded, date_founded,
              linkedin_company_url, content_source, category_id, content_url,
-             estimated_annual_sales, employees, headquarters, arm, study_arm)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+             estimated_annual_sales, employees, headquarters, arm, study_arm,
+             close_send_date, close_sent)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
             RETURNING id, name, description, stage, funding, date_funded, date_founded,
                       linkedin_company_url, content_source, category_id, content_url,
                       estimated_annual_sales, employees, headquarters, size, tier, arm, study_arm,
-                      status_id, name_before_acquisition, created_at, updated_at
+                      status_id, name_before_acquisition, close_send_date, close_sent,
+                      created_at, updated_at
             """,
             org.name,
             org.description,
@@ -1466,7 +1529,9 @@ async def create_organization(org: OrgCreate):
             org.employees,
             org.headquarters,
             org.arm,
-            org.study_arm
+            org.study_arm,
+            org.close_send_date,
+            org.close_sent
         )
         return dict(row)
 
@@ -1480,7 +1545,8 @@ async def get_organization(org_id: int):
             SELECT id, name, description, stage, funding, date_funded, date_founded,
                    linkedin_company_url, content_source, category_id, content_url,
                    estimated_annual_sales, employees, headquarters, size, tier, arm, study_arm,
-                   status_id, name_before_acquisition, created_at, updated_at
+                   status_id, name_before_acquisition, close_send_date, close_sent,
+                   created_at, updated_at
             FROM public.orgs
             WHERE id = $1 AND deleted_at IS NULL
             """,
@@ -1550,6 +1616,13 @@ async def update_organization(org_id: int, patch: OrgUpdate):
         assignments.append(f"study_arm = COALESCE(${len(args) + 1}, study_arm)")
         args.append(patch.study_arm)
 
+        # Close CRM send tracking (PAT-380).
+        assignments.append(f"close_send_date = COALESCE(${len(args) + 1}, close_send_date)")
+        args.append(patch.close_send_date)
+
+        assignments.append(f"close_sent = COALESCE(${len(args) + 1}, close_sent)")
+        args.append(patch.close_sent)
+
         # Mention size only when the caller supplies it so the trigger can tell an
         # explicit valuation from a sales/funding-derived one.
         if patch.size is not None:
@@ -1567,7 +1640,8 @@ async def update_organization(org_id: int, patch: OrgUpdate):
             RETURNING id, name, description, stage, funding, date_funded, date_founded,
                       linkedin_company_url, content_source, category_id, content_url,
                       estimated_annual_sales, employees, headquarters, size, tier, arm, study_arm,
-                      status_id, name_before_acquisition, created_at, updated_at
+                      status_id, name_before_acquisition, close_send_date, close_sent,
+                      created_at, updated_at
             """,
             *args,
         )
@@ -1900,7 +1974,8 @@ async def get_products():
             SELECT p.id, p.date_of_final_decision, p.submission_number, p.device, p.intended_use, p.indications_for_use, 
                    COALESCE(o.name, '') AS company, p.panel, 
                    p.primary_product_code, p.product_contact_1, p.product_contact_2, p.product_contact_3,
-                   p.device_description, p.superiority, p.competitors, p.org_id, p.process_flag, p.created_at, p.updated_at
+                   p.device_description, p.superiority, p.competitors, p.org_id, p.process_flag,
+                   p.close_send_date, p.close_sent, p.created_at, p.updated_at
             FROM public.products p
             LEFT JOIN public.orgs o ON p.org_id = o.id
             WHERE p.deleted_at IS NULL
@@ -1926,11 +2001,13 @@ async def create_product(product: ProductCreate):
             INSERT INTO public.products 
             (date_of_final_decision, submission_number, device, intended_use, indications_for_use, panel,
              primary_product_code, product_contact_1, product_contact_2, product_contact_3,
-             device_description, superiority, competitors, org_id, process_flag)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+             device_description, superiority, competitors, org_id, process_flag,
+             close_send_date, close_sent)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
             RETURNING id, date_of_final_decision, submission_number, device, intended_use, indications_for_use, panel,
                       primary_product_code, product_contact_1, product_contact_2, product_contact_3,
-                      device_description, superiority, competitors, org_id, process_flag, created_at, updated_at
+                      device_description, superiority, competitors, org_id, process_flag,
+                      close_send_date, close_sent, created_at, updated_at
             """,
             product.date_of_final_decision,
             product.submission_number,
@@ -1946,7 +2023,9 @@ async def create_product(product: ProductCreate):
             product.superiority,
             product.competitors,
             product.org_id,
-            product.process_flag
+            product.process_flag,
+            product.close_send_date,
+            product.close_sent
         )
         return dict(row)
 
@@ -1960,7 +2039,8 @@ async def get_product(product_id: int):
             SELECT p.id, p.date_of_final_decision, p.submission_number, p.device, p.intended_use, p.indications_for_use, 
                    COALESCE(o.name, '') AS company, p.panel,
                    p.primary_product_code, p.product_contact_1, p.product_contact_2, p.product_contact_3,
-                   p.device_description, p.superiority, p.competitors, p.org_id, p.created_at, p.updated_at
+                   p.device_description, p.superiority, p.competitors, p.org_id,
+                   p.close_send_date, p.close_sent, p.created_at, p.updated_at
             FROM public.products p
             LEFT JOIN public.orgs o ON p.org_id = o.id
             WHERE p.id = $1 AND p.deleted_at IS NULL
@@ -2003,11 +2083,14 @@ async def update_product(product_id: int, patch: ProductUpdate):
                 competitors = COALESCE($13, competitors),
                 org_id = COALESCE($14, org_id),
                 process_flag = COALESCE($15, process_flag),
+                close_send_date = COALESCE($16, close_send_date),
+                close_sent = COALESCE($17, close_sent),
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = $16 AND deleted_at IS NULL
+            WHERE id = $18 AND deleted_at IS NULL
             RETURNING id, date_of_final_decision, submission_number, device, intended_use, indications_for_use, panel,
                       primary_product_code, product_contact_1, product_contact_2, product_contact_3,
-                      device_description, superiority, competitors, org_id, process_flag, created_at, updated_at
+                      device_description, superiority, competitors, org_id, process_flag,
+                      close_send_date, close_sent, created_at, updated_at
             """,
             patch.date_of_final_decision,
             patch.submission_number,
@@ -2024,6 +2107,8 @@ async def update_product(product_id: int, patch: ProductUpdate):
             patch.competitors,
             patch.org_id,
             patch.process_flag,
+            patch.close_send_date,
+            patch.close_sent,
             product_id
         )
         if not row:
@@ -2053,7 +2138,8 @@ async def get_people():
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
             SELECT id, name, description, linkedin_url, job_description, content_source,
-                   org_id, post_id, content_url, email, company_url, created_at, updated_at
+                   org_id, post_id, content_url, email, company_url,
+                   close_mail_send_date, close_mail_sent, created_at, updated_at
             FROM public.people
             WHERE deleted_at IS NULL
             ORDER BY name ASC
@@ -2081,10 +2167,12 @@ async def create_person(person: PersonCreate):
                 """
                 INSERT INTO public.people
                 (name, description, linkedin_url, job_description, content_source,
-                 org_id, post_id, content_url, email, company_url)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                 org_id, post_id, content_url, email, company_url,
+                 close_mail_send_date, close_mail_sent)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
                 RETURNING id, name, description, linkedin_url, job_description, content_source,
-                          org_id, post_id, content_url, email, company_url, created_at, updated_at
+                          org_id, post_id, content_url, email, company_url,
+                          close_mail_send_date, close_mail_sent, created_at, updated_at
                 """,
                 person.name,
                 person.description,
@@ -2096,6 +2184,8 @@ async def create_person(person: PersonCreate):
                 person.content_url,
                 person.email,
                 person.company_url,
+                person.close_mail_send_date,
+                person.close_mail_sent,
             )
         except asyncpg.UniqueViolationError:
             # people_name_unique: return the existing record so the client can
@@ -2122,7 +2212,8 @@ async def get_person(person_id: int):
         row = await conn.fetchrow(
             """
             SELECT id, name, description, linkedin_url, job_description, content_source,
-                   org_id, post_id, content_url, email, company_url, created_at, updated_at
+                   org_id, post_id, content_url, email, company_url,
+                   close_mail_send_date, close_mail_sent, created_at, updated_at
             FROM public.people
             WHERE id = $1 AND deleted_at IS NULL
             """,
@@ -2158,10 +2249,13 @@ async def update_person(person_id: int, patch: PersonUpdate):
                 content_url = COALESCE($8, content_url),
                 email = COALESCE($9, email),
                 company_url = COALESCE($10, company_url),
+                close_mail_send_date = COALESCE($11, close_mail_send_date),
+                close_mail_sent = COALESCE($12, close_mail_sent),
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = $11 AND deleted_at IS NULL
+            WHERE id = $13 AND deleted_at IS NULL
             RETURNING id, name, description, linkedin_url, job_description, content_source,
-                      org_id, post_id, content_url, email, company_url, created_at, updated_at
+                      org_id, post_id, content_url, email, company_url,
+                      close_mail_send_date, close_mail_sent, created_at, updated_at
             """,
             patch.name,
             patch.description,
@@ -2173,6 +2267,8 @@ async def update_person(person_id: int, patch: PersonUpdate):
             patch.content_url,
             patch.email,
             patch.company_url,
+            patch.close_mail_send_date,
+            patch.close_mail_sent,
             person_id,
         )
         if not row:
@@ -2191,6 +2287,501 @@ async def delete_person(person_id: int):
         if result == "UPDATE 0":
             raise HTTPException(status_code=404, detail="Person not found")
     return {"status": "ok", "deleted_id": person_id}
+
+# -------------------------------------------------------------------------
+# Experiments CRUD + activation (PAT-380: Send to Close)
+# -------------------------------------------------------------------------
+_EXPERIMENT_COLUMNS = (
+    "id, name, description, arm, email_header, email_header_status, created_at, updated_at"
+)
+
+
+def _experiment_read_from_inputs(row, steps, product_ids):
+    """Build an ExperimentRead-shaped dict from an inserted/updated row + inputs."""
+    row = dict(row)
+    return {
+        "id": row["id"],
+        "name": row["name"],
+        "description": row.get("description"),
+        "arm": row["arm"],
+        "email_header": row.get("email_header"),
+        "email_header_status": row["email_header_status"],
+        "steps": [
+            {
+                "position": s.position,
+                "channel": s.channel,
+                "content_id": s.content_id,
+                "content_rev": s.content_rev,
+            }
+            for s in steps
+        ],
+        "product_ids": list(product_ids),
+        "created_at": _iso(row.get("created_at")),
+        "updated_at": _iso(row.get("updated_at")),
+    }
+
+
+def _runs_read(run_rows, step_rows, target_rows, send_rows):
+    """Build ExperimentRunRead-shaped dicts with nested steps/targets/sends."""
+    steps_by_run = {}
+    for raw in step_rows:
+        step = dict(raw)
+        steps_by_run.setdefault(step["run_id"], []).append({
+            "position": step["position"],
+            "content_id": step.get("content_id"),
+            "content_rev": step.get("content_rev"),
+        })
+    sends_by_target = {}
+    for raw in send_rows:
+        send = dict(raw)
+        sends_by_target.setdefault(send["target_id"], []).append({
+            "position": send["position"],
+            "state": send["state"],
+            "external_id": send.get("external_id"),
+            "handed_off_at": _iso(send.get("handed_off_at")),
+            "sent_at": _iso(send.get("sent_at")),
+        })
+    targets_by_run = {}
+    for raw in target_rows:
+        target = dict(raw)
+        targets_by_run.setdefault(target["run_id"], []).append({
+            "id": target["id"],
+            "person_id": target.get("person_id"),
+            "company_id": target.get("company_id"),
+            "contact_id": target.get("contact_id"),
+            "sends": sends_by_target.get(target["id"], []),
+        })
+    return [
+        {
+            "id": run["id"],
+            "experiment_id": run["experiment_id"],
+            "product_id": run["product_id"],
+            "model_id": run.get("model_id"),
+            "email_header_sent": run.get("email_header_sent", False),
+            "steps": steps_by_run.get(run["id"], []),
+            "targets": targets_by_run.get(run["id"], []),
+            "created_at": _iso(run.get("created_at")),
+        }
+        for run in run_rows
+    ]
+
+
+@app.get("/experiments", tags=["Experiments"])
+async def get_experiments():
+    """List active experiments with nested steps and product membership."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            f"SELECT {_EXPERIMENT_COLUMNS} FROM public.experiment "
+            "WHERE deleted_at IS NULL ORDER BY created_at DESC"
+        )
+        ids = [dict(r)["id"] for r in rows]
+        step_rows = []
+        link_rows = []
+        if ids:
+            step_rows = await conn.fetch(
+                "SELECT experiment_id, position, channel, content_id, content_rev "
+                "FROM public.experiment_step WHERE experiment_id = ANY($1::bigint[]) "
+                "ORDER BY experiment_id, position",
+                ids,
+            )
+            link_rows = await conn.fetch(
+                "SELECT experiment_id, product_id FROM public.experiment_product "
+                "WHERE experiment_id = ANY($1::bigint[]) ORDER BY experiment_id, product_id",
+                ids,
+            )
+    return [_experiment_read(row, step_rows, link_rows) for row in rows]
+
+
+@app.post("/experiments", tags=["Experiments"])
+async def create_experiment(experiment: ExperimentCreate):
+    """Create an experiment with its steps and product membership in one transaction."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        if experiment.product_ids:
+            await _validate_products(conn, experiment.product_ids)
+        async with conn.transaction():
+            row = await conn.fetchrow(
+                """
+                INSERT INTO public.experiment
+                (name, description, arm, email_header, email_header_status)
+                VALUES ($1, $2, $3, $4, $5)
+                RETURNING id, name, description, arm, email_header, email_header_status,
+                          created_at, updated_at
+                """,
+                experiment.name,
+                experiment.description,
+                experiment.arm,
+                experiment.email_header,
+                experiment.email_header_status,
+            )
+            for step in experiment.steps:
+                await conn.execute(
+                    "INSERT INTO public.experiment_step "
+                    "(experiment_id, position, channel, content_id, content_rev) "
+                    "VALUES ($1, $2, $3, $4, $5)",
+                    row["id"], step.position, step.channel, step.content_id, step.content_rev,
+                )
+            for product_id in experiment.product_ids:
+                await conn.execute(
+                    "INSERT INTO public.experiment_product (experiment_id, product_id) "
+                    "VALUES ($1, $2) ON CONFLICT DO NOTHING",
+                    row["id"], product_id,
+                )
+    return _experiment_read_from_inputs(row, experiment.steps, experiment.product_ids)
+
+
+@app.get("/experiments/{experiment_id}", tags=["Experiments"])
+async def get_experiment(experiment_id: int):
+    """Get a single experiment with nested steps and product ids."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            f"SELECT {_EXPERIMENT_COLUMNS} FROM public.experiment "
+            "WHERE id = $1 AND deleted_at IS NULL",
+            experiment_id,
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail=f"Experiment {experiment_id} not found")
+        step_rows = await conn.fetch(
+            "SELECT experiment_id, position, channel, content_id, content_rev "
+            "FROM public.experiment_step WHERE experiment_id = $1 ORDER BY position",
+            experiment_id,
+        )
+        link_rows = await conn.fetch(
+            "SELECT experiment_id, product_id FROM public.experiment_product "
+            "WHERE experiment_id = $1 ORDER BY product_id",
+            experiment_id,
+        )
+    return _experiment_read(row, step_rows, link_rows)
+
+
+@app.put("/experiments/{experiment_id}", tags=["Experiments"])
+async def update_experiment(experiment_id: int, patch: ExperimentUpdate):
+    """Update an experiment; replaces steps/product membership when supplied."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        if patch.product_ids is not None:
+            await _validate_products(conn, patch.product_ids)
+        async with conn.transaction():
+            row = await conn.fetchrow(
+                """
+                UPDATE public.experiment
+                SET name = COALESCE($1, name),
+                    description = COALESCE($2, description),
+                    arm = COALESCE($3, arm),
+                    email_header = COALESCE($4, email_header),
+                    email_header_status = COALESCE($5, email_header_status),
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = $6 AND deleted_at IS NULL
+                RETURNING id, name, description, arm, email_header, email_header_status,
+                          created_at, updated_at
+                """,
+                patch.name,
+                patch.description,
+                patch.arm,
+                patch.email_header,
+                patch.email_header_status,
+                experiment_id,
+            )
+            if not row:
+                raise HTTPException(status_code=404, detail=f"Experiment {experiment_id} not found")
+            if patch.steps is not None:
+                await conn.execute(
+                    "DELETE FROM public.experiment_step WHERE experiment_id = $1", experiment_id
+                )
+                for step in patch.steps:
+                    await conn.execute(
+                        "INSERT INTO public.experiment_step "
+                        "(experiment_id, position, channel, content_id, content_rev) "
+                        "VALUES ($1, $2, $3, $4, $5)",
+                        experiment_id, step.position, step.channel, step.content_id, step.content_rev,
+                    )
+            if patch.product_ids is not None:
+                await conn.execute(
+                    "DELETE FROM public.experiment_product WHERE experiment_id = $1", experiment_id
+                )
+                for product_id in patch.product_ids:
+                    await conn.execute(
+                        "INSERT INTO public.experiment_product (experiment_id, product_id) "
+                        "VALUES ($1, $2) ON CONFLICT DO NOTHING",
+                        experiment_id, product_id,
+                    )
+        step_rows = await conn.fetch(
+            "SELECT experiment_id, position, channel, content_id, content_rev "
+            "FROM public.experiment_step WHERE experiment_id = $1 ORDER BY position",
+            experiment_id,
+        )
+        link_rows = await conn.fetch(
+            "SELECT experiment_id, product_id FROM public.experiment_product "
+            "WHERE experiment_id = $1 ORDER BY product_id",
+            experiment_id,
+        )
+    return _experiment_read(row, step_rows, link_rows)
+
+
+@app.delete("/experiments/{experiment_id}", tags=["Experiments"])
+async def delete_experiment(experiment_id: int):
+    """Soft-delete an experiment."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        result = await conn.execute(
+            "UPDATE public.experiment SET deleted_at = CURRENT_TIMESTAMP "
+            "WHERE id = $1 AND deleted_at IS NULL",
+            experiment_id,
+        )
+        if result == "UPDATE 0":
+            raise HTTPException(status_code=404, detail=f"Experiment {experiment_id} not found")
+    return {"status": "ok", "deleted_id": experiment_id}
+
+
+async def _activate_product(conn, exp, steps, product_id):
+    """Activate one experiment run for a single product (all-or-nothing)."""
+    result = {
+        "product_id": product_id,
+        "status": "failed",
+        "run_id": None,
+        "model_id": None,
+        "company_id": None,
+        "steps_pinned": 0,
+        "steps_refused": 0,
+        "targets": 0,
+        "error": None,
+    }
+    try:
+        async with conn.transaction():
+            product_row = await conn.fetchrow(
+                """
+                SELECT p.id, p.device, p.competitors, p.superiority, p.intended_use,
+                       p.date_of_final_decision, p.org_id,
+                       o.name AS org_name, o.estimated_annual_sales, o.size, o.arm
+                FROM public.products p
+                LEFT JOIN public.orgs o ON p.org_id = o.id
+                WHERE p.id = $1 AND p.deleted_at IS NULL
+                """,
+                product_id,
+            )
+            if not product_row:
+                raise ValueError(f"Product {product_id} not found")
+            product = dict(product_row)
+
+            model_row = await conn.fetchrow(
+                "SELECT id FROM threat.models WHERE product_id = $1 ORDER BY id DESC LIMIT 1",
+                product_id,
+            )
+            model_id = dict(model_row)["id"] if model_row else None
+
+            run_row = await conn.fetchrow(
+                "INSERT INTO public.experiment_run (experiment_id, product_id, model_id) "
+                "VALUES ($1, $2, $3) RETURNING id",
+                exp["id"], product_id, model_id,
+            )
+            run_id = dict(run_row)["id"]
+            result["run_id"] = run_id
+            result["model_id"] = model_id
+
+            # Pin steps from Sanity briefs, refusing unapproved content.
+            pinned_positions = []
+            for step in steps:
+                brief = sanity_service.get_brief(step.get("content_id"))
+                if not sanity_service.is_approved(brief):
+                    result["steps_refused"] += 1
+                    continue
+                await conn.execute(
+                    "INSERT INTO public.experiment_run_step "
+                    "(run_id, position, content_id, content_rev) VALUES ($1, $2, $3, $4)",
+                    run_id, step["position"], step.get("content_id"), (brief or {}).get("_rev"),
+                )
+                pinned_positions.append(step["position"])
+            result["steps_pinned"] = len(pinned_positions)
+
+            # Resolve the product's org to a Close company.
+            company_id = None
+            if product.get("org_id"):
+                custom_fields = close_service.build_company_custom_field_payload(exp, product, product)
+                company_id = await close_service.find_or_create_company(
+                    product.get("org_name"), custom_fields
+                )
+            result["company_id"] = company_id
+
+            people = []
+            if product.get("org_id"):
+                people_rows = await conn.fetch(
+                    "SELECT id, name, email, linkedin_url, job_description FROM public.people "
+                    "WHERE org_id = $1 AND deleted_at IS NULL ORDER BY id",
+                    product["org_id"],
+                )
+                people = [dict(r) for r in people_rows]
+
+            # Resolve each person to a Close contact (deduped inside the client).
+            for person in people:
+                contact_id = await close_service.create_contact(company_id, person)
+                await conn.execute(
+                    "INSERT INTO public.experiment_run_target "
+                    "(run_id, person_id, company_id, contact_id) VALUES ($1, $2, $3, $4)",
+                    run_id, person["id"], company_id, contact_id,
+                )
+                result["targets"] += 1
+
+            # Seed pending hand-off state for every (target, pinned step).
+            for position in pinned_positions:
+                await conn.execute(
+                    "INSERT INTO public.experiment_run_send (target_id, position, state) "
+                    "SELECT id, $2, 'pending' FROM public.experiment_run_target WHERE run_id = $1",
+                    run_id, position,
+                )
+
+            # Stamp Close send tracking on product / org / people.
+            await conn.execute(
+                "UPDATE public.products SET close_sent = true, close_send_date = CURRENT_TIMESTAMP "
+                "WHERE id = $1",
+                product_id,
+            )
+            if product.get("org_id"):
+                await conn.execute(
+                    "UPDATE public.orgs SET close_sent = true, close_send_date = CURRENT_TIMESTAMP "
+                    "WHERE id = $1",
+                    product["org_id"],
+                )
+                await conn.execute(
+                    "UPDATE public.people SET close_mail_sent = true, "
+                    "close_mail_send_date = CURRENT_TIMESTAMP WHERE org_id = $1",
+                    product["org_id"],
+                )
+        result["status"] = "success"
+    except HTTPException:
+        raise
+    except Exception as e:
+        result["error"] = str(e)
+        logger.warning(f"Failed to activate experiment for product {product_id}: {e}")
+    return result
+
+
+@app.post("/experiments/{experiment_id}/start", tags=["Experiments"])
+async def start_experiment(experiment_id: int, request: StartExperimentRequest):
+    """Activate an experiment for the selected products (Send to Close)."""
+    if not request.product_ids:
+        raise HTTPException(status_code=400, detail="product_ids must not be empty")
+
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        exp_row = await conn.fetchrow(
+            "SELECT id, name, arm FROM public.experiment WHERE id = $1 AND deleted_at IS NULL",
+            experiment_id,
+        )
+        if not exp_row:
+            raise HTTPException(status_code=404, detail=f"Experiment {experiment_id} not found")
+        exp = dict(exp_row)
+
+        step_rows = await conn.fetch(
+            "SELECT position, channel, content_id, content_rev FROM public.experiment_step "
+            "WHERE experiment_id = $1 ORDER BY position",
+            experiment_id,
+        )
+        steps = [dict(s) for s in step_rows]
+        if not steps:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Experiment has no steps to activate. Add at least one step "
+                    "on the experiment edit page."
+                ),
+            )
+
+        existing = await conn.fetch(
+            "SELECT id FROM public.products WHERE id = ANY($1::bigint[]) AND deleted_at IS NULL",
+            list(request.product_ids),
+        )
+        found = {dict(r)["id"] for r in existing}
+        missing = [pid for pid in request.product_ids if pid not in found]
+        if missing:
+            raise HTTPException(status_code=400, detail=f"Product(s) not found: {missing}")
+
+        # Create the Close smart view once for the experiment.
+        smart_view_id = None
+        smart_view_error = None
+        try:
+            smart_view_query = close_service.build_experiment_smart_view_query(exp["name"])
+            smart_view_id = await close_service.create_smart_view(exp["name"], smart_view_query)
+        except Exception as e:
+            smart_view_error = str(e)
+            logger.warning(f"Could not create Close smart view for experiment {experiment_id}: {e}")
+
+        results = [await _activate_product(conn, exp, steps, pid) for pid in request.product_ids]
+
+    success_count = sum(1 for r in results if r["status"] == "success")
+    failure_count = len(results) - success_count
+    company_count = sum(1 for r in results if r.get("company_id"))
+    contact_count = sum(int(r.get("targets") or 0) for r in results)
+
+    await log_event(
+        pool,
+        "CLOSE_SEND_COMPLETE",
+        {
+            "experiment_id": experiment_id,
+            "experiment_name": exp["name"],
+            "smart_view_id": smart_view_id,
+            "success_count": success_count,
+            "failure_count": failure_count,
+            "company_count": company_count,
+            "contact_count": contact_count,
+            "product_ids": list(request.product_ids),
+        },
+    )
+
+    return {
+        "experiment_id": experiment_id,
+        "smart_view_id": smart_view_id,
+        "smart_view_error": smart_view_error,
+        "success": success_count,
+        "failed": failure_count,
+        "companies": company_count,
+        "contacts": contact_count,
+        "results": results,
+    }
+
+
+@app.get("/experiments/{experiment_id}/runs", tags=["Experiments"])
+async def get_experiment_runs(experiment_id: int):
+    """List the runs (with steps, targets and sends) for an experiment."""
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        exp = await conn.fetchrow(
+            "SELECT id FROM public.experiment WHERE id = $1 AND deleted_at IS NULL",
+            experiment_id,
+        )
+        if not exp:
+            raise HTTPException(status_code=404, detail=f"Experiment {experiment_id} not found")
+        run_rows = await conn.fetch(
+            "SELECT id, experiment_id, product_id, model_id, email_header_sent, created_at "
+            "FROM public.experiment_run WHERE experiment_id = $1 ORDER BY id",
+            experiment_id,
+        )
+        run_ids = [dict(r)["id"] for r in run_rows]
+        step_rows = []
+        target_rows = []
+        send_rows = []
+        if run_ids:
+            step_rows = await conn.fetch(
+                "SELECT run_id, position, content_id, content_rev FROM public.experiment_run_step "
+                "WHERE run_id = ANY($1::bigint[]) ORDER BY run_id, position",
+                run_ids,
+            )
+            target_rows = await conn.fetch(
+                "SELECT id, run_id, person_id, company_id, contact_id "
+                "FROM public.experiment_run_target WHERE run_id = ANY($1::bigint[]) "
+                "ORDER BY run_id, id",
+                run_ids,
+            )
+            target_ids = [dict(t)["id"] for t in target_rows]
+            if target_ids:
+                send_rows = await conn.fetch(
+                    "SELECT target_id, position, state, external_id, handed_off_at, sent_at "
+                    "FROM public.experiment_run_send WHERE target_id = ANY($1::bigint[]) "
+                    "ORDER BY target_id, position",
+                    target_ids,
+                )
+    return _runs_read(run_rows, step_rows, target_rows, send_rows)
 
 # -------------------------------------------------------------------------
 # Statuses (Organization lifecycle lookup)

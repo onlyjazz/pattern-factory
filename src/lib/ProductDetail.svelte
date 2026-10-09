@@ -3,6 +3,7 @@
 	import CheckboxField from './CheckboxField.svelte';
 	import SingleSelect from './SingleSelect.svelte';
 	import type { SelectItem } from '$lib/db';
+	import { formatDate } from '$lib/formatDate';
 
 	export let product: any = null;
 	export let loading = false;
@@ -14,6 +15,8 @@
 	export let orgsLoading = false;
 	export let selectedOrgId: string | null = null;
 	export let selectedOrgName: string = '';
+	/** Resolved organization for the display-only org-level fields (arm/tier/valuation). */
+	export let org: { arm?: number | null; tier?: number | null; size?: number | null } | null = null;
 	export let onEdit: (() => void) | null = null;
 	export let onCancel: (() => void) | null = null;
 	export let onSave: ((e: Event) => void) | null = null;
@@ -52,10 +55,6 @@
 					</div>
 				</div>
 				<div class="detail-row">
-					<div class="detail-field">
-						<span class="detail-field__label">Company</span>
-						<p>{product.company || '-'}</p>
-					</div>
 					<div class="detail-field">
 						<label for="product-panel">Panel</label>
 						<div class="input">
@@ -161,7 +160,6 @@
 					<div class="detail-field"><span class="detail-field__label">Submission Number</span><p>{product.submission_number || '-'}</p></div>
 				</div>
 				<div class="detail-row">
-					<div class="detail-field"><span class="detail-field__label">Company</span><p>{product.company || '-'}</p></div>
 					<div class="detail-field"><span class="detail-field__label">Panel</span><p>{product.panel || '-'}</p></div>
 				</div>
 				<div class="detail-row">
@@ -193,6 +191,19 @@
 					<div class="detail-field"><span class="detail-field__label">Contact 1</span><p>{product.product_contact_1 || '-'}</p></div>
 					<div class="detail-field"><span class="detail-field__label">Contact 2</span><p>{product.product_contact_2 || '-'}</p></div>
 					<div class="detail-field"><span class="detail-field__label">Contact 3</span><p>{product.product_contact_3 || '-'}</p></div>
+				</div>
+			</div>
+
+			<div class="detail-section">
+				<h3>Send to Close</h3>
+				<div class="detail-row">
+					<div class="detail-field"><span class="detail-field__label">Close Send Date</span><p>{formatDate(product.close_send_date) || '-'}</p></div>
+					<div class="detail-field"><span class="detail-field__label">Close Sent</span><p>{product.close_sent ? 'Yes' : 'No'}</p></div>
+				</div>
+				<div class="detail-row">
+					<div class="detail-field"><span class="detail-field__label">Arm</span><p>{org?.arm ?? '-'}</p></div>
+					<div class="detail-field"><span class="detail-field__label">Tier</span><p>{org?.tier ?? '-'}</p></div>
+					<div class="detail-field"><span class="detail-field__label">Valuation</span><p>{(org?.size ?? 0).toLocaleString()}</p></div>
 				</div>
 			</div>
 		{/if}

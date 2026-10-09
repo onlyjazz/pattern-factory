@@ -2,6 +2,7 @@
 	import EntityDetailLayout from './EntityDetailLayout.svelte';
 	import SingleSelect from './SingleSelect.svelte';
 	import type { SelectItem } from '$lib/db';
+	import { formatDate } from '$lib/formatDate';
 
 	export let org: any = null;
 	export let loading = false;
@@ -148,6 +149,9 @@
 					<div class="detail-field"><span class="detail-field__label">Name Before Acquisition</span><p>{org.name_before_acquisition || '-'}</p></div>
 				</div>
 				<div class="detail-row full"><div class="detail-field"><span class="detail-field__label">Description</span><p>{org.description || '-'}</p></div></div>
+				<div class="detail-row">
+					<div class="detail-field"><span class="detail-field__label">Close Send Date</span><p>{formatDate(org.close_send_date) || '-'}</p></div>
+				</div>
 			</div>
 
 			<div class="detail-section">

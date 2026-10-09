@@ -1,0 +1,54 @@
+CLOSE:
+  rev: 1.0
+  date: 2026-10-09
+  author: Pattern Factory
+  description: >
+    Close CRM integration configuration for the PAT-380 Send-to-Close flow.
+    backend/services/close_service.py loads this file at runtime (same pattern
+    as the SEARCH.yaml loader in backend/pitboss/competitors.py). No field ids
+    or endpoint constants are hard-coded in Python.
+
+  api:
+    base_url: https://api.close.com/api/v1
+    api_key_env: CLOSE_API_KEY
+    timeout_seconds: 30
+
+  # Pattern Factory "table.column" -> Close company (lead) custom field.
+  # The service writes these onto the company created for each product's org.
+  company_field_map:
+    experiment.name:
+      label: Experiment
+      field_id: cf_E6pZxfxbtvqYhKGyUqj9D5qAVpvC9vwtJEyi8NIyPHB
+    products.competitors:
+      label: Competitors
+      field_id: cf_dp8Q8l9egeFLfPufYYtVycyrwaS7TTFpxFNFiqw5s0u
+    products.device:
+      label: Product
+      field_id: cf_kxHmGZjozVejIV4GRW06c1cvaMKsSHS2KDRrLg5DUyn
+    products.superiority:
+      label: Superiority
+      field_id: cf_Xa4UudugiQkj2omJiLnPk9yeZ6vdL9hVNlkhPzrRioJ
+    products.date_of_final_decision:
+      label: Date Of Final Decision
+      field_id: cf_nSGRvzr1DD5wVOG4FLI4xJZiI48HSfKhzEuNxFLWKnx
+    orgs.estimated_annual_sales:
+      label: Estimated Annual Sales
+      field_id: cf_qt29QxJ2ciDfqqaeCotXYhHy0eZo0MbmSzTqtmpNkvK
+    orgs.size:
+      label: Size
+      field_id: cf_KsI0fgI3ZtAJidFO6RUobAmMr6Cg87wlxgZkFKzsT3m
+    orgs.arm:
+      label: Arm
+      field_id: cf_1YDHShein5VXjvO4KrCKpuSOBzNSAaztnmLnkysjJB6
+    products.intended_use:
+      label: Intended use
+      field_id: cf_Ye270BbBBQnXvisnHFGQOMW7WeVtCohXRoDrEVg3R5P
+
+  # Declared for completeness but intentionally NOT mapped in this release.
+  unmapped_fields:
+    products.product_count:
+      label: Product count
+      field_id: cf_g5ZdKb5f2ylxODNwGzfK6aoa8AhKDaEXtWRBy55MYr4
+    products.sle:
+      label: SLE
+      field_id: cf_UceK6wLaY8uJ7Mb83alB1ewiwJEglQVW6QyWtztgFu0

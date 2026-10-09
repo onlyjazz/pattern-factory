@@ -2,6 +2,7 @@
 	import EntityDetailLayout from './EntityDetailLayout.svelte';
 	import SingleSelect from './SingleSelect.svelte';
 	import type { SelectItem } from '$lib/db';
+	import { formatDate } from '$lib/formatDate';
 
 	export let person: any = null;
 	export let loading = false;
@@ -116,6 +117,14 @@
 					<div class="detail-field"><span class="detail-field__label">Content Source</span><p>{person.content_source || '-'}</p></div>
 				</div>
 				<div class="detail-row full"><div class="detail-field"><span class="detail-field__label">Content URL</span><p>{person.content_url || '-'}</p></div></div>
+			</div>
+
+			<div class="detail-section">
+				<h3>Send to Close</h3>
+				<div class="detail-row">
+					<div class="detail-field"><span class="detail-field__label">Close Mail Send Date</span><p>{formatDate(person.close_mail_send_date) || '-'}</p></div>
+					<div class="detail-field"><span class="detail-field__label">Close Mail Sent</span><p>{person.close_mail_sent ? 'Yes' : 'No'}</p></div>
+				</div>
 			</div>
 		{/if}
 	</div>

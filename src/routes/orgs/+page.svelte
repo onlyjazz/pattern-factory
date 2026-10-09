@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { globalSearch } from '$lib/searchStore';
 	import type { Organization, Status } from '$lib/db';
+	import { formatDate } from '$lib/formatDate';
 	import { API_BASE } from '$lib/config';
 
 	let orgs: Organization[] = [];
@@ -262,7 +263,7 @@
 										</span>
 									</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'product_count' && sortDirection === 'asc'} class:sorted-desc={sortField === 'product_count' && sortDirection === 'desc'} onclick={() => toggleSort('product_count')}>Products</th>
-									<th class="tal sortable" class:sorted-asc={sortField === 'name_before_acquisition' && sortDirection === 'asc'} class:sorted-desc={sortField === 'name_before_acquisition' && sortDirection === 'desc'} onclick={() => toggleSort('name_before_acquisition')}>Name Before Acquisition</th>
+									<th class="tal sortable" class:sorted-asc={sortField === 'close_send_date' && sortDirection === 'asc'} class:sorted-desc={sortField === 'close_send_date' && sortDirection === 'desc'} onclick={() => toggleSort('close_send_date')}>Close Send Date</th>
 									<th class="tal">Status</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'tier' && sortDirection === 'asc'} class:sorted-desc={sortField === 'tier' && sortDirection === 'desc'} onclick={() => toggleSort('tier')}>Tier</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'arm' && sortDirection === 'asc'} class:sorted-desc={sortField === 'arm' && sortDirection === 'desc'} onclick={() => toggleSort('arm')}>Arm</th>
@@ -288,7 +289,7 @@
 											</span>
 										</td>
 										<td class="tal">{o.product_count ?? 0}</td>
-										<td class="tal">{o.name_before_acquisition || '-'}</td>
+										<td class="tal">{formatDate(o.close_send_date) || '-'}</td>
 										<td class="tal">{statusName(o.status_id)}</td>
 										<td class="tal">{o.tier ?? '-'}</td>
 										<td class="tal">{o.arm ?? '-'}</td>

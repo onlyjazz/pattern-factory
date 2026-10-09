@@ -3,7 +3,7 @@
 	import { onMount } from 'svelte';
 	import { modeStore } from '$lib/modeStore';
 	import { API_BASE } from '$lib/config';
-import { Network, FileText, Route, ListTree, AlertTriangle, Box, Bug, Shield, List, Gauge, Package, Users, Building2 } from 'lucide-svelte';
+import { Network, FileText, Route, ListTree, AlertTriangle, Box, Bug, Shield, List, Gauge, Package, Users, Building2, FlaskConical } from 'lucide-svelte';
 
 	let currentPath = '';
 	let views: any[] = [];
@@ -27,7 +27,8 @@ import { Network, FileText, Route, ListTree, AlertTriangle, Box, Bug, Shield, Li
 	const productLinks = [
 		{ name: "Products", href: "/products", icon: Package },
 		{ name: "People", href: "/people", icon: Users },
-		{ name: "Orgs", href: "/orgs", icon: Building2 }
+		{ name: "Orgs", href: "/orgs", icon: Building2 },
+		{ name: "Experiments", href: "/experiments", icon: FlaskConical }
 	];
 
 	type NavLink = { name: string; href: string; icon: typeof Package };

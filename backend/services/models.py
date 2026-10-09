@@ -9,7 +9,7 @@ the corresponding models in this file (see backend/db/AGENTS.md).
 """
 
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -39,6 +39,8 @@ class OrgCreate(BaseModel):
     study_arm: str | None = None
     randomization_seed: int | None = None
     randomized_at: str | None = None
+    close_send_date: datetime | None = None
+    close_sent: bool = False
     status_id: int = 1
 
     @field_validator("date_funded", "date_founded", mode="before")
@@ -80,6 +82,8 @@ class OrgUpdate(BaseModel):
     study_arm: str | None = None
     randomization_seed: int | None = None
     randomized_at: str | None = None
+    close_send_date: datetime | None = None
+    close_sent: bool | None = None
     status_id: int | None = None
 
     @field_validator("date_funded", "date_founded", mode="before")
@@ -421,6 +425,8 @@ class ProductCreate(BaseModel):
     competitors: str | None = None  # Comma-separated list of competitor company names
     org_id: int | None = None  # Foreign key to organizations
     process_flag: bool = False  # True after the device is processed for basis-threat generation
+    close_send_date: datetime | None = None  # When this product was handed to Close CRM
+    close_sent: bool = False  # True once this product has been sent to Close CRM
 
     @field_validator("date_of_final_decision", mode="before")
     @classmethod
@@ -449,6 +455,8 @@ class ProductUpdate(BaseModel):
     competitors: str | None = None  # Comma-separated list of competitor company names
     org_id: int | None = None
     process_flag: bool | None = None
+    close_send_date: datetime | None = None
+    close_sent: bool | None = None
 
     @field_validator("date_of_final_decision", mode="before")
     @classmethod
@@ -474,6 +482,8 @@ class PersonCreate(BaseModel):
     content_url: str | None = None
     email: str | None = None
     company_url: str | None = None
+    close_mail_send_date: datetime | None = None  # When this person was mailed via Close CRM
+    close_mail_sent: bool = False  # True once this person has been handed to Close CRM
 
 
 class PersonUpdate(BaseModel):
@@ -488,6 +498,8 @@ class PersonUpdate(BaseModel):
     content_url: str | None = None
     email: str | None = None
     company_url: str | None = None
+    close_mail_send_date: datetime | None = None
+    close_mail_sent: bool | None = None
 
 
 # -------------------------------------------------------------------------
@@ -521,3 +533,98 @@ class CompetitorRead(BaseModel):
     rationale: str | None
     created_at: str
     updated_at: str
+
+
+# -------------------------------------------------------------------------
+# Experiments (PAT-380: Send to Close)
+# -------------------------------------------------------------------------
+ExperimentArm = Literal["social", "risk-then-superiority", "superiority-then-risk"]
+ExperimentChannel = Literal["buffer", "email"]
+ExperimentContentStatus = Literal["draft", "approved"]
+ExperimentSendState = Literal["pending", "handedOff", "rejected", "failed"]
+
+
+class ExperimentStepModel(BaseModel):
+    """One ordered channel step in an experiment."""
+    position: int
+    channel: ExperimentChannel
+    content_id: str | None = None  # Sanity document _id
+    content_rev: str | None = None  # Sanity document _rev
+
+
+class ExperimentCreate(BaseModel):
+    """Create a new experiment."""
+    name: str
+    description: str | None = None
+    arm: ExperimentArm
+    email_header: str | None = None
+    email_header_status: ExperimentContentStatus = "draft"
+    steps: list[ExperimentStepModel] = []
+    product_ids: list[int] = []  # many-to-many product membership
+
+
+class ExperimentUpdate(BaseModel):
+    """Update an experiment (all fields optional)."""
+    name: str | None = None
+    description: str | None = None
+    arm: ExperimentArm | None = None
+    email_header: str | None = None
+    email_header_status: ExperimentContentStatus | None = None
+    steps: list[ExperimentStepModel] | None = None
+    product_ids: list[int] | None = None
+
+
+class ExperimentRead(BaseModel):
+    """Read response for an experiment with nested steps and product ids."""
+    id: int
+    name: str
+    description: str | None = None
+    arm: str
+    email_header: str | None = None
+    email_header_status: str
+    steps: list[ExperimentStepModel] = []
+    product_ids: list[int] = []
+    created_at: str | None = None
+    updated_at: str | None = None
+
+
+class StartExperimentRequest(BaseModel):
+    """Activate an experiment for a set of products (POST /experiments/{id}/start)."""
+    product_ids: list[int]
+
+
+class ExperimentRunStepRead(BaseModel):
+    """Pinned step on an experiment run."""
+    position: int
+    content_id: str | None = None
+    content_rev: str | None = None
+
+
+class ExperimentRunSendRead(BaseModel):
+    """Per-step hand-off state for a run target."""
+    position: int
+    state: str
+    external_id: str | None = None
+    handed_off_at: str | None = None
+    sent_at: str | None = None
+
+
+class ExperimentRunTargetRead(BaseModel):
+    """Close company/contact resolved for a run."""
+    id: int
+    person_id: int | None = None
+    company_id: str | None = None
+    contact_id: str | None = None
+    sends: list[ExperimentRunSendRead] = []
+
+
+class ExperimentRunRead(BaseModel):
+    """Read response for an experiment run."""
+    id: int
+    experiment_id: int
+    product_id: int
+    model_id: int | None = None
+    email_header_sent: bool = False
+    steps: list[ExperimentRunStepRead] = []
+    targets: list[ExperimentRunTargetRead] = []
+    created_at: str | None = None

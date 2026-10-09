@@ -9,6 +9,7 @@
 	let error: string | null = null;
 	let selectedOrgId: string | null = null;
 	let selectedOrgName = '';
+	let org: { name?: string; arm?: number | null; tier?: number | null; size?: number | null } | null = null;
 
 	const apiBase = API_BASE;
 
@@ -23,8 +24,8 @@
 				selectedOrgId = String(product.org_id);
 				const orgRes = await fetch(`${apiBase}/orgs/${product.org_id}`);
 				if (orgRes.ok) {
-					const org = await orgRes.json();
-					selectedOrgName = org.name || '';
+					org = await orgRes.json();
+					selectedOrgName = org?.name || '';
 				}
 			}
 		} catch (e) {
@@ -48,5 +49,6 @@
 	isEditing={false}
 	{selectedOrgId}
 	{selectedOrgName}
+	{org}
 	onEdit={handleEdit}
 />

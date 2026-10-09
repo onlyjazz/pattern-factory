@@ -26,6 +26,8 @@ DATA:
           - superiority
           - process_flag
           - competitors
+          - close_send_date
+          - close_sent
 
         competitors:
           - id
@@ -61,6 +63,8 @@ DATA:
           - content_url
           - email
           - company_url
+          - close_mail_send_date
+          - close_mail_sent
           - created_at
           - updated_at
           - deleted_at
@@ -90,6 +94,8 @@ DATA:
           - study_arm
           - randomized_at
           - status_id
+          - close_send_date
+          - close_sent
 
         patterns:
           - id
@@ -155,6 +161,69 @@ DATA:
           - created_at
           - updated_at
           - deleted_at
+
+        experiment:
+          - id
+          - name
+          - description
+          - arm
+          - email_header
+          - email_header_status
+          - created_at
+          - updated_at
+          - deleted_at
+
+        experiment_step:
+          - id
+          - experiment_id
+          - position
+          - channel
+          - content_id
+          - content_rev
+          - created_at
+          - updated_at
+
+        experiment_product:
+          - experiment_id
+          - product_id
+          - created_at
+
+        experiment_run:
+          - id
+          - experiment_id
+          - product_id
+          - model_id
+          - email_header_sent
+          - created_at
+          - updated_at
+
+        experiment_run_step:
+          - id
+          - run_id
+          - position
+          - content_id
+          - content_rev
+          - created_at
+
+        experiment_run_target:
+          - id
+          - run_id
+          - person_id
+          - company_id
+          - contact_id
+          - created_at
+          - updated_at
+
+        experiment_run_send:
+          - id
+          - target_id
+          - position
+          - state
+          - external_id
+          - handed_off_at
+          - sent_at
+          - created_at
+          - updated_at
 
     threat:
       tables:

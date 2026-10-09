@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { globalSearch } from '$lib/searchStore';
 	import type { Person, Organization } from '$lib/db';
+	import { formatDate } from '$lib/formatDate';
 	import { API_BASE } from '$lib/config';
 
 	let people: Person[] = [];
@@ -164,6 +165,7 @@
 									<th class="tal sortable" class:sorted-asc={sortField === 'job_description' && sortDirection === 'asc'} class:sorted-desc={sortField === 'job_description' && sortDirection === 'desc'} onclick={() => toggleSort('job_description')}>Job Description</th>
 									<th class="tal">Org</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'email' && sortDirection === 'asc'} class:sorted-desc={sortField === 'email' && sortDirection === 'desc'} onclick={() => toggleSort('email')}>Email</th>
+									<th class="tal sortable" class:sorted-asc={sortField === 'close_mail_send_date' && sortDirection === 'asc'} class:sorted-desc={sortField === 'close_mail_send_date' && sortDirection === 'desc'} onclick={() => toggleSort('close_mail_send_date')}>Close Mail Send Date</th>
 									<th class="tar">Actions</th>
 								</tr>
 							</thead>
@@ -174,6 +176,7 @@
 										<td class="tal">{p.job_description || '-'}</td>
 										<td class="tal">{orgName(p.org_id)}</td>
 										<td class="tal">{p.email || '-'}</td>
+										<td class="tal">{formatDate(p.close_mail_send_date) || '-'}</td>
 										<td class="tar">
 											<button class="button button_small" onclick={(e) => { e.stopPropagation(); window.location.href = `/people/${p.id}/edit`; }} title="Edit">✎</button>
 											<button class="button button_small" onclick={(e) => { e.stopPropagation(); handleDelete(p.id); }} title="Delete">🗑</button>

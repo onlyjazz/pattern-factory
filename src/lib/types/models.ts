@@ -36,6 +36,8 @@ export interface Organization {
   study_arm?: string; // Study arm label: 'control' | 'treatment_1' | 'treatment_2'
   status_id?: number; // Foreign key to statuses (1=active, 2=closed)
   product_count?: number; // Derived count of active products linked to this org (GET /orgs)
+  close_send_date?: string | null; // When this org was handed to Close CRM
+  close_sent?: boolean; // True once this org has been sent to Close CRM
   created_at?: string; // ISO timestamp
   updated_at?: string; // ISO timestamp
   deleted_at?: string | null; // ISO timestamp or null for active records
@@ -102,6 +104,8 @@ export interface Product {
   competitors?: string; // Comma-separated list of competitor company names
   org_id?: number; // Foreign key to organizations
   process_flag: boolean; // True after processing for basis-threat generation
+  close_send_date?: string | null; // When this product was handed to Close CRM
+  close_sent?: boolean; // True once this product has been sent to Close CRM
   created_at?: string; // ISO timestamp
   updated_at?: string; // ISO timestamp
   deleted_at?: string | null; // ISO timestamp or null for active records
@@ -122,6 +126,8 @@ export interface Person {
   content_url?: string; // Source URL
   email?: string; // Email address
   company_url?: string; // Company website URL
+  close_mail_send_date?: string | null; // When this person was mailed via Close CRM
+  close_mail_sent?: boolean; // True once this person has been handed to Close CRM
   created_at?: string; // ISO timestamp
   updated_at?: string; // ISO timestamp
   deleted_at?: string | null; // ISO timestamp or null for active records
@@ -154,6 +160,67 @@ export interface ViewRegistry {
   mode?: 'explore' | 'model';
   created_at?: string; // ISO timestamp
   updated_at?: string; // ISO timestamp
+}
+
+/**
+ * Experiment — a reusable cross-channel outreach template (PAT-380: Send to Close)
+ */
+export interface ExperimentStep {
+  position: number;
+  channel: 'buffer' | 'email';
+  content_id?: string | null; // Sanity document _id
+  content_rev?: string | null; // Sanity document _rev
+}
+
+export interface Experiment {
+  id: number;
+  name: string;
+  description?: string | null;
+  arm: 'social' | 'risk-then-superiority' | 'superiority-then-risk';
+  email_header?: string | null;
+  email_header_status: 'draft' | 'approved';
+  steps: ExperimentStep[];
+  product_ids: number[]; // many-to-many product membership
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+}
+
+/** Per-step hand-off state for a run target. */
+export interface ExperimentRunSend {
+  position: number;
+  state: 'pending' | 'handedOff' | 'rejected' | 'failed';
+  external_id?: string | null;
+  handed_off_at?: string | null;
+  sent_at?: string | null;
+}
+
+/** Close company/contact resolved for a run. */
+export interface ExperimentRunTarget {
+  id: number;
+  person_id?: number | null;
+  company_id?: string | null;
+  contact_id?: string | null;
+  sends: ExperimentRunSend[];
+}
+
+/** Content pinned at activation. */
+export interface ExperimentRunStep {
+  position: number;
+  content_id?: string | null;
+  content_rev?: string | null;
+}
+
+/** One experiment run per product at activation. */
+export interface ExperimentRun {
+  id: number;
+  experiment_id: number;
+  product_id: number;
+  model_id?: number | null;
+  email_header_sent: boolean;
+  steps: ExperimentRunStep[];
+  targets: ExperimentRunTarget[];
+  created_at?: string;
 }
 
 /**
