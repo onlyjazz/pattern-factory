@@ -15,11 +15,23 @@
 	let sending = false;
 	let sendError: string | null = null;
 	let sendResult: StartExperimentResult | null = null;
+	let queryProductIds: number[] = [];
 
 	const apiBase = API_BASE;
 
+	// Products checked on the Products index arrive as ?products=1,2,3; when
+	// absent, fall back to the experiment's own membership.
+	$: sendIds = queryProductIds.length > 0 ? queryProductIds : (experiment?.product_ids ?? []);
+
 	onMount(async () => {
 		const experimentId = $page.params.id;
+		const rawProducts = $page.url.searchParams.get('products');
+		if (rawProducts) {
+			queryProductIds = rawProducts
+				.split(',')
+				.map(Number)
+				.filter((n) => Number.isFinite(n));
+		}
 		try {
 			const response = await fetch(`${apiBase}/experiments/${experimentId}`);
 			if (!response.ok) throw new Error('Failed to fetch experiment');
@@ -62,7 +74,7 @@
 			sending = true;
 			sendError = null;
 			sendResult = null;
-			sendResult = await startExperiment(experiment.id, experiment.product_ids, apiBase);
+			sendResult = await startExperiment(experiment.id, sendIds, apiBase);
 		} catch (e) {
 			sendError = e instanceof Error ? e.message : 'Failed to start experiment';
 		} finally {
@@ -81,6 +93,7 @@
 	{sending}
 	{sendError}
 	{sendResult}
+	sendCount={sendIds.length}
 	onSend={handleSend}
 	onEdit={handleEdit}
 />

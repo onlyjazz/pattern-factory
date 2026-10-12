@@ -1,17 +1,15 @@
 <script lang="ts">
 	import CloseSendResult from './CloseSendResult.svelte';
 	import type { StartExperimentResult } from '$lib/closeSend';
-	import type { Experiment } from '$lib/types/models';
 
-	export let experiment: Experiment | null = null;
+	export let sendCount = 0;
+	export let hasSteps = false;
 	export let sending = false;
 	export let sendError: string | null = null;
 	export let sendResult: StartExperimentResult | null = null;
 	export let onSend: (() => void) | null = null;
 
-	$: hasProducts = (experiment?.product_ids?.length ?? 0) > 0;
-	$: hasSteps = (experiment?.steps?.length ?? 0) > 0;
-	$: canSend = hasProducts && hasSteps;
+	$: canSend = hasSteps && sendCount > 0;
 </script>
 
 <div class="detail-section">
@@ -22,8 +20,10 @@
 	</p>
 	{#if !hasSteps}
 		<p class="help-text">Add at least one step on the edit page before sending.</p>
-	{:else if !hasProducts}
-		<p class="help-text">Assign at least one product on the edit page before sending.</p>
+	{:else if sendCount === 0}
+		<p class="help-text">Select products on the Products page (or assign them here) before sending.</p>
+	{:else}
+		<p class="help-text">{sendCount} {sendCount === 1 ? 'product' : 'products'} will be sent to Close.</p>
 	{/if}
 	<div class="form-footer">
 		<button

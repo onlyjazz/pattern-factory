@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { globalSearch } from '$lib/searchStore';
 	import type { Product, Organization } from '$lib/db';
+	import type { Experiment } from '$lib/types/models';
 	import { formatDate } from '$lib/formatDate';
 	import { API_BASE } from '$lib/config';
 
@@ -15,29 +16,36 @@
 
 	let products: ProductRow[] = [];
 	let orgs: Organization[] = [];
+	let experiments: Experiment[] = [];
 	let loading = true;
 	let error: string | null = null;
 	let filteredProducts: ProductRow[] = [];
+
+	let selectedProductIds: string[] = [];
 
 	let showAddModal = false;
 	let addModalError: string | null = null;
 	let newProduct = { submission_number: '', device: '', org_id: null as number | null };
 
-	let sortField: keyof ProductRow | null = 'device';
-	let sortDirection: 'asc' | 'desc' = 'asc';
+	let sortField: keyof ProductRow | null = 'updated_at';
+	let sortDirection: 'asc' | 'desc' = 'desc';
 
 	const apiBase = API_BASE;
 
 	$: filteredProducts = filterProducts(products, $globalSearch, sortField, sortDirection);
+	$: allFilteredSelected =
+		filteredProducts.length > 0 && filteredProducts.every((p) => selectedProductIds.includes(p.id));
 
 	onMount(async () => {
 		try {
-			const [productsRes, orgsRes] = await Promise.all([
+			const [productsRes, orgsRes, experimentsRes] = await Promise.all([
 				fetch(`${apiBase}/products`),
-				fetch(`${apiBase}/orgs`)
+				fetch(`${apiBase}/orgs`),
+				fetch(`${apiBase}/experiments`)
 			]);
 			if (!productsRes.ok) throw new Error('Failed to fetch products');
 			if (orgsRes.ok) orgs = await orgsRes.json();
+			if (experimentsRes.ok) experiments = await experimentsRes.json();
 			const data = await productsRes.json();
 			products = data.map((p: any): ProductRow => {
 				const org = orgs.find((o) => Number(o.id) === p.org_id);
@@ -93,6 +101,32 @@
 		}
 	}
 
+	function toggleSelection(productId: string) {
+		if (selectedProductIds.includes(productId)) {
+			selectedProductIds = selectedProductIds.filter((id) => id !== productId);
+		} else {
+			selectedProductIds = [...selectedProductIds, productId];
+		}
+	}
+
+	function toggleSelectAll() {
+		if (allFilteredSelected) {
+			const visible = new Set(filteredProducts.map((p) => p.id));
+			selectedProductIds = selectedProductIds.filter((id) => !visible.has(id));
+		} else {
+			selectedProductIds = [...new Set([...selectedProductIds, ...filteredProducts.map((p) => p.id)])];
+		}
+	}
+
+	function handleExperimentSelect(event: Event) {
+		const target = event.currentTarget as HTMLSelectElement;
+		const experimentId = target.value;
+		if (!experimentId) return;
+		// Carry the checked products into the experiment's Send to Close action.
+		const query = selectedProductIds.length > 0 ? `?products=${selectedProductIds.join(',')}` : '';
+		window.location.href = `/experiments/${experimentId}${query}`;
+	}
+
 	function closeAddModal() {
 		showAddModal = false;
 		newProduct = { submission_number: '', device: '', org_id: null };
@@ -130,6 +164,7 @@
 			const response = await fetch(`${apiBase}/products/${productId}`, { method: 'DELETE' });
 			if (!response.ok) throw new Error('Failed to delete product');
 			products = products.filter(p => p.id !== productId);
+			selectedProductIds = selectedProductIds.filter((id) => id !== productId);
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to delete product';
 		}
@@ -141,9 +176,20 @@
 		<button class="button button_green" onclick={() => (showAddModal = true)}>
 			Add Product
 		</button>
-		<button class="button button_blue" onclick={() => (window.location.href = '/products/start-experiment')}>
-			Start Experiment
-		</button>
+		<div class="input input_select">
+			<select
+				id="start-experiment"
+				class="input__text"
+				class:input__text_changed={selectedProductIds.length > 0}
+				onchange={handleExperimentSelect}
+			>
+				<option value="">Start experiment…</option>
+				{#each experiments as experiment (experiment.id)}
+					<option value={experiment.id}>{experiment.name}</option>
+				{/each}
+			</select>
+			<label for="start-experiment" class="input__label">Experiment</label>
+		</div>
 		<h1 class="heading heading_1">Products</h1>
 	</div>
 
@@ -153,6 +199,14 @@
 				<div class="card-header">
 					<div class="heading heading_3">FDA devices</div>
 				</div>
+
+				{#if selectedProductIds.length > 0}
+					<div class="message">
+						{selectedProductIds.length}
+						{selectedProductIds.length === 1 ? 'product' : 'products'} selected — choose an experiment
+						above to continue.
+					</div>
+				{/if}
 
 				{#if loading}
 					<div class="message">Loading products...</div>
@@ -165,7 +219,17 @@
 						<table>
 							<thead>
 								<tr>
-									<th class="tal sortable" class:sorted-asc={sortField === 'submission_number' && sortDirection === 'asc'} class:sorted-desc={sortField === 'submission_number' && sortDirection === 'desc'} onclick={() => toggleSort('submission_number')}>Submission</th>
+									<th class="tal">
+										<input
+											type="checkbox"
+											class="checkbox-input checkbox-input_inline"
+											aria-label="Select all products"
+											checked={allFilteredSelected}
+											onchange={toggleSelectAll}
+											onclick={(e) => e.stopPropagation()}
+										/>
+									</th>
+									<th class="tal sortable" class:sorted-asc={sortField === 'updated_at' && sortDirection === 'asc'} class:sorted-desc={sortField === 'updated_at' && sortDirection === 'desc'} onclick={() => toggleSort('updated_at')}>Updated</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'device' && sortDirection === 'asc'} class:sorted-desc={sortField === 'device' && sortDirection === 'desc'} onclick={() => toggleSort('device')}>Device</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'panel' && sortDirection === 'asc'} class:sorted-desc={sortField === 'panel' && sortDirection === 'desc'} onclick={() => toggleSort('panel')}>Panel</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'org_name' && sortDirection === 'asc'} class:sorted-desc={sortField === 'org_name' && sortDirection === 'desc'} onclick={() => toggleSort('org_name')}>Org</th>
@@ -180,7 +244,17 @@
 							<tbody>
 								{#each filteredProducts as p (p.id)}
 									<tr class="entity-row" onclick={() => (window.location.href = `/products/${p.id}`)}>
-										<td class="tal">{p.submission_number || '-'}</td>
+										<td class="tal">
+											<input
+												type="checkbox"
+												class="checkbox-input checkbox-input_inline"
+												aria-label={`Select ${p.device}`}
+												checked={selectedProductIds.includes(p.id)}
+												onchange={() => toggleSelection(p.id)}
+												onclick={(e) => e.stopPropagation()}
+											/>
+										</td>
+										<td class="tal">{formatDate(p.updated_at) || '-'}</td>
 										<td class="tal">{p.device}</td>
 										<td class="tal">{p.panel || '-'}</td>
 										<td class="tal">{p.org_name ?? '-'}</td>

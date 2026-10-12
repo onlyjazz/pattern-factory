@@ -26,11 +26,13 @@
 	export let sending = false;
 	export let sendError: string | null = null;
 	export let sendResult: StartExperimentResult | null = null;
+	export let sendCount = 0;
 	export let onSend: (() => void) | null = null;
 
 	$: selectedProductNames = (experiment?.product_ids ?? []).map(
 		(id) => productItems.find((product) => product.id === id)?.name ?? `#${id}`
 	);
+	$: hasSteps = (experiment?.steps?.length ?? 0) > 0;
 </script>
 
 <EntityDetailLayout
@@ -109,7 +111,7 @@
 				<ProductMultiSelect items={productItems} loading={productsLoading} bind:selectedIds={experiment.product_ids} />
 			</div>
 		{:else if experiment}
-			<ExperimentSendPanel {experiment} {sending} {sendError} {sendResult} {onSend} />
+			<ExperimentSendPanel {sendCount} {hasSteps} {sending} {sendError} {sendResult} {onSend} />
 
 			<div class="detail-section">
 				<h3>Definition</h3>

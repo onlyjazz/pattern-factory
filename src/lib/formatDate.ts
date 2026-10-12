@@ -1,10 +1,10 @@
 /**
  * Shared date formatter for the UI.
  *
- * AGENTS.md requires every date rendered in the interface to use long US
- * format, e.g. "June 30, 2026" — never a raw ISO string or a locale-default
- * short format. Use this helper for all dates in the Product workspace,
- * including the PAT-380 Close send dates.
+ * AGENTS.md requires every date rendered in the interface to use the
+ * abbreviated US month format, e.g. "Nov 15, 2024" — never a raw ISO string or
+ * a locale-default format. Use this helper for all dates in the Product
+ * workspace, including the PAT-380 Close send dates.
  */
 export function formatDate(value: string | number | Date | null | undefined): string {
 	if (value === null || value === undefined || value === '') return '';
@@ -26,7 +26,7 @@ export function formatDate(value: string | number | Date | null | undefined): st
 
 	return date.toLocaleDateString('en-US', {
 		year: 'numeric',
-		month: 'long',
+		month: 'short',
 		day: 'numeric'
 	});
 }

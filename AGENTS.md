@@ -1313,7 +1313,7 @@ Discovers and stores the top 3 competing products for a given FDA-cleared device
 ## 2. Structural & Architectural Invariants
 - Styling: use src/app.css and src/main.css. Never install inline style packages.
 - API Layer: All client data fetching must route through custom hooks inside `/src/hooks/queries`.
-- Date format: render all dates in the UI in long US format, e.g. `June 30, 2026` (use a shared `formatDate` helper; do not emit raw ISO strings or locale-default formats).
+- Date format: render all dates in the UI with an abbreviated US month, e.g. `Nov 15, 2024` (use a shared `formatDate` helper; do not emit raw ISO strings or locale-default formats).
 
 ## 3. The Three-Tier Boundary Model
 <!-- Defining strict "Never" rules cuts down on hallucinated files and breaking changes -->

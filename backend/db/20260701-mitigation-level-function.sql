@@ -3,6 +3,27 @@
 -- Date: 2026-07-01
 -- Purpose: Transparently compute threat.mitigation_level
 --          from threat_impact view as residual_risk_pct * 100
+--
+-- ⚠️ SUPERSEDED — DO NOT RE-RUN THIS MIGRATION ⚠️
+--
+-- This migration is obsolete and must not be re-applied:
+--
+--   1. It creates trigger-based maintenance of threat.threats.mitigation_level.
+--      That approach was abandoned — residual risk and mitigation are computed
+--      on the fly in the threat.threat_impact view (current_mitigation_pct /
+--      target_mitigation_pct).
+--
+--   2. Its helper threat.compute_mitigation_level() reads
+--      threat_impact.residual_risk_pct, a column removed by
+--      20260902-pat-341-threat-impact-sle-views.sql. Re-running this file
+--      reinstalls triggers that reference the dropped column, which aborts
+--      threat.upsert_risk_model with:
+--        'column ti.residual_risk_pct does not exist'
+--
+-- The triggers and helper functions created here were dropped by
+-- 20261012-pat-392-drop-obsolete-mitigation-triggers.sql.
+--
+-- Historical reference only. See PAT-392.
 -- =========================================================
 
 BEGIN;
