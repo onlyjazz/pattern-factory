@@ -68,7 +68,7 @@
 		<div class="header-search">
 			<input
 				type="text"
-				placeholder="Search..."
+				placeholder="Search or filter…"
 				bind:value={$globalSearch}
 				class="header-search-input"
 				/>

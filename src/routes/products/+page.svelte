@@ -1,18 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { globalSearch } from '$lib/searchStore';
-	import type { Product, Organization } from '$lib/db';
+	import type { Organization } from '$lib/db';
 	import type { Experiment } from '$lib/types/models';
+	import { matchesFilter, parseQuery, type Query } from '$lib/queryFilter';
+	import { productQueryFields, type ProductRow } from '$lib/productQueryFields';
 	import { formatDate } from '$lib/formatDate';
 	import { API_BASE } from '$lib/config';
-
-	/** Product plus resolved org fields, so org columns can sort and search. */
-	type ProductRow = Product & {
-		org_name: string | null;
-		arm: number | null;
-		tier: number | null;
-		size: number | null;
-	};
 
 	let products: ProductRow[] = [];
 	let orgs: Organization[] = [];
@@ -32,9 +26,14 @@
 
 	const apiBase = API_BASE;
 
-	$: filteredProducts = filterProducts(products, $globalSearch, sortField, sortDirection);
+	$: productQuery = parseQuery($globalSearch, productQueryFields);
+	$: filteredProducts = filterProducts(products, productQuery, sortField, sortDirection);
 	$: allFilteredSelected =
 		filteredProducts.length > 0 && filteredProducts.every((p) => selectedProductIds.includes(p.id));
+	// Selections survive filter changes, so surface the ones the current filter
+	// hides instead of quietly sending a different batch to Close.
+	$: visibleSelectedCount = filteredProducts.filter((p) => selectedProductIds.includes(p.id)).length;
+	$: hiddenSelectedCount = selectedProductIds.length - visibleSelectedCount;
 
 	onMount(async () => {
 		try {
@@ -65,16 +64,21 @@
 		}
 	});
 
-	function filterProducts(items: ProductRow[], search: string, field: keyof ProductRow | null, dir: 'asc' | 'desc'): ProductRow[] {
+	function filterProducts(items: ProductRow[], query: Query<ProductRow>, field: keyof ProductRow | null, dir: 'asc' | 'desc'): ProductRow[] {
 		let result = items;
-		if (search.trim() !== '') {
-			const term = search.toLowerCase();
-			result = result.filter(p =>
-				(p.device || '').toLowerCase().includes(term) ||
-				(p.submission_number || '').toLowerCase().includes(term) ||
-				(p.panel || '').toLowerCase().includes(term) ||
-				(p.org_name || '').toLowerCase().includes(term)
-			);
+		if (query.kind === 'text') {
+			const term = query.term.toLowerCase().trim();
+			if (term !== '') {
+				result = result.filter(p =>
+					(p.device || '').toLowerCase().includes(term) ||
+					(p.submission_number || '').toLowerCase().includes(term) ||
+					(p.panel || '').toLowerCase().includes(term) ||
+					(p.org_name || '').toLowerCase().includes(term)
+				);
+			}
+		} else if (query.kind === 'filter') {
+			// Lite SQL filter from the search box, e.g. `panel = Radiology and not sent`.
+			result = result.filter((p) => matchesFilter(query.filter, p));
 		}
 		if (field) {
 			result = [...result].sort((a, b) => {
@@ -201,10 +205,34 @@
 				</div>
 
 				{#if selectedProductIds.length > 0}
-					<div class="message">
-						{selectedProductIds.length}
-						{selectedProductIds.length === 1 ? 'product' : 'products'} selected — choose an experiment
-						above to continue.
+					<div class="list-status">
+						<span class="list-status__text">
+							{selectedProductIds.length}
+							{selectedProductIds.length === 1 ? 'product' : 'products'} selected
+							{#if hiddenSelectedCount > 0}
+								({hiddenSelectedCount} hidden by the current filter)
+							{/if}
+							— choose an experiment above to continue.
+						</span>
+					</div>
+				{/if}
+
+				{#if productQuery.kind === 'error'}
+					<div class="message message-error">Filter error: {productQuery.message}</div>
+				{:else if productQuery.kind === 'text' && productQuery.warning}
+					<div class="message message-warning">{productQuery.warning}</div>
+				{:else if productQuery.kind === 'filter' && !loading}
+					<div class="list-status">
+						<span class="list-status__text">
+							{#if filteredProducts.length === 0}
+								Filter: {productQuery.filter.label} — no products match (0 of {products.length})
+							{:else}
+								Filter: {productQuery.filter.label} — {filteredProducts.length} of {products.length} products
+							{/if}
+						</span>
+						<button type="button" class="button button_secondary button_s" onclick={() => globalSearch.clear()}>
+							Clear filter
+						</button>
 					</div>
 				{/if}
 
@@ -213,7 +241,9 @@
 				{:else if error}
 					<div class="message message-error">Error: {error}</div>
 				{:else if filteredProducts.length === 0}
-					<div class="message">No products found</div>
+					{#if productQuery.kind !== 'filter'}
+						<div class="message">No products found</div>
+					{/if}
 				{:else}
 					<div class="table">
 						<table>

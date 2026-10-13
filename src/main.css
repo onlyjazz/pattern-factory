@@ -2450,6 +2450,22 @@ th.sortable.sorted-desc::after {
 .message-success {
 	color: #2e7d32;
 }
+.message-warning {
+	color: #b26a00;
+}
+
+/* Status rows above an index table: the active filter and the current selection */
+.list-status {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 16px;
+	font-size: 13px;
+	color: #666;
+}
+.list-status__text {
+	font-style: italic;
+}
 
 /* Org merge (list selection + target picker) */
 /* Checkbox and its label sharing one table cell, so a wrapped name stays
