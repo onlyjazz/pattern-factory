@@ -10,7 +10,7 @@ from datetime import datetime
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional
+from typing import Dict, Optional
 import asyncpg
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -2535,8 +2535,16 @@ async def delete_experiment(experiment_id: int):
     return {"status": "ok", "deleted_id": experiment_id}
 
 
-async def _activate_product(conn, exp, steps, product_id):
-    """Activate one experiment run for a single product (all-or-nothing)."""
+async def _activate_product(conn, exp, steps, product_id, claimed_orgs):
+    """Activate one experiment run for a single product (all-or-nothing).
+
+    Close company and contact work is per org rather than per product: the first
+    product of each org claims it and is recorded in ``claimed_orgs``, so a
+    selection containing several products of the same org yields one Close
+    company and one set of contacts instead of one per product. Later products of
+    that org still get their own run and pinned steps, but carry no targets —
+    which also keeps ``experiment_run_send`` free of duplicate sends.
+    """
     result = {
         "product_id": product_id,
         "status": "failed",
@@ -2595,35 +2603,50 @@ async def _activate_product(conn, exp, steps, product_id):
                 pinned_positions.append(step["position"])
             result["steps_pinned"] = len(pinned_positions)
 
-            # Resolve the product's org to a Close company.
-            company_id = None
-            if product.get("org_id"):
+            # Close company and contacts are per org: only the first product of
+            # each org creates them, and that product's run owns the targets.
+            org_id = product.get("org_id")
+            owns_org = bool(org_id) and org_id not in claimed_orgs
+
+            if owns_org:
                 custom_fields = close_service.build_company_custom_field_payload(exp, product, product)
                 company_id = await close_service.find_or_create_company(
                     product.get("org_name"), custom_fields
                 )
-            result["company_id"] = company_id
+                result["company_id"] = company_id
 
-            people = []
-            if product.get("org_id"):
                 people_rows = await conn.fetch(
                     "SELECT id, name, email, linkedin_url, job_description FROM public.people "
                     "WHERE org_id = $1 AND deleted_at IS NULL ORDER BY id",
-                    product["org_id"],
+                    org_id,
                 )
-                people = [dict(r) for r in people_rows]
 
-            # Resolve each person to a Close contact (deduped inside the client).
-            for person in people:
-                contact_id = await close_service.create_contact(company_id, person)
+                # Resolve each person to a Close contact (deduped inside the client).
+                for person_row in people_rows:
+                    person = dict(person_row)
+                    contact_id = await close_service.create_contact(company_id, person)
+                    await conn.execute(
+                        "INSERT INTO public.experiment_run_target "
+                        "(run_id, person_id, company_id, contact_id) VALUES ($1, $2, $3, $4)",
+                        run_id, person["id"], company_id, contact_id,
+                    )
+                    result["targets"] += 1
+
+                # Stamp the org and its people once, not once per product.
                 await conn.execute(
-                    "INSERT INTO public.experiment_run_target "
-                    "(run_id, person_id, company_id, contact_id) VALUES ($1, $2, $3, $4)",
-                    run_id, person["id"], company_id, contact_id,
+                    "UPDATE public.orgs SET close_sent = true, close_send_date = CURRENT_TIMESTAMP "
+                    "WHERE id = $1",
+                    org_id,
                 )
-                result["targets"] += 1
+                await conn.execute(
+                    "UPDATE public.people SET close_mail_sent = true, "
+                    "close_mail_send_date = CURRENT_TIMESTAMP WHERE org_id = $1",
+                    org_id,
+                )
 
-            # Seed pending hand-off state for every (target, pinned step).
+            # Seed pending hand-off state for every (target, pinned step) of this
+            # run. A run that does not own its org has no targets, so this is a
+            # no-op for it.
             for position in pinned_positions:
                 await conn.execute(
                     "INSERT INTO public.experiment_run_send (target_id, position, state) "
@@ -2631,24 +2654,15 @@ async def _activate_product(conn, exp, steps, product_id):
                     run_id, position,
                 )
 
-            # Stamp Close send tracking on product / org / people.
+            # Stamp Close send tracking on the product itself.
             await conn.execute(
                 "UPDATE public.products SET close_sent = true, close_send_date = CURRENT_TIMESTAMP "
                 "WHERE id = $1",
                 product_id,
             )
-            if product.get("org_id"):
-                await conn.execute(
-                    "UPDATE public.orgs SET close_sent = true, close_send_date = CURRENT_TIMESTAMP "
-                    "WHERE id = $1",
-                    product["org_id"],
-                )
-                await conn.execute(
-                    "UPDATE public.people SET close_mail_sent = true, "
-                    "close_mail_send_date = CURRENT_TIMESTAMP WHERE org_id = $1",
-                    product["org_id"],
-                )
         result["status"] = "success"
+        if owns_org:
+            claimed_orgs[org_id] = result["run_id"]
     except HTTPException:
         raise
     except Exception as e:
@@ -2707,11 +2721,19 @@ async def start_experiment(experiment_id: int, request: StartExperimentRequest):
             smart_view_error = str(e)
             logger.warning(f"Could not create Close smart view for experiment {experiment_id}: {e}")
 
-        results = [await _activate_product(conn, exp, steps, pid) for pid in request.product_ids]
+        # Close work is per org: the first product of each org claims it, so a
+        # selection containing several products of one org does not fan out
+        # duplicate companies, contacts or pending sends.
+        claimed_orgs: Dict[int, int] = {}
+        results = []
+        for product_id in request.product_ids:
+            results.append(await _activate_product(conn, exp, steps, product_id, claimed_orgs))
 
     success_count = sum(1 for r in results if r["status"] == "success")
     failure_count = len(results) - success_count
-    company_count = sum(1 for r in results if r.get("company_id"))
+    # One company per org and one target per person, so count the distinct
+    # companies and sum the per-org target counts instead of per-product ones.
+    company_count = len({r["company_id"] for r in results if r.get("company_id")})
     contact_count = sum(int(r.get("targets") or 0) for r in results)
 
     await log_event(

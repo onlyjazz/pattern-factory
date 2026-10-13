@@ -202,6 +202,61 @@ def test_start_experiment_success(client, mock_pool, fake_conn, patched_services
     assert any("close_mail_sent = true" in sql for sql in sqls)
 
 
+def test_start_experiment_dedupes_close_work_per_org(
+    client, mock_pool, fake_conn, patched_services
+):
+    """Several products of one org must yield one company and one contact set.
+
+    Regression for the per-product fan-out: two products of org 9 used to create
+    two targets (and two pending sends) for the same person and report
+    two companies / two contacts.
+    """
+    product = {
+        "device": "d", "competitors": None, "superiority": None,
+        "intended_use": None, "date_of_final_decision": None, "org_id": 9,
+        "org_name": "Acme", "estimated_annual_sales": None, "size": None, "arm": 2,
+    }
+    fake_conn.fetchrow.side_effect = [
+        {"id": 1, "name": "Exp", "arm": "social"},  # experiment
+        {**product, "id": 5},  # product 5 of org 9
+        {"id": 77},  # model for product 5
+        {"id": 300},  # run for product 5
+        {**product, "id": 6},  # product 6 of the same org
+        {"id": 78},  # model for product 6
+        {"id": 301},  # run for product 6
+    ]
+    fake_conn.fetch.side_effect = [
+        [{"position": 1, "channel": "email", "content_id": "c1", "content_rev": None}],
+        [{"id": 5}, {"id": 6}],  # existing products
+        # People are loaded once, for the org's first product only.
+        [{"id": 11, "name": "Jane", "email": "j@x.com", "linkedin_url": None, "job_description": None}],
+    ]
+
+    r = client.post("/experiments/1/start", json={"product_ids": [5, 6]})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["success"] == 2
+    assert body["companies"] == 1
+    assert body["contacts"] == 1
+
+    first, second = body["results"]
+    assert first["company_id"] == "lead_123"
+    assert first["targets"] == 1
+    assert second["company_id"] is None
+    assert second["targets"] == 0
+
+    sqls = [str(call.args[0]) for call in fake_conn.execute.call_args_list]
+    # The org's Close work happens once...
+    assert sum("INSERT INTO public.experiment_run_target" in sql for sql in sqls) == 1
+    assert sum("UPDATE public.orgs SET close_sent" in sql for sql in sqls) == 1
+    assert sum("UPDATE public.people SET close_mail_sent" in sql for sql in sqls) == 1
+    # ...while every product still gets its own run, stamp and send seeding.
+    run_sqls = [str(call.args[0]) for call in fake_conn.fetchrow.call_args_list]
+    assert sum("INSERT INTO public.experiment_run " in sql for sql in run_sqls) == 2
+    assert sum("UPDATE public.products SET close_sent" in sql for sql in sqls) == 2
+    assert sum("INSERT INTO public.experiment_run_send" in sql for sql in sqls) == 2
+
+
 def test_start_experiment_refuses_unapproved_step(
     client, mock_pool, fake_conn, patched_services, monkeypatch
 ):

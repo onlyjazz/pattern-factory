@@ -64,8 +64,8 @@ forward compatibility only; no request is made and the token is never logged.
 ## Activation flow (`POST /experiments/{id}/start`)
 
 Body: `StartExperimentRequest { product_ids }`. Returns
-`{experiment_id, smart_view_id, smart_view_error, success_count, failure_count,
-results[]}`.
+`{experiment_id, smart_view_id, smart_view_error, success, failed, companies,
+contacts, results[]}`.
 
 1. 404 if the experiment is missing; 400 if `product_ids` is empty, the
    experiment has no steps, or a requested product does not exist.
@@ -76,19 +76,69 @@ results[]}`.
      product).
    - Pin steps from Sanity briefs; a step whose brief is not approved is
      refused (counted in `steps_refused`, not inserted).
-   - Resolve the product's org to a Close company (custom fields from
-     `CLOSE.yaml`), then the org's people to Close contacts (deduped).
-   - Insert `experiment_run_step`, `experiment_run_target` and
-     `experiment_run_send` rows (`state = 'pending'`).
-   - Stamp `products.close_sent` / `close_send_date`,
-     `orgs.close_sent` / `close_send_date`, and
-     `people.close_mail_sent` / `close_mail_send_date`.
+   - Insert `experiment_run_step` rows and stamp `products.close_sent` /
+     `close_send_date`.
    - A failure rolls back that product's DB writes and is reported in
      `results[].error`; other products continue.
+   - Close company/contact work is **per org, not per product** — see the
+     deduplication section below.
 4. Log `CLOSE_SEND_COMPLETE` via `log_event`.
 
 `GET /experiments/{id}/runs` returns each run with nested steps, targets, and
 per-step send state.
+
+## Per-org deduplication of Close work
+
+Close companies and contacts are org-level entities, so the activation loop
+resolves them once per org rather than once per product. `_activate_product`
+takes a `claimed_orgs` map; the first product of each org claims it and, inside
+that product's transaction:
+
+- resolves the org to a Close company (`find_or_create_company`, custom fields
+  from `CLOSE.yaml`),
+- loads the org's people and resolves each to a Close contact,
+- inserts one `experiment_run_target` per person, owned by the claiming run,
+- stamps `orgs.close_sent` / `close_send_date` and
+  `people.close_mail_sent` / `close_mail_send_date`.
+
+Later products of the same org still get their own run and pinned steps, but
+skip all of the above. Because `experiment_run_send` rows are seeded from the
+targets of their own run, those runs seed nothing, so a multi-product org queues
+each (person, step) exactly once.
+
+Ownership is recorded only after the claiming product's transaction commits, so
+if it fails — including a Close-side failure, which rolls the whole transaction
+back — the next product of that org retries the org work instead of leaving the
+org without a company.
+
+`companies` is therefore the number of distinct companies resolved and
+`contacts` the number of distinct people targeted. Only the claiming run's
+result carries a `company_id`; the org's other runs report `company_id: null`
+and `targets: 0`.
+
+### Measured on live data (experiment 6, 2026-10-13)
+
+Selection `panel = Radiology and valuation < 100M and not sent`: 265 products
+across 148 orgs with 141 people.
+
+- `experiment_run` 265 (one per product, by design); `success` 265, `failed` 0
+- companies resolved 265 -> **148**
+- contacts 248 -> **141**
+- `experiment_run_target` rows 248 -> **141**, i.e. 107 duplicate rows avoided
+- targets for the same person twice: **0**
+- targets whose person belongs to a different org than the run's product: **0**
+- 148 orgs in the run, 137 with targets, 11 with no people at all
+- 141 targets resolved to 140 distinct Close contacts: two person records in one
+  org share an email and are matched to one contact by the existing email-first
+  dedup
+- no Close company id is shared by two orgs
+
+`experiment_run_send` stayed at 0 for this run because every `experiment_step`
+row has a blank `content_id` and `sanity_service.get_brief(falsy)` returns
+`None`, so all steps are refused (`steps_pinned = 0`). That is pre-existing — 0
+pinned steps across all 39 runs made before this change — and it means the
+duplicate-send half of the above is covered by unit test only. Wiring real
+content ids into experiment steps is the prerequisite for exercising it live.
 
 ## Tests
 
@@ -98,7 +148,8 @@ Hermetic suite (no DB/OpenAI/network), using the fake asyncpg pool in
 - `backend/tests/test_close_fields_api.py` — `close_*` round-trip on orgs,
   products, people.
 - `backend/tests/test_experiments_api.py` — experiments CRUD, activation
-  (success/404/400/refusal), runs.
+  (success/404/400/refusal), runs, and per-org dedup of Close work
+  (`test_start_experiment_dedupes_close_work_per_org`).
 - `backend/tests/test_close_service.py` — Close field mapping + Sanity stub.
 
 Run from the repo root: `python -m pytest -q`.
