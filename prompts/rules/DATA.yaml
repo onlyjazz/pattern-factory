@@ -166,6 +166,8 @@ DATA:
           - id
           - name
           - description
+          - hypothesis
+          - target
           - arm
           - email_header
           - email_header_status

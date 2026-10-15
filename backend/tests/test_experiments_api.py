@@ -11,6 +11,8 @@ EXP_ROW = {
     "id": 1,
     "name": "Exp",
     "description": None,
+    "hypothesis": "Stories beat abstract risk talk",
+    "target": "AI-guided surgery and imaging startups",
     "arm": "social",
     "email_header": None,
     "email_header_status": "draft",
@@ -71,6 +73,8 @@ def test_list_experiments_nested(client, mock_pool, fake_conn):
         {"position": 1, "channel": "email", "content_id": "c1", "content_rev": "r1"}
     ]
     assert body[0]["product_ids"] == [5]
+    assert body[0]["hypothesis"] == EXP_ROW["hypothesis"]
+    assert body[0]["target"] == EXP_ROW["target"]
 
 
 def test_get_experiment_returns_nested(client, mock_pool, fake_conn):
@@ -82,6 +86,8 @@ def test_get_experiment_returns_nested(client, mock_pool, fake_conn):
     r = client.get("/experiments/1")
     assert r.status_code == 200, r.text
     assert r.json()["product_ids"] == [7]
+    assert r.json()["hypothesis"] == EXP_ROW["hypothesis"]
+    assert r.json()["target"] == EXP_ROW["target"]
 
 
 def test_get_experiment_missing_returns_404(client, mock_pool, fake_conn):
@@ -97,6 +103,8 @@ def test_create_experiment_returns_nested(client, mock_pool, fake_conn):
         "/experiments",
         json={
             "name": "Exp",
+            "hypothesis": "Stories beat abstract risk talk",
+            "target": "AI-guided surgery and imaging startups",
             "arm": "social",
             "steps": [{"position": 1, "channel": "email", "content_id": "c1"}],
             "product_ids": [5],
@@ -107,6 +115,12 @@ def test_create_experiment_returns_nested(client, mock_pool, fake_conn):
     assert body["id"] == 1
     assert body["product_ids"] == [5]
     assert body["steps"][0]["position"] == 1
+
+    # The new fields reach the INSERT, in column order after name/description.
+    insert = fake_conn.fetchrow.call_args_list[0]
+    assert "hypothesis, target" in str(insert.args[0])
+    assert insert.args[3] == "Stories beat abstract risk talk"
+    assert insert.args[4] == "AI-guided surgery and imaging startups"
 
 
 def test_create_experiment_missing_product_returns_400(client, mock_pool, fake_conn):
@@ -135,6 +149,8 @@ def test_update_experiment_replaces_children(client, mock_pool, fake_conn):
         "/experiments/1",
         json={
             "name": "Exp2",
+            "hypothesis": "Sharper hook",
+            "target": "Imaging startups",
             "steps": [{"position": 1, "channel": "email", "content_id": "c1"}],
             "product_ids": [5],
         },
@@ -142,6 +158,13 @@ def test_update_experiment_replaces_children(client, mock_pool, fake_conn):
     assert r.status_code == 200, r.text
     assert r.json()["name"] == "Exp2"
     assert r.json()["product_ids"] == [5]
+
+    # The new fields are in the UPDATE's SET list and its parameter list.
+    update = fake_conn.fetchrow.call_args_list[0]
+    assert "hypothesis = COALESCE($3, hypothesis)" in str(update.args[0])
+    assert "target = COALESCE($4, target)" in str(update.args[0])
+    assert update.args[3] == "Sharper hook"
+    assert update.args[4] == "Imaging startups"
 
 
 def test_update_experiment_missing_returns_404(client, mock_pool, fake_conn):

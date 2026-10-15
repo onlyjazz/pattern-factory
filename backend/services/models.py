@@ -556,6 +556,8 @@ class ExperimentCreate(BaseModel):
     """Create a new experiment."""
     name: str
     description: str | None = None
+    hypothesis: str | None = None
+    target: str | None = None
     arm: ExperimentArm
     email_header: str | None = None
     email_header_status: ExperimentContentStatus = "draft"
@@ -567,6 +569,8 @@ class ExperimentUpdate(BaseModel):
     """Update an experiment (all fields optional)."""
     name: str | None = None
     description: str | None = None
+    hypothesis: str | None = None
+    target: str | None = None
     arm: ExperimentArm | None = None
     email_header: str | None = None
     email_header_status: ExperimentContentStatus | None = None
@@ -579,6 +583,8 @@ class ExperimentRead(BaseModel):
     id: int
     name: str
     description: str | None = None
+    hypothesis: str | None = None
+    target: str | None = None
     arm: str
     email_header: str | None = None
     email_header_status: str

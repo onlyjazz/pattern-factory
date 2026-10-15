@@ -176,6 +176,8 @@ export interface Experiment {
   id: number;
   name: string;
   description?: string | null;
+  hypothesis?: string | null;
+  target?: string | null;
   arm: 'social' | 'risk-then-superiority' | 'superiority-then-risk';
   email_header?: string | null;
   email_header_status: 'draft' | 'approved';

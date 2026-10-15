@@ -654,6 +654,9 @@ textarea.input__text {
 	padding: 10px 0;
 	line-height: 1.6;
 }
+textarea.input__text.input__text_compact {
+	min-height: 5em;
+}
 .input__text_changed {
 	padding-top: 12px;
 }
@@ -1159,6 +1162,9 @@ textarea.input__text {
 	color: #333;
 	line-height: 1.5;
 	margin: 0;
+}
+.detail-field__multiline {
+	white-space: pre-line;
 }
 .detail-field.full {
 	grid-column: 1 / -1;

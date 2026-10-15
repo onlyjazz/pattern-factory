@@ -241,6 +241,8 @@ def _experiment_read(exp_row, step_rows, product_link_rows):
         "id": exp["id"],
         "name": exp["name"],
         "description": exp.get("description"),
+        "hypothesis": exp.get("hypothesis"),
+        "target": exp.get("target"),
         "arm": exp["arm"],
         "email_header": exp.get("email_header"),
         "email_header_status": exp["email_header_status"],
@@ -2292,7 +2294,8 @@ async def delete_person(person_id: int):
 # Experiments CRUD + activation (PAT-380: Send to Close)
 # -------------------------------------------------------------------------
 _EXPERIMENT_COLUMNS = (
-    "id, name, description, arm, email_header, email_header_status, created_at, updated_at"
+    "id, name, description, hypothesis, target, arm, email_header, email_header_status, "
+    "created_at, updated_at"
 )
 
 
@@ -2303,6 +2306,8 @@ def _experiment_read_from_inputs(row, steps, product_ids):
         "id": row["id"],
         "name": row["name"],
         "description": row.get("description"),
+        "hypothesis": row.get("hypothesis"),
+        "target": row.get("target"),
         "arm": row["arm"],
         "email_header": row.get("email_header"),
         "email_header_status": row["email_header_status"],
@@ -2404,13 +2409,15 @@ async def create_experiment(experiment: ExperimentCreate):
             row = await conn.fetchrow(
                 """
                 INSERT INTO public.experiment
-                (name, description, arm, email_header, email_header_status)
-                VALUES ($1, $2, $3, $4, $5)
-                RETURNING id, name, description, arm, email_header, email_header_status,
-                          created_at, updated_at
+                (name, description, hypothesis, target, arm, email_header, email_header_status)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                RETURNING id, name, description, hypothesis, target, arm, email_header,
+                          email_header_status, created_at, updated_at
                 """,
                 experiment.name,
                 experiment.description,
+                experiment.hypothesis,
+                experiment.target,
                 experiment.arm,
                 experiment.email_header,
                 experiment.email_header_status,
@@ -2469,16 +2476,20 @@ async def update_experiment(experiment_id: int, patch: ExperimentUpdate):
                 UPDATE public.experiment
                 SET name = COALESCE($1, name),
                     description = COALESCE($2, description),
-                    arm = COALESCE($3, arm),
-                    email_header = COALESCE($4, email_header),
-                    email_header_status = COALESCE($5, email_header_status),
+                    hypothesis = COALESCE($3, hypothesis),
+                    target = COALESCE($4, target),
+                    arm = COALESCE($5, arm),
+                    email_header = COALESCE($6, email_header),
+                    email_header_status = COALESCE($7, email_header_status),
                     updated_at = CURRENT_TIMESTAMP
-                WHERE id = $6 AND deleted_at IS NULL
-                RETURNING id, name, description, arm, email_header, email_header_status,
-                          created_at, updated_at
+                WHERE id = $8 AND deleted_at IS NULL
+                RETURNING id, name, description, hypothesis, target, arm, email_header,
+                          email_header_status, created_at, updated_at
                 """,
                 patch.name,
                 patch.description,
+                patch.hypothesis,
+                patch.target,
                 patch.arm,
                 patch.email_header,
                 patch.email_header_status,

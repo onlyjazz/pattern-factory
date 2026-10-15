@@ -52,6 +52,8 @@
 				(e) =>
 				(e.name || '').toLowerCase().includes(term) ||
 				richTextToPlain(e.description).toLowerCase().includes(term) ||
+				(e.hypothesis || '').toLowerCase().includes(term) ||
+				(e.target || '').toLowerCase().includes(term) ||
 				(e.arm || '').toLowerCase().includes(term)
 			);
 		}

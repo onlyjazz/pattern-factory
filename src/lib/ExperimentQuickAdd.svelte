@@ -10,6 +10,8 @@
 
 	let name = '';
 	let description: string | null = '';
+	let hypothesis: string | null = '';
+	let target: string | null = '';
 	let arm: ExperimentArm = 'social';
 	let saving = false;
 	let error: string | null = null;
@@ -17,6 +19,8 @@
 	function reset() {
 		name = '';
 		description = '';
+		hypothesis = '';
+		target = '';
 		arm = 'social';
 		saving = false;
 		error = null;
@@ -41,6 +45,8 @@
 				body: JSON.stringify({
 					name: name.trim(),
 					description: (description ?? '').trim() || null,
+					hypothesis: (hypothesis ?? '').trim() || null,
+					target: (target ?? '').trim() || null,
 					arm,
 					email_header_status: 'draft',
 					steps: [],
@@ -92,6 +98,24 @@
 							required
 						/>
 						<label for="add-experiment-name" class="input__label">Name</label>
+					</div>
+					<div class="input">
+						<textarea
+							id="add-experiment-hypothesis"
+							bind:value={hypothesis}
+							class="input__text input__text_compact"
+							class:input__text_changed={!!hypothesis}
+						></textarea>
+						<label for="add-experiment-hypothesis" class="input__label">Hypothesis</label>
+					</div>
+					<div class="input">
+						<textarea
+							id="add-experiment-target"
+							bind:value={target}
+							class="input__text input__text_compact"
+							class:input__text_changed={!!target}
+						></textarea>
+						<label for="add-experiment-target" class="input__label">Target</label>
 					</div>
 					<RichTextEditor
 						label="Description"

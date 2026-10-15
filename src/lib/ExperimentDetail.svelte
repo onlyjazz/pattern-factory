@@ -65,6 +65,22 @@
 				</div>
 				<div class="detail-row full">
 					<div class="detail-field">
+						<label for="experiment-hypothesis">Hypothesis</label>
+						<div class="input">
+							<textarea id="experiment-hypothesis" bind:value={experiment.hypothesis} class="input__text input__text_compact" class:input__text_changed={!!experiment.hypothesis}></textarea>
+						</div>
+					</div>
+				</div>
+				<div class="detail-row full">
+					<div class="detail-field">
+						<label for="experiment-target">Target</label>
+						<div class="input">
+							<textarea id="experiment-target" bind:value={experiment.target} class="input__text input__text_compact" class:input__text_changed={!!experiment.target}></textarea>
+						</div>
+					</div>
+				</div>
+				<div class="detail-row full">
+					<div class="detail-field">
 						<RichTextEditor
 							label="Description"
 							placeholder="Paste a Close template candidate..."
@@ -96,11 +112,10 @@
 				</div>
 				<div class="detail-row full">
 					<div class="detail-field">
-						<RichTextEditor
-							label="Email Header"
-							placeholder="Paste the email header copy..."
-							bind:value={experiment.email_header}
-						/>
+						<label for="experiment-email-header">Email Header</label>
+						<div class="input">
+							<input id="experiment-email-header" type="text" bind:value={experiment.email_header} class="input__text" class:input__text_changed={!!experiment.email_header} />
+						</div>
 					</div>
 				</div>
 			</div>
@@ -120,6 +135,8 @@
 			<div class="detail-section">
 				<h3>Definition</h3>
 				<div class="detail-row full"><div class="detail-field"><span class="detail-field__label">Name</span><p>{experiment.name || '-'}</p></div></div>
+				<div class="detail-row full"><div class="detail-field"><span class="detail-field__label">Hypothesis</span><p class="detail-field__multiline">{experiment.hypothesis || '-'}</p></div></div>
+				<div class="detail-row full"><div class="detail-field"><span class="detail-field__label">Target</span><p class="detail-field__multiline">{experiment.target || '-'}</p></div></div>
 				<div class="detail-row full">
 					<div class="detail-field">
 						<span class="detail-field__label">Description</span>
@@ -134,16 +151,7 @@
 					<div class="detail-field"><span class="detail-field__label">Arm</span><p>{armLabel(experiment.arm)}</p></div>
 					<div class="detail-field"><span class="detail-field__label">Email Header Status</span><p>{experiment.email_header_status}</p></div>
 				</div>
-				<div class="detail-row full">
-					<div class="detail-field">
-						<span class="detail-field__label">Email Header</span>
-						{#if experiment.email_header}
-							<div class="rich-text-content">{@html richTextToHtml(experiment.email_header)}</div>
-						{:else}
-							<p>-</p>
-						{/if}
-					</div>
-				</div>
+				<div class="detail-row full"><div class="detail-field"><span class="detail-field__label">Email Header</span><p>{experiment.email_header || '-'}</p></div></div>
 			</div>
 
 			<div class="detail-section">
