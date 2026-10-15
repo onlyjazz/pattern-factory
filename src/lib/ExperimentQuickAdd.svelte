@@ -2,13 +2,14 @@
 	import type { Experiment } from '$lib/types/models';
 	import { ARM_OPTIONS, type ExperimentArm } from '$lib/experiments';
 	import { API_BASE } from '$lib/config';
+	import RichTextEditor from './RichTextEditor.svelte';
 
 	export let open = false;
 	export let onClose: () => void = () => {};
 	export let onCreated: (experiment: Experiment) => void = () => {};
 
 	let name = '';
-	let description = '';
+	let description: string | null = '';
 	let arm: ExperimentArm = 'social';
 	let saving = false;
 	let error: string | null = null;
@@ -39,7 +40,7 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					name: name.trim(),
-					description: description.trim() || null,
+					description: (description ?? '').trim() || null,
 					arm,
 					email_header_status: 'draft',
 					steps: [],
@@ -92,15 +93,12 @@
 						/>
 						<label for="add-experiment-name" class="input__label">Name</label>
 					</div>
-					<div class="input">
-						<textarea
-							id="add-experiment-description"
-							bind:value={description}
-							class="input__text"
-							class:input__text_changed={description.length > 0}
-						></textarea>
-						<label for="add-experiment-description" class="input__label">Description</label>
-					</div>
+					<RichTextEditor
+						label="Description"
+						placeholder="Paste a Close template candidate..."
+						compact
+						bind:value={description}
+					/>
 					<div class="input input_select">
 						<select id="add-experiment-arm" bind:value={arm} class="input__text" class:input__text_changed={true}>
 							{#each ARM_OPTIONS as option}

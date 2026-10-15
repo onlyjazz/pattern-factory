@@ -57,6 +57,7 @@
 		"marked": "^17.0.1",
 		"node-fetch": "^3.3.2",
 		"pdfmake": "^0.2.20",
+		"quill": "^2.0.3",
 		"svelte-skeleton-collapsible-sidebar": "^1.0.0",
 		"ts-node": "^10.9.2",
 		"ws": "^8.18.2"

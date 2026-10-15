@@ -3,6 +3,7 @@
 	import { globalSearch } from '$lib/searchStore';
 	import type { Experiment } from '$lib/types/models';
 	import { armLabel } from '$lib/experiments';
+	import { richTextToPlain } from '$lib/richText';
 	import { formatDate } from '$lib/formatDate';
 	import { API_BASE } from '$lib/config';
 	import ExperimentQuickAdd from '$lib/ExperimentQuickAdd.svelte';
@@ -49,9 +50,9 @@
 			const term = search.toLowerCase();
 			result = result.filter(
 				(e) =>
-					(e.name || '').toLowerCase().includes(term) ||
-					(e.description || '').toLowerCase().includes(term) ||
-					(e.arm || '').toLowerCase().includes(term)
+				(e.name || '').toLowerCase().includes(term) ||
+				richTextToPlain(e.description).toLowerCase().includes(term) ||
+				(e.arm || '').toLowerCase().includes(term)
 			);
 		}
 		if (field) {
