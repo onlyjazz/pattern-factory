@@ -52,3 +52,8 @@ CLOSE:
     products.sle:
       label: SLE
       field_id: cf_UceK6wLaY8uJ7Mb83alB1ewiwJEglQVW6QyWtztgFu0
+#
+# Who reads this file
+# backend/services/close_service.py loads CLOSE.company_field_map at runtime (cached)
+# builds the custom payload from it — build_company_custom_field_payload() (line 154) and 
+# runs build_experiment_smart_view_query() (line 198). No field ids are hard-coded in Python.
