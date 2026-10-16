@@ -470,6 +470,27 @@ DATA:
           - target_mitigation_pct
           - target_residual_exposure_pct
         
+        # Function, not a table. Takes the model id and returns one row per
+        # threat, e.g. SELECT * FROM threat.threat_impact(35).
+        threat_impact(model_id):
+          - threat_id
+          - model_id
+          - threat_tag
+          - threat_name
+          - damage_description
+          - threat_probability
+          - affected_asset_count
+          - gross_sle
+          - current_sle
+          - current_mitigation_pct
+          - current_residual_exposure_pct
+          - target_sle
+          - target_mitigation_pct
+          - target_residual_exposure_pct
+          - sle
+          - sle_after_mitigation
+          - product_id
+
         threat_countermeasures:
           - model_id
           - threat_id
