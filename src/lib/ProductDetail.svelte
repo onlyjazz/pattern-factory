@@ -4,6 +4,7 @@
 	import SingleSelect from './SingleSelect.svelte';
 	import type { SelectItem } from '$lib/db';
 	import { formatDate } from '$lib/formatDate';
+	import { formatCompactCurrency } from '$lib/formatCompactCurrency';
 
 	export let product: any = null;
 	export let loading = false;
@@ -162,7 +163,7 @@
 			<div class="detail-section">
 				<h3>Risk</h3>
 				<div class="detail-row">
-					<div class="detail-field"><span class="detail-field__label">SLE after mitigation</span><p>{product.sle_after_mitigation ?? '-'}</p></div>
+					<div class="detail-field"><span class="detail-field__label">SLE after mitigation</span><p>{formatCompactCurrency(product.sle_after_mitigation)}</p></div>
 				</div>
 			</div>
 		{:else}
@@ -211,7 +212,7 @@
 			<div class="detail-section">
 				<h3>Risk</h3>
 				<div class="detail-row">
-					<div class="detail-field"><span class="detail-field__label">SLE after mitigation</span><p>{product.sle_after_mitigation ?? '-'}</p></div>
+					<div class="detail-field"><span class="detail-field__label">SLE after mitigation</span><p>{formatCompactCurrency(product.sle_after_mitigation)}</p></div>
 				</div>
 			</div>
 
