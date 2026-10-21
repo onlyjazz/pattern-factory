@@ -134,6 +134,13 @@ export const productQueryFields: FieldSpec<ProductRow>[] = [
 		aliases: ['valuation', 'size'],
 		get: (row) => row.size
 	},
+	{
+		key: 'sle_after_mitigation',
+		label: 'SLE after mitigation',
+		type: 'number',
+		aliases: ['sle', 'sle after mitigation', 'sle_after_mitigation'],
+		get: (row) => row.sle_after_mitigation
+	},
 	{ key: 'arm', label: 'Arm', type: 'number', aliases: ['arm'], get: (row) => row.arm },
 	{ key: 'tier', label: 'Tier', type: 'number', aliases: ['tier'], get: (row) => row.tier }
 ];

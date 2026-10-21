@@ -83,7 +83,7 @@
 		}
 		if (field) {
 			result = [...result].sort((a, b) => {
-				if (field === 'arm' || field === 'tier' || field === 'size') {
+				if (field === 'arm' || field === 'tier' || field === 'size' || field === 'sle_after_mitigation') {
 					const av = Number(a[field] ?? 0);
 					const bv = Number(b[field] ?? 0);
 					return dir === 'asc' ? av - bv : bv - av;
@@ -269,7 +269,7 @@
 									<th class="tal sortable" class:sorted-asc={sortField === 'date_of_final_decision' && sortDirection === 'asc'} class:sorted-desc={sortField === 'date_of_final_decision' && sortDirection === 'desc'} onclick={() => toggleSort('date_of_final_decision')}>Final Decision</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'arm' && sortDirection === 'asc'} class:sorted-desc={sortField === 'arm' && sortDirection === 'desc'} onclick={() => toggleSort('arm')}>Arm</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'tier' && sortDirection === 'asc'} class:sorted-desc={sortField === 'tier' && sortDirection === 'desc'} onclick={() => toggleSort('tier')}>Tier</th>
-									<th class="tal sortable" class:sorted-asc={sortField === 'size' && sortDirection === 'asc'} class:sorted-desc={sortField === 'size' && sortDirection === 'desc'} onclick={() => toggleSort('size')}>Valuation</th>
+									<th class="tal sortable" class:sorted-asc={sortField === 'sle_after_mitigation' && sortDirection === 'asc'} class:sorted-desc={sortField === 'sle_after_mitigation' && sortDirection === 'desc'} onclick={() => toggleSort('sle_after_mitigation')}>SLE After Mitigation</th>
 									<th class="tar table__actions">Actions</th>
 								</tr>
 							</thead>
@@ -295,7 +295,7 @@
 										<td class="tal">{formatDate(p.date_of_final_decision) || '-'}</td>
 										<td class="tal">{p.arm ?? '-'}</td>
 										<td class="tal">{p.tier ?? '-'}</td>
-										<td class="tal">{(p.size ?? 0).toLocaleString()}</td>
+										<td class="tal">{p.sle_after_mitigation != null ? p.sle_after_mitigation.toLocaleString() : '-'}</td>
 										<td class="tar table__actions">
 											<button class="button button_small" onclick={(e) => { e.stopPropagation(); window.location.href = `/products/${p.id}/edit`; }} title="Edit">✎</button>
 											<button class="button button_small" onclick={(e) => { e.stopPropagation(); handleDelete(p.id); }} title="Delete">🗑</button>
