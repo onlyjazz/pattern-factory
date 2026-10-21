@@ -13,6 +13,24 @@ Specifically if you run psql or git commands do not cd to the project root.
 - the database is called pattern-factory
 - to understand and when altering the schema - always query with psql don't use migration scripts
 
+## Key Schema Relationships
+
+- `threat.models.product_id` -> `public.products.id` is **1:1** - a product has at
+  most one model, and a model belongs to at most one product. A product can
+  therefore expose its model with a plain
+  `LEFT JOIN threat.models m ON m.product_id = p.id` without fanning out the
+  product rows.
+  - True in the live data (1501 models carry a product, across 1501 distinct
+    products) but **not enforced**: `threat.models` has only its primary key and
+    `models_product_id_fkey`, with no unique index on `product_id`. If that ever
+    needs to change, add the constraint first and revisit every `product_id`
+    join - several callers rely on one model per product.
+  - `threat.models.product_id` is `integer` while `public.products.id` is
+    `bigint`. Comparisons widen implicitly, but a function that takes `integer`
+    (e.g. `threat.threat_impact(model_id)`) needs an explicit `m.id::integer`.
+- `public.products.org_id` -> `public.orgs.id` is many-to-one, so joining
+  products to orgs never duplicates a product row.
+
 ## Always Do When Updating DB Schema
 
 - Update prompts/rules/DATA.yaml - in the tables section

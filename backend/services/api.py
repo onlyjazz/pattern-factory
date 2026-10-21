@@ -1972,15 +1972,19 @@ async def get_products():
     """Get all FDA-cleared AI medical device products."""
     pool = get_pg_pool()
     async with pool.acquire() as conn:
+        # threat.models.product_id -> products.id is 1:1 (see backend/db/AGENTS.MD),
+        # so exposing the product's model id cannot fan the rows out.
         rows = await conn.fetch("""
             SELECT p.id, p.date_of_final_decision, p.submission_number, p.device, p.intended_use, p.indications_for_use, 
                    COALESCE(o.name, '') AS company, p.panel, 
                    p.primary_product_code, p.product_contact_1, p.product_contact_2, p.product_contact_3,
                    p.device_description, p.superiority, p.competitors, p.org_id, p.process_flag,
                    p.close_send_date, p.close_sent, p.tag, p.sle_after_mitigation,
+                   m.id AS model_id,
                    p.created_at, p.updated_at
             FROM public.products p
             LEFT JOIN public.orgs o ON p.org_id = o.id
+            LEFT JOIN threat.models m ON m.product_id = p.id
             WHERE p.deleted_at IS NULL
             ORDER BY p.created_at DESC
         """)

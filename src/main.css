@@ -2557,19 +2557,31 @@ th.sortable.sorted-desc::after {
 	opacity: 1;
 	color: #0066cc;
 }
-/* The reset gives every table `width: 100%`, so in auto layout the columns share
-   the slack and the right-aligned row icons drift away from the data. One column
-   (`table__grow`) absorbs all of the slack and the actions column hugs its
-   icons, leaving just the cell gutter between them. */
-.table th.table__grow,
-.table td.table__grow {
-	width: 100%;
+/* The reset gives every table `width: 100%`, so auto layout spreads the leftover
+   width across the columns - which pushes the right-aligned row icons away from
+   the last data column. A percentage width caps a column at its content, so
+   `table__hug` pins the last data column tight and the actions end up beside it.
+   (Giving a column `width: 100%` instead makes the table ask for more than its
+   container and overflow, so the slack is left to the auto columns.) */
+.table th.table__hug,
+.table td.table__hug {
+	width: 1%;
 }
 .table th.table__actions,
 .table td.table__actions {
 	width: 1%;
 	padding-left: 12px;
 	white-space: nowrap;
+}
+/* Centre each icon inside its button so the SVG, the pencil glyph and the emoji
+   sit on one line instead of each on its own font baseline. */
+.table td.table__actions .button_small {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	height: 32px;
+	line-height: 1;
+	vertical-align: top;
 }
 .message-error {
 	color: #c0392b;

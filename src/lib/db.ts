@@ -199,6 +199,7 @@ export interface Product {
     superiority?: string | null;
     competitors?: string | null;
     org_id?: number | null;
+    model_id?: number | null; // threat.models.id; 1:1 with this product, null when it has no model
     process_flag?: boolean;
     close_send_date?: string | null;
     close_sent?: boolean;
