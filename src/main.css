@@ -1397,6 +1397,27 @@ textarea.input__text.input__text_compact {
 .page-title {
 	margin-bottom: 32px;
 }
+/* Page title whose controls (a picker plus its action button) share one row: the
+   picker takes the space left of the button instead of being pushed under the
+   button's float, and the heading keeps its own full-width row. */
+.page-title_row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: 24px 16px;
+}
+.page-title_row .input {
+	flex: 1;
+	min-width: 0;
+}
+/* Match the picker's value text to the index table's row typography. */
+.page-title_row .input__text {
+	font-size: 13px;
+	line-height: 18px;
+}
+.page-title_row .heading_1 {
+	flex-basis: 100%;
+}
 .view-description {
 	margin-top: 8px;
 	font-size: 13px;
@@ -2535,6 +2556,20 @@ th.sortable.sorted-desc::after {
 	content: ' ▼';
 	opacity: 1;
 	color: #0066cc;
+}
+/* The reset gives every table `width: 100%`, so in auto layout the columns share
+   the slack and the right-aligned row icons drift away from the data. One column
+   (`table__grow`) absorbs all of the slack and the actions column hugs its
+   icons, leaving just the cell gutter between them. */
+.table th.table__grow,
+.table td.table__grow {
+	width: 100%;
+}
+.table th.table__actions,
+.table td.table__actions {
+	width: 1%;
+	padding-left: 12px;
+	white-space: nowrap;
 }
 .message-error {
 	color: #c0392b;

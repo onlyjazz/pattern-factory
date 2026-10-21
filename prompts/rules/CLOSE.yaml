@@ -15,6 +15,11 @@ CLOSE:
 
   # Pattern Factory "table.column" -> Close company (lead) custom field.
   # The service writes these onto the company created for each product's org.
+  #
+  # An optional `format` renders the raw value into the string the Close field
+  # expects. `currency_compact` reads a dollar amount in thousands and
+  # abbreviates it: 410000 -> "$410K", 4100000 -> "$4.1M". See
+  # backend/services/close_service.py for the formatter.
   company_field_map:
     experiment.name:
       label: Experiment
@@ -43,17 +48,19 @@ CLOSE:
     products.intended_use:
       label: Intended use
       field_id: cf_Ye270BbBBQnXvisnHFGQOMW7WeVtCohXRoDrEVg3R5P
+    products.sle_after_mitigation:
+      label: SLE
+      field_id: cf_UceK6wLaY8uJ7Mb83alB1ewiwJEglQVW6QyWtztgFu0
+      format: currency_compact
 
   # Declared for completeness but intentionally NOT mapped in this release.
   unmapped_fields:
     products.product_count:
       label: Product count
       field_id: cf_g5ZdKb5f2ylxODNwGzfK6aoa8AhKDaEXtWRBy55MYr4
-    products.sle:
-      label: SLE
-      field_id: cf_UceK6wLaY8uJ7Mb83alB1ewiwJEglQVW6QyWtztgFu0
 #
 # Who reads this file
-# backend/services/close_service.py loads CLOSE.company_field_map at runtime (cached)
-# builds the custom payload from it — build_company_custom_field_payload() (line 154) and 
-# runs build_experiment_smart_view_query() (line 198). No field ids are hard-coded in Python.
+# backend/services/close_service.py loads CLOSE.company_field_map at runtime (cached),
+# builds the custom payload from it (build_company_custom_field_payload, which applies any
+# declared `format`) and runs build_experiment_smart_view_query. No field ids or formats are
+# hard-coded in Python.

@@ -149,8 +149,43 @@ async def _request(
 
 
 # ---------------------------------------------------------------------------
-# Custom-field payload helpers (field ids come from CLOSE.yaml)
+# Custom-field payload helpers (field ids and formats come from CLOSE.yaml)
 # ---------------------------------------------------------------------------
+def _format_compact_currency(value: Any) -> str:
+    """Render a dollar amount the way the Close SLE field expects.
+
+    The amount is read in thousands and abbreviated: below 1,000 dollars it is a
+    plain dollar figure, below 1,000,000 it is $410K, above that $4.1M. One
+    decimal is kept and a trailing .0 dropped, so 410000 -> "$410K" and
+    4100000 -> "$4.1M". The thousands inside an M figure keep their separators
+    (5037422500 -> "$5,037.4M").
+    """
+    amount = float(value)
+    sign = "-" if amount < 0 else ""
+    amount = abs(amount)
+
+    if amount < 1000:
+        return f"{sign}${amount:,.0f}"
+
+    thousands = amount / 1000.0
+    if thousands < 1000:
+        scaled, suffix = thousands, "K"
+    else:
+        scaled, suffix = thousands / 1000.0, "M"
+
+    text = f"{scaled:,.1f}"
+    if text.endswith(".0"):
+        text = text[:-2]
+    return f"{sign}${text}{suffix}"
+
+
+# CLOSE.yaml `format` name -> formatter. Unknown names are ignored, so a field
+# with a typo'd format is sent as-is rather than dropped.
+_FIELD_FORMATTERS = {
+    "currency_compact": _format_compact_currency,
+}
+
+
 def build_company_custom_field_payload(
     experiment: Optional[Dict[str, Any]] = None,
     product: Optional[Dict[str, Any]] = None,
@@ -185,9 +220,19 @@ def build_company_custom_field_payload(
             continue
         if isinstance(value, str) and not value.strip():
             continue
+        # A declared format wins: it renders the raw value into the string the
+        # Close field expects. A value that cannot be rendered is skipped rather
+        # than sent half-converted.
+        formatter = _FIELD_FORMATTERS.get(str(spec.get("format") or "").strip().lower())
+        if formatter is not None:
+            try:
+                value = formatter(value)
+            except (TypeError, ValueError) as e:
+                logger.warning(f"  Could not format {key} for Close: {e}")
+                continue
         # asyncpg returns NUMERIC columns as Decimal, which is not JSON
         # serializable; coerce to int/float for the Close payload.
-        if isinstance(value, Decimal):
+        elif isinstance(value, Decimal):
             value = int(value) if value == value.to_integral_value() else float(value)
         elif hasattr(value, "isoformat"):
             value = value.isoformat()

@@ -101,6 +101,53 @@ def test_update_product_sets_close_fields(client, mock_pool, fake_conn):
     assert "close_sent = COALESCE" in sql
 
 
+def test_get_products_select_includes_tag_and_sle(client, mock_pool, fake_conn):
+    fake_conn.fetch.return_value = [
+        {"id": 1, "device": "d", "tag": "cohort-a", "sle_after_mitigation": 100}
+    ]
+    r = client.get("/products")
+    assert r.status_code == 200, r.text
+    sql = _sql(fake_conn.fetch.call_args)
+    assert "p.tag" in sql
+    assert "p.sle_after_mitigation" in sql
+    assert r.json()[0]["tag"] == "cohort-a"
+
+
+def test_create_product_round_trips_tag(client, mock_pool, fake_conn):
+    fake_conn.fetchrow.return_value = {
+        "id": 1, "submission_number": "K1", "device": "d", "tag": "cohort-a"
+    }
+    r = client.post(
+        "/products",
+        json={"submission_number": "K1", "device": "d", "tag": "cohort-a"},
+    )
+    assert r.status_code == 200, r.text
+    assert "tag" in _sql(fake_conn.fetchrow.call_args)
+    assert r.json()["tag"] == "cohort-a"
+
+
+def test_get_product_includes_tag_and_sle(client, mock_pool, fake_conn):
+    fake_conn.fetchrow.return_value = {
+        "id": 1, "device": "d", "tag": "cohort-a", "sle_after_mitigation": 100
+    }
+    r = client.get("/products/1")
+    assert r.status_code == 200, r.text
+    sql = _sql(fake_conn.fetchrow.call_args)
+    assert "p.tag" in sql
+    assert "p.sle_after_mitigation" in sql
+
+
+def test_update_product_sets_tag_and_sle(client, mock_pool, fake_conn):
+    fake_conn.fetchrow.return_value = {
+        "id": 1, "device": "d", "tag": "cohort-a", "sle_after_mitigation": 100
+    }
+    r = client.put("/products/1", json={"tag": "cohort-a", "sle_after_mitigation": 100})
+    assert r.status_code == 200, r.text
+    sql = _sql(fake_conn.fetchrow.call_args)
+    assert "tag = COALESCE" in sql
+    assert "sle_after_mitigation = COALESCE" in sql
+
+
 # ---------------------------------------------------------------------------
 # people
 # ---------------------------------------------------------------------------

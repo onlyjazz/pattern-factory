@@ -5,6 +5,8 @@ These are pure and hermetic: no network, no database. They verify that Close
 field ids come from CLOSE.yaml (never hard-coded) and that the Sanity stub is
 deterministic and correctly reports approval state.
 """
+import pytest
+
 from backend.services import close_service, sanity_service
 
 
@@ -137,3 +139,45 @@ def test_find_or_create_company_creates_when_absent(monkeypatch):
 
     assert lead_id == "lead_new"
     assert any(method == "POST" for method, _path, _body in calls)
+
+
+def test_sle_after_mitigation_is_mapped_not_unmapped():
+    """products.sle_after_mitigation is sent, not left in unmapped_fields."""
+    config = close_service._load_close_config()
+    assert "products.sle_after_mitigation" in config["company_field_map"]
+    assert "products.sle_after_mitigation" not in (config.get("unmapped_fields") or {})
+
+
+def test_company_custom_field_payload_sends_sle_after_mitigation():
+    import decimal
+
+    field_map = close_service._load_close_config()["company_field_map"]
+    payload = close_service.build_company_custom_field_payload(
+        product={"device": "Dev", "sle_after_mitigation": decimal.Decimal("1500000")},
+    )
+    # The SLE field is declared `format: currency_compact` in CLOSE.yaml, so the
+    # NUMERIC column arrives at Close as an abbreviated dollar string.
+    assert payload[field_map["products.sle_after_mitigation"]["field_id"]] == "$1.5M"
+
+
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        (0, "$0"),
+        (410, "$410"),
+        (410000, "$410K"),
+        (1000000, "$1M"),
+        (4100000, "$4.1M"),
+        (485925000, "$485.9M"),
+        (5037422500, "$5,037.4M"),
+        (-410000, "-$410K"),
+    ],
+)
+def test_format_compact_currency(raw, expected):
+    assert close_service._format_compact_currency(raw) == expected
+
+
+def test_currency_compact_format_is_declared_in_yaml():
+    """The formatter is wired to the SLE field from config, not by column name."""
+    field_map = close_service._load_close_config()["company_field_map"]
+    assert field_map["products.sle_after_mitigation"]["format"] == "currency_compact"

@@ -202,6 +202,8 @@ export interface Product {
     process_flag?: boolean;
     close_send_date?: string | null;
     close_sent?: boolean;
+    tag?: string | null;
+    sle_after_mitigation?: number | null;
     created_at?: string;
     updated_at?: string;
 }

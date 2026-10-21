@@ -73,6 +73,7 @@
 					(p.device || '').toLowerCase().includes(term) ||
 					(p.submission_number || '').toLowerCase().includes(term) ||
 					(p.panel || '').toLowerCase().includes(term) ||
+					(p.tag || '').toLowerCase().includes(term) ||
 					(p.org_name || '').toLowerCase().includes(term)
 				);
 			}
@@ -176,11 +177,8 @@
 </script>
 
 <div id="application-content-area">
-	<div class="page-title">
-		<button class="button button_green" onclick={() => (showAddModal = true)}>
-			Add Product
-		</button>
-		<div class="input input_select">
+	<div class="page-title page-title_row">
+		<div class="input">
 			<select
 				id="start-experiment"
 				class="input__text"
@@ -194,6 +192,9 @@
 			</select>
 			<label for="start-experiment" class="input__label">Experiment</label>
 		</div>
+		<button class="button button_green" onclick={() => (showAddModal = true)}>
+			Add Product
+		</button>
 		<h1 class="heading heading_1">Products</h1>
 	</div>
 
@@ -260,15 +261,16 @@
 										/>
 									</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'updated_at' && sortDirection === 'asc'} class:sorted-desc={sortField === 'updated_at' && sortDirection === 'desc'} onclick={() => toggleSort('updated_at')}>Updated</th>
-									<th class="tal sortable" class:sorted-asc={sortField === 'device' && sortDirection === 'asc'} class:sorted-desc={sortField === 'device' && sortDirection === 'desc'} onclick={() => toggleSort('device')}>Device</th>
+									<th class="tal sortable table__grow" class:sorted-asc={sortField === 'device' && sortDirection === 'asc'} class:sorted-desc={sortField === 'device' && sortDirection === 'desc'} onclick={() => toggleSort('device')}>Device</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'panel' && sortDirection === 'asc'} class:sorted-desc={sortField === 'panel' && sortDirection === 'desc'} onclick={() => toggleSort('panel')}>Panel</th>
+									<th class="tal sortable" class:sorted-asc={sortField === 'tag' && sortDirection === 'asc'} class:sorted-desc={sortField === 'tag' && sortDirection === 'desc'} onclick={() => toggleSort('tag')}>Tag</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'org_name' && sortDirection === 'asc'} class:sorted-desc={sortField === 'org_name' && sortDirection === 'desc'} onclick={() => toggleSort('org_name')}>Org</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'close_send_date' && sortDirection === 'asc'} class:sorted-desc={sortField === 'close_send_date' && sortDirection === 'desc'} onclick={() => toggleSort('close_send_date')}>Close Send Date</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'date_of_final_decision' && sortDirection === 'asc'} class:sorted-desc={sortField === 'date_of_final_decision' && sortDirection === 'desc'} onclick={() => toggleSort('date_of_final_decision')}>Final Decision</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'arm' && sortDirection === 'asc'} class:sorted-desc={sortField === 'arm' && sortDirection === 'desc'} onclick={() => toggleSort('arm')}>Arm</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'tier' && sortDirection === 'asc'} class:sorted-desc={sortField === 'tier' && sortDirection === 'desc'} onclick={() => toggleSort('tier')}>Tier</th>
 									<th class="tal sortable" class:sorted-asc={sortField === 'size' && sortDirection === 'asc'} class:sorted-desc={sortField === 'size' && sortDirection === 'desc'} onclick={() => toggleSort('size')}>Valuation</th>
-									<th class="tar">Actions</th>
+									<th class="tar table__actions">Actions</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -285,15 +287,16 @@
 											/>
 										</td>
 										<td class="tal">{formatDate(p.updated_at) || '-'}</td>
-										<td class="tal">{p.device}</td>
+										<td class="tal table__grow">{p.device}</td>
 										<td class="tal">{p.panel || '-'}</td>
+										<td class="tal">{p.tag || '-'}</td>
 										<td class="tal">{p.org_name ?? '-'}</td>
 										<td class="tal">{formatDate(p.close_send_date) || '-'}</td>
 										<td class="tal">{formatDate(p.date_of_final_decision) || '-'}</td>
 										<td class="tal">{p.arm ?? '-'}</td>
 										<td class="tal">{p.tier ?? '-'}</td>
 										<td class="tal">{(p.size ?? 0).toLocaleString()}</td>
-										<td class="tar">
+										<td class="tar table__actions">
 											<button class="button button_small" onclick={(e) => { e.stopPropagation(); window.location.href = `/products/${p.id}/edit`; }} title="Edit">✎</button>
 											<button class="button button_small" onclick={(e) => { e.stopPropagation(); handleDelete(p.id); }} title="Delete">🗑</button>
 										</td>

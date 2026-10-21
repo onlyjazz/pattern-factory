@@ -29,6 +29,7 @@ export const productQueryFields: FieldSpec<ProductRow>[] = [
 		get: (row) => row.submission_number
 	},
 	{ key: 'panel', label: 'Panel', type: 'text', aliases: ['panel'], get: (row) => row.panel },
+	{ key: 'tag', label: 'Tag', type: 'text', aliases: ['tag'], get: (row) => row.tag },
 	{
 		key: 'date_of_final_decision',
 		label: 'Final decision',

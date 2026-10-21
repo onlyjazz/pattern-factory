@@ -61,6 +61,12 @@
 							<input id="product-panel" type="text" bind:value={product.panel} class="input__text" class:input__text_changed={product.panel?.length > 0} />
 						</div>
 					</div>
+					<div class="detail-field">
+						<label for="product-tag">Tag</label>
+						<div class="input">
+							<input id="product-tag" type="text" bind:value={product.tag} class="input__text" class:input__text_changed={product.tag?.length > 0} />
+						</div>
+					</div>
 				</div>
 				<div class="detail-row full">
 					<div class="detail-field">
@@ -152,6 +158,13 @@
 					</div>
 				</div>
 			</div>
+
+			<div class="detail-section">
+				<h3>Risk</h3>
+				<div class="detail-row">
+					<div class="detail-field"><span class="detail-field__label">SLE after mitigation</span><p>{product.sle_after_mitigation ?? '-'}</p></div>
+				</div>
+			</div>
 		{:else}
 			<div class="detail-section">
 				<h3>Identification</h3>
@@ -161,6 +174,7 @@
 				</div>
 				<div class="detail-row">
 					<div class="detail-field"><span class="detail-field__label">Panel</span><p>{product.panel || '-'}</p></div>
+					<div class="detail-field"><span class="detail-field__label">Tag</span><p>{product.tag || '-'}</p></div>
 				</div>
 				<div class="detail-row">
 					<div class="detail-field"><span class="detail-field__label">Organization</span><p>{selectedOrgName || '-'}</p></div>
@@ -191,6 +205,13 @@
 					<div class="detail-field"><span class="detail-field__label">Contact 1</span><p>{product.product_contact_1 || '-'}</p></div>
 					<div class="detail-field"><span class="detail-field__label">Contact 2</span><p>{product.product_contact_2 || '-'}</p></div>
 					<div class="detail-field"><span class="detail-field__label">Contact 3</span><p>{product.product_contact_3 || '-'}</p></div>
+				</div>
+			</div>
+
+			<div class="detail-section">
+				<h3>Risk</h3>
+				<div class="detail-row">
+					<div class="detail-field"><span class="detail-field__label">SLE after mitigation</span><p>{product.sle_after_mitigation ?? '-'}</p></div>
 				</div>
 			</div>
 

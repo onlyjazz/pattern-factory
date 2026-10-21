@@ -28,6 +28,24 @@ DATA:
           - competitors
           - close_send_date
           - close_sent
+          - tag
+          - sle_after_mitigation
+
+        # Logical view, not a table. One row per product (products joined to
+        # orgs on products.org_id) exposing the product's total SLE after
+        # mitigation, summed across the models attached to that product.
+        # Products with no org_id are excluded; sle_after_mitigation is NULL
+        # for products with no model or no matching threats. product_id is
+        # products.id, appended last, so a product can join the view back to
+        # its own row.
+        product_sle_after_mitigation:
+          - device
+          - panel
+          - superiority
+          - name
+          - size
+          - sle_after_mitigation
+          - product_id
 
         competitors:
           - id

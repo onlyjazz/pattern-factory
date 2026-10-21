@@ -427,6 +427,7 @@ class ProductCreate(BaseModel):
     process_flag: bool = False  # True after the device is processed for basis-threat generation
     close_send_date: datetime | None = None  # When this product was handed to Close CRM
     close_sent: bool = False  # True once this product has been sent to Close CRM
+    tag: str | None = None  # Free-text label used to select tagged products for an experiment
 
     @field_validator("date_of_final_decision", mode="before")
     @classmethod
@@ -457,6 +458,11 @@ class ProductUpdate(BaseModel):
     process_flag: bool | None = None
     close_send_date: datetime | None = None
     close_sent: bool | None = None
+    tag: str | None = None  # Free-text label used to select tagged products for an experiment
+    # Derived total exposure after mitigation, backfilled from
+    # public.product_sle_after_mitigation (see
+    # backend/db/20261020-pat-398-products-tag-sle-after-mitigation.sql).
+    sle_after_mitigation: float | None = None
 
     @field_validator("date_of_final_decision", mode="before")
     @classmethod

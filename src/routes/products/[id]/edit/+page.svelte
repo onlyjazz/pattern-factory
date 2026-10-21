@@ -70,6 +70,7 @@
 					device_description: product.device_description || null,
 					superiority: product.superiority || null,
 					competitors: product.competitors || null,
+					tag: product.tag || null,
 					product_contact_1: product.product_contact_1 || null,
 					product_contact_2: product.product_contact_2 || null,
 					product_contact_3: product.product_contact_3 || null,

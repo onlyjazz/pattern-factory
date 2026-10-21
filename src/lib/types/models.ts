@@ -106,6 +106,8 @@ export interface Product {
   process_flag: boolean; // True after processing for basis-threat generation
   close_send_date?: string | null; // When this product was handed to Close CRM
   close_sent?: boolean; // True once this product has been sent to Close CRM
+  tag?: string | null; // Free-text label used to select tagged products for an experiment
+  sle_after_mitigation?: number | null; // Derived total exposure after mitigation (product_sle_after_mitigation view)
   created_at?: string; // ISO timestamp
   updated_at?: string; // ISO timestamp
   deleted_at?: string | null; // ISO timestamp or null for active records

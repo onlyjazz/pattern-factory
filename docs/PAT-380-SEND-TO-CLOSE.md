@@ -24,11 +24,22 @@ base URL is hard-coded. Close custom-field ids are read from
 `company_field_map`, whose keys are Pattern Factory `table.column` names
 (`experiment.name`, `products.device`, `products.competitors`,
 `products.superiority`, `products.date_of_final_decision`,
-`products.intended_use`, `orgs.estimated_annual_sales`, `orgs.size`,
-`orgs.arm`), and returns a `{field_id: value}` payload for the Close lead
-`custom` object. Empty/None values are skipped and datetimes are ISO-8601
-serialized. `CLOSE.unmapped_fields` (`products.product_count`, `products.sle`)
-is declared but intentionally not sent.
+`products.intended_use`, `products.sle_after_mitigation`,
+`orgs.estimated_annual_sales`, `orgs.size`, `orgs.arm`), and returns a
+`{field_id: value}` payload for the Close lead `custom` object. Empty/None
+values are skipped, datetimes are ISO-8601 serialized, and NUMERIC columns
+(asyncpg `Decimal`) are coerced to int/float. `products.sle_after_mitigation`
+is the product's derived exposure (see
+`backend/db/20261020-pat-398-products-tag-sle-after-mitigation.sql`), so the
+`SLE` custom field tracks the value that was current when the product was sent.
+A field may also declare a `format`, which renders the raw value into the
+string the Close field expects. `products.sle_after_mitigation` uses
+`currency_compact`, which reads the amount in thousands and abbreviates it:
+`410000` becomes `$410K` and `4100000` becomes `$4.1M`. Unknown format names
+are ignored, so the value is sent as-is.
+
+`CLOSE.unmapped_fields` (`products.product_count`) is declared but
+intentionally not sent.
 
 Public functions:
 
