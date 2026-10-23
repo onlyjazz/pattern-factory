@@ -225,6 +225,82 @@ def test_start_experiment_success(client, mock_pool, fake_conn, patched_services
     assert any("close_mail_sent = true" in sql for sql in sqls)
 
 
+def _product_and_org_row():
+    """The product/org row _activate_product loads for a product of org 9."""
+    return {
+        "id": 5, "device": "d", "competitors": None, "superiority": None,
+        "intended_use": None, "date_of_final_decision": None, "org_id": 9,
+        "org_name": "Acme", "estimated_annual_sales": None, "size": None, "arm": 2,
+    }
+
+
+def _activation_fetch_rows():
+    """The step, existing-product and people rows a single-product run loads."""
+    return [
+        [{"position": 1, "channel": "email", "content_id": "c1", "content_rev": None}],
+        [{"id": 5}],
+        [{"id": 11, "name": "Jane", "email": "j@x.com", "linkedin_url": None, "job_description": None}],
+    ]
+
+
+def test_start_experiment_persists_the_smart_view_on_first_run(
+    client, mock_pool, fake_conn, patched_services
+):
+    """The first activation records the view it created, so later runs can reuse it."""
+    fake_conn.fetchrow.side_effect = [
+        {"id": 1, "name": "Exp", "arm": "social"},  # no close_smart_view_id yet
+        _product_and_org_row(),
+        {"id": 77},   # model
+        {"id": 300},  # experiment_run
+    ]
+    fake_conn.fetch.side_effect = _activation_fetch_rows()
+
+    r = client.post("/experiments/1/start", json={"product_ids": [5]})
+    assert r.status_code == 200, r.text
+    assert r.json()["smart_view_id"] == "sv_1"
+
+    persisted = [
+        call.args for call in fake_conn.execute.call_args_list
+        if "SET close_smart_view_id" in str(call.args[0])
+    ]
+    assert len(persisted) == 1, "the created view id must be written back once"
+    assert persisted[0][1] == "sv_1"
+
+
+def test_start_experiment_reuses_the_smart_view_on_rerun(
+    client, mock_pool, fake_conn, patched_services, monkeypatch
+):
+    """Re-running an experiment must not create a second Close smart view.
+
+    Regression: every activation used to POST a new saved search, so running the
+    same experiment repeatedly piled up duplicate views in Close.
+    """
+    close_service, _ = patched_services
+    created = []
+
+    async def fake_create_smart_view(name, query):
+        created.append(name)
+        return "sv_new"
+
+    monkeypatch.setattr(close_service, "create_smart_view", fake_create_smart_view)
+
+    fake_conn.fetchrow.side_effect = [
+        {"id": 1, "name": "Exp", "arm": "social", "close_smart_view_id": "sv_existing"},
+        _product_and_org_row(),
+        {"id": 77},
+        {"id": 300},
+    ]
+    fake_conn.fetch.side_effect = _activation_fetch_rows()
+
+    r = client.post("/experiments/1/start", json={"product_ids": [5]})
+    assert r.status_code == 200, r.text
+    assert r.json()["smart_view_id"] == "sv_existing"
+    assert created == [], "a re-run must not reach Close to create another view"
+
+    sqls = [str(call.args[0]) for call in fake_conn.execute.call_args_list]
+    assert not any("SET close_smart_view_id" in sql for sql in sqls)
+
+
 def test_start_experiment_dedupes_close_work_per_org(
     client, mock_pool, fake_conn, patched_services
 ):

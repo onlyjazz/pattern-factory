@@ -594,6 +594,8 @@ class ExperimentRead(BaseModel):
     arm: str
     email_header: str | None = None
     email_header_status: str
+    # Close smart view created on first activation; reused by later runs.
+    close_smart_view_id: str | None = None
     steps: list[ExperimentStepModel] = []
     product_ids: list[int] = []
     created_at: str | None = None

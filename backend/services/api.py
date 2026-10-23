@@ -246,6 +246,7 @@ def _experiment_read(exp_row, step_rows, product_link_rows):
         "arm": exp["arm"],
         "email_header": exp.get("email_header"),
         "email_header_status": exp["email_header_status"],
+        "close_smart_view_id": exp.get("close_smart_view_id"),
         "steps": steps_by_experiment.get(exp["id"], []),
         "product_ids": products_by_experiment.get(exp["id"], []),
         "created_at": _iso(exp.get("created_at")),
@@ -2306,7 +2307,7 @@ async def delete_person(person_id: int):
 # -------------------------------------------------------------------------
 _EXPERIMENT_COLUMNS = (
     "id, name, description, hypothesis, target, arm, email_header, email_header_status, "
-    "created_at, updated_at"
+    "close_smart_view_id, created_at, updated_at"
 )
 
 
@@ -2322,6 +2323,7 @@ def _experiment_read_from_inputs(row, steps, product_ids):
         "arm": row["arm"],
         "email_header": row.get("email_header"),
         "email_header_status": row["email_header_status"],
+        "close_smart_view_id": row.get("close_smart_view_id"),
         "steps": [
             {
                 "position": s.position,
@@ -2423,7 +2425,7 @@ async def create_experiment(experiment: ExperimentCreate):
                 (name, description, hypothesis, target, arm, email_header, email_header_status)
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
                 RETURNING id, name, description, hypothesis, target, arm, email_header,
-                          email_header_status, created_at, updated_at
+                          email_header_status, close_smart_view_id, created_at, updated_at
                 """,
                 experiment.name,
                 experiment.description,
@@ -2495,7 +2497,7 @@ async def update_experiment(experiment_id: int, patch: ExperimentUpdate):
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = $8 AND deleted_at IS NULL
                 RETURNING id, name, description, hypothesis, target, arm, email_header,
-                          email_header_status, created_at, updated_at
+                          email_header_status, close_smart_view_id, created_at, updated_at
                 """,
                 patch.name,
                 patch.description,
@@ -2702,7 +2704,8 @@ async def start_experiment(experiment_id: int, request: StartExperimentRequest):
     pool = get_pg_pool()
     async with pool.acquire() as conn:
         exp_row = await conn.fetchrow(
-            "SELECT id, name, arm FROM public.experiment WHERE id = $1 AND deleted_at IS NULL",
+            "SELECT id, name, arm, close_smart_view_id FROM public.experiment "
+            "WHERE id = $1 AND deleted_at IS NULL",
             experiment_id,
         )
         if not exp_row:
@@ -2733,15 +2736,24 @@ async def start_experiment(experiment_id: int, request: StartExperimentRequest):
         if missing:
             raise HTTPException(status_code=400, detail=f"Product(s) not found: {missing}")
 
-        # Create the Close smart view once for the experiment.
-        smart_view_id = None
+        # The Close smart view belongs to the experiment, not to a run: create it
+        # on first activation and reuse it afterwards, so re-running an experiment
+        # does not pile up duplicate views. Persisting the id also means later
+        # runs need no Close call at all.
+        smart_view_id = exp.get("close_smart_view_id")
         smart_view_error = None
-        try:
-            smart_view_query = close_service.build_experiment_smart_view_query(exp["name"])
-            smart_view_id = await close_service.create_smart_view(exp["name"], smart_view_query)
-        except Exception as e:
-            smart_view_error = str(e)
-            logger.warning(f"Could not create Close smart view for experiment {experiment_id}: {e}")
+        if not smart_view_id:
+            try:
+                smart_view_query = close_service.build_experiment_smart_view_query(exp["name"])
+                created_view_id = await close_service.create_smart_view(exp["name"], smart_view_query)
+                await conn.execute(
+                    "UPDATE public.experiment SET close_smart_view_id = $1 WHERE id = $2",
+                    created_view_id, experiment_id,
+                )
+                smart_view_id = created_view_id
+            except Exception as e:
+                smart_view_error = str(e)
+                logger.warning(f"Could not create Close smart view for experiment {experiment_id}: {e}")
 
         # Close work is per org: the first product of each org claims it, so a
         # selection containing several products of one org does not fan out

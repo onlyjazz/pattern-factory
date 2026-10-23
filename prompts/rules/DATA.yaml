@@ -189,6 +189,7 @@ DATA:
           - arm
           - email_header
           - email_header_status
+          - close_smart_view_id
           - created_at
           - updated_at
           - deleted_at

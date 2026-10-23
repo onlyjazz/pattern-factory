@@ -183,6 +183,7 @@ export interface Experiment {
   arm: 'social' | 'risk-then-superiority' | 'superiority-then-risk';
   email_header?: string | null;
   email_header_status: 'draft' | 'approved';
+  close_smart_view_id?: string | null; // Close smart view, created on first activation and reused by later runs
   steps: ExperimentStep[];
   product_ids: number[]; // many-to-many product membership
   created_at?: string;
