@@ -1966,6 +1966,40 @@ async def get_enterprise_risk(org_id: int, limit: int = Query(5000, description=
     }
 
 # -------------------------------------------------------------------------
+# Model Risk (model-level SLE aggregation)
+# -------------------------------------------------------------------------
+@app.get("/model-risk/{model_id}", tags=["Models"])
+async def get_model_risk(model_id: int):
+    """Threat impact for the model named in the path.
+
+    public."THRIM" is pinned to the single row in public.active_models, so it
+    reports whichever model happens to be active rather than the one being
+    viewed. This resolves the model from its argument instead, via
+    threat.threat_impact(model_id) - which also carries sle and
+    sle_after_mitigation, so the caller need not re-derive them.
+
+    Args:
+        model_id (int): Model id from the URL
+
+    Returns:
+        List[dict]: One row per threat of that model, heaviest gross SLE first
+
+    Raises:
+        404: If the model does not exist
+    """
+    pool = get_pg_pool()
+    async with pool.acquire() as conn:
+        exists = await conn.fetchval("SELECT id FROM threat.models WHERE id = $1", model_id)
+        if not exists:
+            raise HTTPException(status_code=404, detail=f"Model {model_id} not found")
+        rows = await conn.fetch(
+            "SELECT * FROM threat.threat_impact($1::integer) "
+            "ORDER BY gross_sle DESC NULLS LAST",
+            model_id,
+        )
+    return [dict(r) for r in rows]
+
+# -------------------------------------------------------------------------
 # Products CRUD (FDA-Cleared AI-Enabled Medical Devices)
 # -------------------------------------------------------------------------
 @app.get("/products", tags=["Products"])

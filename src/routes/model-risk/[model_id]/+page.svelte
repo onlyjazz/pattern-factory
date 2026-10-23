@@ -163,11 +163,13 @@
 
       await loadHeader(modelId);
       
-      // Fetch threat impact data from THRIM view
+      // Threat impact for this model. THRIM is deliberately not used: it is
+      // pinned to public.active_models, so it reports whichever model happens to
+      // be active rather than the model in the URL.
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       
-      const response = await fetch(`${apiBase}/query/THRIM`, { signal: controller.signal });
+      const response = await fetch(`${apiBase}/model-risk/${modelId}`, { signal: controller.signal });
       clearTimeout(timeoutId);
       
       if (response.ok) {
