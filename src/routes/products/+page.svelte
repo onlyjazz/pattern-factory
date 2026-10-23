@@ -13,6 +13,7 @@
 	let orgs: Organization[] = [];
 	let experiments: Experiment[] = [];
 	let loading = true;
+	let refreshing = false;
 	let error: string | null = null;
 	let filteredProducts: ProductRow[] = [];
 
@@ -36,7 +37,11 @@
 	$: visibleSelectedCount = filteredProducts.filter((p) => selectedProductIds.includes(p.id)).length;
 	$: hiddenSelectedCount = selectedProductIds.length - visibleSelectedCount;
 
-	onMount(async () => {
+	// The page holds a snapshot of the API, so rows changed outside the app - e.g.
+	// products tagged by a SQL helper - only appear once this runs again. Called on
+	// mount, and on demand from the Refresh button.
+	async function loadProducts() {
+		error = null;
 		try {
 			const [productsRes, orgsRes, experimentsRes] = await Promise.all([
 				fetch(`${apiBase}/products`),
@@ -63,7 +68,20 @@
 		} finally {
 			loading = false;
 		}
+	}
+
+	onMount(() => {
+		loadProducts();
 	});
+
+	async function handleRefresh() {
+		refreshing = true;
+		try {
+			await loadProducts();
+		} finally {
+			refreshing = false;
+		}
+	}
 
 	function filterProducts(items: ProductRow[], query: Query<ProductRow>, field: keyof ProductRow | null, dir: 'asc' | 'desc'): ProductRow[] {
 		let result = items;
@@ -199,6 +217,15 @@
 			</select>
 			<label for="start-experiment" class="input__label">Experiment</label>
 		</div>
+		<button
+			type="button"
+			class="button button_secondary"
+			onclick={handleRefresh}
+			disabled={refreshing}
+			title="Re-fetch products, orgs and experiments"
+		>
+			{refreshing ? 'Refreshing…' : 'Refresh'}
+		</button>
 		<button class="button button_green" onclick={() => (showAddModal = true)}>
 			Add Product
 		</button>
